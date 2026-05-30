@@ -26,3 +26,4 @@ python-dotenv>=1.0.0
 
 # === 유틸 ===
 tenacity>=8.2.0            # API 재시도 로직
+reportlab>=4.0.0

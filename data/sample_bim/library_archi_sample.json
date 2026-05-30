@@ -1,0 +1,112 @@
+{
+  "_meta": {
+    "description": "서울 강남구 가상 공공도서관 BIM 추출 JSON (시연용)",
+    "source": "졸업설계 데모 가상 데이터",
+    "note": "특징: 큰 연면적(3,500㎡), 일부 보강 완료된 중급 케이스. 외벽 단열 일부 완료, LED 절반 교체, 태양광 미설치"
+  },
+  "region": "중부1",
+  "building_year": 1998,
+  "total_area_m2": 3500,
+  "directly_owned": true,
+
+  "walls": [
+    {
+      "id": "W001",
+      "area": 1200.0,
+      "facing": "exterior_direct",
+      "insulated": true,
+      "u_value": 0.21,
+      "material": "압출보온판 100T (2018년 일부 보강)"
+    },
+    {
+      "id": "W002",
+      "area": 1450.0,
+      "facing": "exterior_direct",
+      "insulated": false,
+      "u_value": null,
+      "material": null
+    }
+  ],
+
+  "windows": [
+    {
+      "id": "Win01",
+      "area": 220.0,
+      "facing": "exterior_direct",
+      "u_value": 2.8,
+      "type": "복층유리 (1998년)"
+    }
+  ],
+
+  "doors": [
+    {
+      "id": "D01",
+      "area": 18.5,
+      "count": 7,
+      "facing": "exterior_direct",
+      "insulated": false,
+      "type": "강철문 SD"
+    }
+  ],
+
+  "roofs": [
+    {
+      "id": "R001",
+      "area": 1750.0,
+      "insulated": true,
+      "u_value": 0.28,
+      "cool_roof_applied": false
+    }
+  ],
+
+  "floors": [
+    {
+      "id": "F001",
+      "area": 1750.0,
+      "insulated": false,
+      "underfloor_heating": false,
+      "u_value": null,
+      "type": "1층 콘크리트 슬래브"
+    }
+  ],
+
+  "pv_panels": [],
+
+  "hvac": {
+    "heating": {
+      "type": "EHP",
+      "units": 35,
+      "replaced_units": 0,
+      "efficient": false
+    },
+    "cooling": {
+      "type": "EHP",
+      "units": 35,
+      "replaced_units": 0,
+      "efficient": false
+    },
+    "boiler": {
+      "type": "가스보일러",
+      "units": 2,
+      "efficient": false,
+      "age_years": 18
+    },
+    "ventilation": {
+      "type": "ERV",
+      "units": 4,
+      "efficient": false,
+      "covered_area_m2": 1400
+    }
+  },
+
+  "lighting": {
+    "led_count": 280,
+    "total_count": 620
+  },
+
+  "bems_installed": false,
+
+  "energy_saving_ratio": 0.18,
+  "annual_saving_kwh": 0,
+  "project_cost_million_won": 1
+}

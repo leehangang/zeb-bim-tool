@@ -139,6 +139,7 @@ def render_intake_panel() -> None:
     """Mode 4 Streamlit 패널."""
     import streamlit as st
     from core.intake_tools import IntakeSession, render_application_markdown
+    from core.error_messages import friendly_error
 
     st.markdown("""
     <div style="margin-bottom:1.5rem;">
@@ -266,7 +267,8 @@ def _render_chat_tab(session) -> None:
                 st.error(f"❌ {e}")
                 return
             except Exception as e:
-                st.error(f"❌ 처리 실패: {type(e).__name__}: {e}")
+                from core.error_messages import friendly_error
+                st.error(friendly_error(e))
                 return
 
         st.markdown(result["answer"])

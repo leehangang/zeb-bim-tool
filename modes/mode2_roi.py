@@ -148,12 +148,9 @@ def render_roi_panel() -> None:
     try:
         with st.spinner("Claude가 파라미터 추출 + ROI 산정 중..."):
             result = run_roi_simulation(user_message)
-    except RuntimeError as e:
-        st.error(f"❌ {e}")
-        return
     except Exception as e:
-        st.error(f"❌ 시뮬레이션 실패: {type(e).__name__}: {e}")
-        st.caption("ANTHROPIC_API_KEY가 .env에 설정되어 있는지 확인하세요.")
+        from core.error_messages import friendly_error
+        st.error(friendly_error(e))
         return
 
     # 히스토리 저장 후 표시

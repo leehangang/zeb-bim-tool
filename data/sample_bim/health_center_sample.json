@@ -1,0 +1,99 @@
+{
+  "_meta": {
+    "description": "강원도 가상 보건지소 BIM 추출 JSON (시연용)",
+    "source": "졸업설계 데모 가상 데이터",
+    "note": "특징: 소규모(450㎡), 최악 상태(80년대 노후 건물), 보강 거의 없음. 점수 상승 잠재력 극대 케이스."
+  },
+  "region": "중부2",
+  "building_year": 1985,
+  "total_area_m2": 450,
+  "directly_owned": true,
+
+  "walls": [
+    {
+      "id": "W001",
+      "area": 380.0,
+      "facing": "exterior_direct",
+      "insulated": false,
+      "u_value": null,
+      "material": null
+    }
+  ],
+
+  "windows": [
+    {
+      "id": "Win01",
+      "area": 45.0,
+      "facing": "exterior_direct",
+      "u_value": 4.2,
+      "type": "일반 단창 (알루미늄 새시)"
+    }
+  ],
+
+  "doors": [
+    {
+      "id": "D01",
+      "area": 12.5,
+      "count": 5,
+      "facing": "exterior_direct",
+      "insulated": false,
+      "type": "강철문 SD"
+    }
+  ],
+
+  "roofs": [
+    {
+      "id": "R001",
+      "area": 230.0,
+      "insulated": false,
+      "u_value": null,
+      "cool_roof_applied": false
+    }
+  ],
+
+  "floors": [
+    {
+      "id": "F001",
+      "area": 230.0,
+      "insulated": false,
+      "underfloor_heating": false,
+      "u_value": null,
+      "type": "1층 콘크리트 슬래브"
+    }
+  ],
+
+  "pv_panels": [],
+
+  "hvac": {
+    "heating": {
+      "type": "EHP",
+      "units": 8,
+      "replaced_units": 0,
+      "efficient": false
+    },
+    "cooling": {
+      "type": "EHP",
+      "units": 8,
+      "replaced_units": 0,
+      "efficient": false
+    },
+    "boiler": {
+      "type": "기름보일러 (등유)",
+      "units": 1,
+      "efficient": false,
+      "age_years": 25
+    },
+    "ventilation": null
+  },
+
+  "lighting": {
+    "led_count": 0,
+    "total_count": 95
+  },
+
+  "bems_installed": false,
+
+  "energy_saving_ratio": 0.12,
+  "annual_saving_kwh": 0,
+  "project_cost_million_won": 1
+}

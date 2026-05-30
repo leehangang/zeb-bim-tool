@@ -161,12 +161,9 @@ def render_rag_panel() -> None:
     try:
         with st.spinner(f"7개 정책 자료에서 검색 중... (top-{top_k})"):
             result = answer_question(question, top_k=top_k)
-    except RuntimeError as e:
-        st.error(f"❌ {e}")
-        return
     except Exception as e:
-        st.error(f"❌ 답변 생성 실패: {type(e).__name__}: {e}")
-        st.caption("Claude API 키(.env의 ANTHROPIC_API_KEY)가 설정되어 있는지 확인하세요.")
+        from core.error_messages import friendly_error
+        st.error(friendly_error(e))
         return
 
     # 답변 표시

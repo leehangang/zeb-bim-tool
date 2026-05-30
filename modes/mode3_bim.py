@@ -98,12 +98,39 @@ def render_bim_panel() -> None:
     </div>
     """, unsafe_allow_html=True)
 
+    # 샘플 갤러리 (1-클릭 시연용)
+    with st.expander("🎯 데모용 샘플 케이스 (1-클릭)", expanded=False):
+        st.caption("실제 BIM 파일이 없어도 가상 케이스로 진단 흐름을 체험할 수 있습니다.")
+        sample_cols = st.columns(3)
+        samples = [
+            ("doam_archi_sample.json",
+             "🏫 도담어린이집",
+             "1,251㎡ · 2014년 · 어린이집",
+             "KEPCO 검증 케이스. 일부 보강 완료 (바닥/태양광)"),
+            ("library_archi_sample.json",
+             "📚 공공도서관",
+             "3,500㎡ · 1998년 · 도서관",
+             "노후 중대형 건물. 부분 보강 완료, 큰 잠재력"),
+            ("health_center_sample.json",
+             "🏥 보건지소",
+             "450㎡ · 1985년 · 보건소",
+             "최악 상태 소규모. 점수 상승 잠재력 극대"),
+        ]
+        for i, (fname, title, meta, desc) in enumerate(samples):
+            with sample_cols[i]:
+                if st.button(f"**{title}**\n\n{meta}\n\n{desc}",
+                             key=f"sample_{i}", use_container_width=True):
+                    # 샘플 파일을 직접 진단
+                    st.session_state["_mode3_sample_path"] = f"data/sample_bim/{fname}"
+                    st.session_state["_mode3_sample_name"] = fname
+                    st.rerun()
+
     # 입력 영역
     col_upload, col_opts = st.columns([2, 1])
 
     with col_upload:
         uploaded = st.file_uploader(
-            "BIM JSON 파일 업로드",
+            "또는 BIM JSON 파일 직접 업로드",
             type=["json"],
             help="Dynamo 노드로 추출한 walls/windows/doors/.../bems_installed 스키마 JSON",
         )
@@ -119,48 +146,53 @@ def render_bim_panel() -> None:
     # ---------------------------------------------------------------
     # 진단 결과 캐싱 (session_state)
     # ---------------------------------------------------------------
-    # 입력 키: 파일 이름 + 크기 + 공사 기간. 변경되면 재진단.
+    # 입력 소스: 1) 업로드 파일 2) 샘플 케이스 경로
+    sample_path = st.session_state.pop("_mode3_sample_path", None)
+    sample_name = st.session_state.pop("_mode3_sample_name", None)
+
     if uploaded is not None:
-        input_key = (uploaded.name, uploaded.size, duration)
+        input_key = ("upload", uploaded.name, uploaded.size, duration)
+        source_for_diagnosis = "upload"
+    elif sample_path is not None:
+        input_key = ("sample", sample_name, duration)
+        source_for_diagnosis = "sample"
     else:
         input_key = None
+        source_for_diagnosis = None
 
     cached_key = st.session_state.get("_mode3_input_key")
     cached_result = st.session_state.get("_mode3_result")
 
     need_run = False
     if run_btn and uploaded is not None:
-        # 사용자가 명시적으로 진단 실행 버튼 눌렀을 때
         need_run = True
-    elif uploaded is not None and input_key != cached_key:
-        # 파일 업로드되었고 입력이 바뀐 경우 (캐시 무효)
-        need_run = (cached_result is None) or run_btn
+    elif source_for_diagnosis is not None and input_key != cached_key:
+        # 새 파일이 업로드되거나 새 샘플이 선택됨
+        need_run = True
 
-    if uploaded is None and cached_result is None:
+    if source_for_diagnosis is None and cached_result is None:
         st.info(
-            "👈 BIM JSON 파일을 업로드한 뒤 **진단 실행** 버튼을 눌러주세요.\n\n"
+            "👈 위에서 데모 케이스를 클릭하거나 BIM JSON 파일을 업로드하세요.\n\n"
             "스키마 예시: `data/sample_bim/doam_archi_sample.json`"
         )
         return
 
     if need_run:
         try:
-            tmp_path = save_uploaded_to_temp(uploaded)
+            if source_for_diagnosis == "upload":
+                diagnose_path = save_uploaded_to_temp(uploaded)
+            else:
+                diagnose_path = sample_path
+
             with st.spinner("진단 중... (단가DB 로드 + 11개 항목 ROI 산정)"):
                 result = run_bim_diagnosis(
-                    tmp_path,
+                    diagnose_path,
                     with_roi=True,
                     duration_months=duration,
                 )
-        except json.JSONDecodeError as e:
-            st.error(f"❌ JSON 파싱 실패: {e}")
-            return
-        except KeyError as e:
-            st.error(f"❌ JSON 스키마 오류: 필수 키 누락 — {e}")
-            st.caption("스키마 예시는 `data/sample_bim/doam_archi_sample.json`을 참고하세요.")
-            return
         except Exception as e:
-            st.error(f"❌ 진단 실패: {type(e).__name__}: {e}")
+            from core.error_messages import friendly_error
+            st.error(friendly_error(e))
             return
 
         st.session_state["_mode3_result"] = result
@@ -187,10 +219,16 @@ def render_bim_panel() -> None:
         "📄 전체 리포트",
     ])
 
-    # 파일명: 현재 업로드 또는 캐시 키에서 추출
-    source_name = uploaded.name if uploaded is not None else (
-        cached_key[0] if cached_key else "bim.json"
-    )
+    # 파일명: 현재 업로드 또는 샘플 또는 캐시 키에서 추출
+    if uploaded is not None:
+        source_name = uploaded.name
+    elif sample_name:
+        source_name = sample_name
+    elif cached_key:
+        # cached_key 구조: ("upload"|"sample", name, ...)
+        source_name = cached_key[1] if len(cached_key) > 1 else "bim.json"
+    else:
+        source_name = "bim.json"
 
     with tab1:
         _render_diagnosis_tab(result)
@@ -432,7 +470,6 @@ def _render_gr_card(item: dict) -> None:
 def _render_score_bars(rows: list) -> None:
     """점수 분해 막대그래프."""
     import streamlit as st
-    from core.ui_theme import COLORS
 
     html_parts = ['<div style="margin-top:0.5rem;">']
     for label, detail, score_val, max_val in rows:
@@ -450,21 +487,24 @@ def _render_score_bars(rows: list) -> None:
 
         detail_html = f'<span style="color:#9E9E9E; font-size:0.8rem; margin-left:0.4rem;">{detail}</span>' if detail else ""
 
-        html_parts.append(f"""
-        <div style="margin-bottom:0.8rem;">
-          <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
-            <span style="font-weight:500; font-size:0.92rem;">{label}{detail_html}</span>
-            <span style="color:{color}; font-weight:600; font-size:0.9rem;">
-              {score_val}/{max_val}점 ({pct:.0f}%)
-            </span>
-          </div>
-          <div style="background:#F0F0F0; border-radius:6px; height:10px; overflow:hidden;">
-            <div style="background:{bg}; height:100%; width:{pct}%; transition: width 0.3s ease;"></div>
-          </div>
-        </div>
-        """)
+        # 한 줄로 합쳐서 streamlit이 코드블록으로 오해하지 않도록
+        bar_html = (
+            f'<div style="margin-bottom:0.8rem;">'
+            f'<div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">'
+            f'<span style="font-weight:500; font-size:0.92rem;">{label}{detail_html}</span>'
+            f'<span style="color:{color}; font-weight:600; font-size:0.9rem;">'
+            f'{score_val}/{max_val}점 ({pct:.0f}%)'
+            f'</span>'
+            f'</div>'
+            f'<div style="background:#F0F0F0; border-radius:6px; height:10px; overflow:hidden;">'
+            f'<div style="background:{bg}; height:100%; width:{pct}%; transition: width 0.3s ease;"></div>'
+            f'</div>'
+            f'</div>'
+        )
+        html_parts.append(bar_html)
     html_parts.append('</div>')
-    st.markdown("\n".join(html_parts), unsafe_allow_html=True)
+    # 줄바꿈 없이 한 문자열로 합쳐 마크다운 코드블록 오해 방지
+    st.markdown("".join(html_parts), unsafe_allow_html=True)
 
 
 def _render_roi_tab(result: dict) -> None:
@@ -775,7 +815,7 @@ def _render_optimization_tab(result: dict) -> None:
 
 
 def _render_full_report_tab(result: dict, source_name: str) -> None:
-    """탭4: 마크다운 전체 리포트 + 다운로드."""
+    """탭4: 마크다운 전체 리포트 + 다운로드 (마크다운/PDF 2종)."""
     import streamlit as st
 
     report = result["report"]
@@ -783,12 +823,42 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
 
     st.divider()
     file_stem = Path(source_name).stem
-    st.download_button(
-        label="📥 진단 리포트 다운로드 (.md)",
-        data=report,
-        file_name=f"진단리포트_{file_stem}.md",
-        mime="text/markdown",
-    )
+
+    # 다운로드 버튼 2개 (마크다운 / PDF)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.download_button(
+            label="📄 마크다운 다운로드 (.md)",
+            data=report,
+            file_name=f"진단리포트_{file_stem}.md",
+            mime="text/markdown",
+            use_container_width=True,
+            help="GitHub, Notion, Obsidian 등에서 바로 사용 가능",
+        )
+
+    with col2:
+        # PDF 생성 - 클릭 시 한 번만 (lazy)
+        try:
+            from core.pdf_report import generate_pdf_report
+            pdf_bytes = generate_pdf_report(result, source_name=source_name)
+            st.download_button(
+                label="📕 PDF 리포트 다운로드 (.pdf)",
+                data=pdf_bytes,
+                file_name=f"진단리포트_{file_stem}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                help="인쇄·이메일 첨부·결재용 (한글 폰트 자동 적용)",
+                type="primary",
+            )
+        except ImportError:
+            st.info(
+                "PDF 다운로드를 사용하려면 `reportlab` 패키지가 필요합니다.\n\n"
+                "cmd: `pip install reportlab`"
+            )
+        except Exception as e:
+            st.warning(f"PDF 생성 중 오류: {type(e).__name__}")
+            st.caption("마크다운 다운로드는 정상 사용 가능합니다.")
 
 
 # ====================================================================
