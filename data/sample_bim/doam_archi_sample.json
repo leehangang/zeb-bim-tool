@@ -1,0 +1,113 @@
+{
+  "_meta": {
+    "description": "KEPCO 김천 도담어린이집 가상 BIM 추출 JSON (Step 3 검증용)",
+    "source": "Dynamo 스크립트 추출값 + 일부 가정",
+    "note": "실제 Dynamo 출력 포맷과 일치시킬 경우 이 스키마를 표준으로 사용"
+  },
+  "region": "중부2",
+  "building_year": 2014,
+  "total_area_m2": 1251,
+  "directly_owned": true,
+
+  "walls": [
+    {
+      "id": "W001",
+      "area": 683.75,
+      "facing": "exterior_direct",
+      "insulated": true,
+      "u_value": 0.156,
+      "material": "압출보온판 150T"
+    },
+    {
+      "id": "W002",
+      "area": 887.50,
+      "facing": "exterior_direct",
+      "insulated": false,
+      "u_value": null,
+      "material": null
+    }
+  ],
+
+  "windows": [
+    {
+      "id": "Win01",
+      "area": 100.0,
+      "facing": "exterior_direct",
+      "u_value": 3.6,
+      "type": "일반 단창"
+    }
+  ],
+
+  "doors": [
+    {
+      "id": "D01",
+      "area": 28.85,
+      "count": 13,
+      "facing": "exterior_direct",
+      "insulated": false,
+      "type": "강철문 SD"
+    }
+  ],
+
+  "roofs": [
+    {
+      "id": "R001",
+      "area": 600.0,
+      "insulated": false,
+      "u_value": null,
+      "cool_roof_applied": false
+    }
+  ],
+
+  "floors": [
+    {
+      "id": "F001",
+      "area": 600.0,
+      "insulated": true,
+      "underfloor_heating": true,
+      "u_value": 0.17,
+      "type": "1층 XL 배관 매립"
+    }
+  ],
+
+  "pv_panels": [
+    {
+      "id": "PV001",
+      "area": 27.0,
+      "capacity_kw": 5.4
+    }
+  ],
+
+  "hvac": {
+    "heating": {
+      "type": "EHP",
+      "units": 23,
+      "replaced_units": 0,
+      "efficient": false
+    },
+    "cooling": {
+      "type": "EHP",
+      "units": 23,
+      "replaced_units": 0,
+      "efficient": false
+    },
+    "boiler": null,
+    "ventilation": {
+      "type": "ERV",
+      "units": 9,
+      "efficient": true,
+      "covered_area_m2": 800
+    }
+  },
+
+  "lighting": {
+    "led_count": 0,
+    "total_count": 439
+  },
+
+  "bems_installed": false,
+
+  "energy_saving_ratio": 0.25,
+  "annual_saving_kwh": 0,
+  "project_cost_million_won": 1
+}

@@ -1,0 +1,28 @@
+# ZEB-ROI Consulting Chatbot — Python 패키지 의존성
+# Python 3.10+ 권장
+# 설치: pip install -r requirements.txt
+
+# === Web UI ===
+streamlit>=1.30.0
+
+# === LLM API ===
+anthropic>=0.39.0          # Claude Haiku 4.5
+openai>=1.50.0             # 임베딩 전용 (text-embedding-3-small)
+
+# === RAG (모드 1) ===
+llama-index-core>=0.10.0
+llama-index-embeddings-openai>=0.2.0
+llama-index-vector-stores-chroma>=0.2.0
+llama-index-readers-file>=0.1.0   # PDF 로더
+chromadb>=0.4.20
+
+# === 데이터 처리 ===
+pandas>=2.0.0
+openpyxl>=3.1.0            # 엑셀 (07 단가DB, 08 간접비)
+pypdf>=4.0.0               # PDF 백업 파서
+
+# === 환경 변수 ===
+python-dotenv>=1.0.0
+
+# === 유틸 ===
+tenacity>=8.2.0            # API 재시도 로직
