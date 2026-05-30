@@ -391,12 +391,17 @@ class RagIndexer:
 
         embeddings = self.embedder.embed(texts)
 
-        self.collection.add(
-            ids=ids,
-            documents=texts,
-            metadatas=metas,
-            embeddings=embeddings,
-        )
+        # ChromaDB는 한 번에 5461개 이하만 받음 → 배치로 나눠 추가
+        BATCH_SIZE = 5000
+        total = len(ids)
+        for start in range(0, total, BATCH_SIZE):
+            end = min(start + BATCH_SIZE, total)
+            self.collection.add(
+                ids=ids[start:end],
+                documents=texts[start:end],
+                metadatas=metas[start:end],
+                embeddings=embeddings[start:end],
+            )
         print(f"[OK]   {path.name}: {len(chunks)}개 청크 인덱싱 "
               f"({len(pages)}페이지)")
         return len(chunks)

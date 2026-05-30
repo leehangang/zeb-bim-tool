@@ -45,62 +45,28 @@ def _check_rag_index() -> bool:
     )
 
 
-@st.cache_resource(show_spinner=False)
-def _auto_build_index_if_needed() -> dict:
+def _auto_unzip_chroma_if_needed():
     """
-    배포 환경에서 첫 실행 시 자동 RAG 인덱싱.
-
-    조건:
-        - 인덱스가 아직 없고
-        - 정책 PDF가 존재할 때
-
-    @st.cache_resource로 감싸서 세션 간 1회만 실행되도록 함.
-
-    Returns:
-        {"status": "built"|"skipped"|"no_pdfs"|"error", "message": str, "count": int}
+    배포 환경에서 data/chroma_db.zip이 있으면 자동으로 압축 해제.
+    GitHub 단일 파일 100MB 제한 우회.
     """
     from pathlib import Path
+    import zipfile
 
-    # 이미 인덱스가 있으면 skip
-    if _check_rag_index():
-        return {"status": "skipped", "message": "기존 인덱스 사용", "count": 0}
+    chroma_dir = Path("./data/chroma_db")
+    chroma_zip = Path("./data/chroma_db.zip")
 
-    # PDF 폴더 확인
-    pdf_dir = Path("./data/policy_docs")
-    if not pdf_dir.exists():
-        return {"status": "no_pdfs", "message": "PDF 폴더 없음", "count": 0}
-
-    pdfs = list(pdf_dir.glob("*.pdf"))
-    if not pdfs:
-        return {"status": "no_pdfs", "message": "PDF 파일 없음", "count": 0}
-
-    # 빌드 시작
-    try:
-        with st.spinner(f"⏳ 첫 실행 — RAG 인덱스 자동 빌드 중... ({len(pdfs)}개 PDF, 3~5분 소요)"):
-            # 환경변수로 로컬 임베딩 사용 (Streamlit Cloud는 OpenAI 키 없을 수 있음)
-            os.environ.setdefault("EMBEDDING_PROVIDER", "local")
-
-            from core.rag_indexer import RagIndexer
-            indexer = RagIndexer(
-                persist_dir="./data/chroma_db",
-                collection_name="policy_docs",
-            )
-            stats = indexer.index_directory(str(pdf_dir))
-        return {
-            "status": "built",
-            "message": f"인덱스 빌드 완료 ({stats.get('chunks', '?')}개 청크)",
-            "count": len(pdfs),
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"인덱싱 실패: {type(e).__name__}: {str(e)[:200]}",
-            "count": 0,
-        }
+    # zip이 있고 폴더가 없으면 압축 해제
+    if chroma_zip.exists() and not chroma_dir.exists():
+        try:
+            with zipfile.ZipFile(chroma_zip, "r") as zf:
+                zf.extractall("./data/")
+        except Exception:
+            pass  # 실패해도 앱은 계속 실행
 
 
-# 앱 시작 시 1회 자동 시도 (캐시되어 두 번째부터는 즉시 반환)
-_auto_index_result = _auto_build_index_if_needed()
+# 앱 시작 시 1회 실행
+_auto_unzip_chroma_if_needed()
 
 
 # ====================================================================
