@@ -212,10 +212,11 @@ def render_bim_panel() -> None:
     )
 
     # 탭 구성
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab_sens, tab4 = st.tabs([
         "📊 진단 결과",
         "💰 ROI 보강 계획",
         "🎯 최적화",
+        "📈 민감도·시나리오",
         "📄 전체 리포트",
     ])
 
@@ -236,6 +237,8 @@ def render_bim_panel() -> None:
         _render_roi_tab(result)
     with tab3:
         _render_optimization_tab(result)
+    with tab_sens:
+        _render_sensitivity_tab(result)
     with tab4:
         _render_full_report_tab(result, source_name)
 
@@ -814,7 +817,187 @@ def _render_optimization_tab(result: dict) -> None:
             st.dataframe(df, hide_index=True, use_container_width=True)
 
 
-def _render_full_report_tab(result: dict, source_name: str) -> None:
+def _render_sensitivity_tab(result: dict) -> None:
+    """탭4: 민감도 분석 + 시나리오 비교 (PFV 사업수지 모델에서 영감).
+    
+    엑셀 분석으로 도입한 두 가지 핵심 기능:
+    1. 민감도 — 보조금율/비용/절감액을 ±N% 흔들었을 때 ROI 변화
+    2. 시나리오 — 부분보강 / 전체보강 / 시그니처 3개 동시 비교
+    """
+    import streamlit as st
+    import pandas as pd
+    from core.sensitivity import run_sensitivity_analysis
+    from core.scenario_compare import (
+        compare_all_scenarios,
+        recommend_scenario,
+        build_inputs_from_diagnosis,
+    )
+
+    plan = result.get("roi_plan") or []
+    if not plan:
+        st.info("ROI 보강 계획이 없어 민감도/시나리오 분석을 할 수 없습니다.")
+        return
+
+    scenario = result.get("scenario", {})
+    roi_summary = result.get("roi_summary", {})
+    area_m2 = scenario.get("연면적_m2", 1000)
+    total_cost = sum(p.get("Max_Cost", 0) for p in plan)
+    annual_saving = area_m2 * 9_900  # 보수적 단가 (원/m2/year)
+
+    st.markdown("### 📈 민감도·시나리오 분석")
+    st.caption(
+        "성수동 PFV 사업수지 모델에서 영감 — 핵심 변수를 흔들면서 사업성 안정성 확인. "
+        "심사위원에게 임팩트 있는 분석."
+    )
+
+    # ─────────────────────────────────────
+    # Section 1: 시나리오 비교
+    # ─────────────────────────────────────
+    st.markdown("#### 🎬 3개 사업 전략 비교")
+
+    base_inputs = {
+        "total_cost_full": total_cost,
+        "annual_saving_full": annual_saving,
+        "area_m2": area_m2,
+        "far_bonus_full": roi_summary.get("용적률_자산가치_원", 0),
+        "tax_relief_full": roi_summary.get("취득세_감면액_원", 0),
+    }
+    scenarios = compare_all_scenarios(base_inputs)
+
+    # 3개 카드 가로 배치
+    cols = st.columns(3)
+    colors = ["#FFE0B2", "#C8E6C9", "#BBDEFB"]  # 주황 / 초록 / 파랑
+    for col, sc, color in zip(cols, scenarios, colors):
+        with col:
+            payback = sc["통합_회수년"]
+            payback_str = f"{payback:.1f}년" if payback < 99 else "∞"
+            st.markdown(
+                f"""
+<div style="background:{color}; padding:14px; border-radius:10px; min-height:240px;">
+<div style="font-weight:700; font-size:1.05em; margin-bottom:6px;">{sc['label']}</div>
+<div style="color:#555; font-size:0.85em; margin-bottom:10px;">{sc['desc']}</div>
+<div>보조율: <b>{sc['subsidy_pct']:.0f}%</b></div>
+<div>자부담: <b>{sc['자부담_억']:.2f}억</b></div>
+<div>회수기간: <b>{payback_str}</b></div>
+<div>30년 ROI: <b>{sc['자산화_ROI_pct']:.0f}%</b></div>
+<div>총효익(30y): <b>{sc['30년_총효익_억']:.2f}억</b></div>
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # 우선순위별 추천
+    st.markdown("##### 🏆 우선순위별 최적 시나리오")
+    rec_cols = st.columns(3)
+    priorities = [
+        ("회수기간", "⏱️ 빨리 회수"),
+        ("ROI", "📈 ROI 극대화"),
+        ("초기부담", "💵 자부담 최소"),
+    ]
+    for col, (pri, label) in zip(rec_cols, priorities):
+        with col:
+            rec = recommend_scenario(scenarios, pri)
+            best = rec["best_scenario"]
+            st.markdown(
+                f"""
+<div style="background:#F5F5F5; padding:10px; border-radius:8px; border-left:4px solid #4CAF50;">
+<div style="font-size:0.85em; color:#666;">{label}</div>
+<div style="font-weight:700; margin:4px 0;">{best['label']}</div>
+<div style="font-size:0.8em; color:#555;">{rec['reason']}</div>
+</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("---")
+
+    # ─────────────────────────────────────
+    # Section 2: 민감도 분석
+    # ─────────────────────────────────────
+    st.markdown("#### 🎚️ 민감도 분석 (변수 ±N% 흔들기)")
+
+    baseline = {
+        "subsidy_rate": 0.7,  # 기본 70% 보조
+        "total_cost_won": total_cost,
+        "annual_saving_won": annual_saving,
+        "area_m2": area_m2,
+        "far_bonus_value_won": roi_summary.get("용적률_자산가치_원", 0),
+        "tax_relief_won": roi_summary.get("취득세_감면액_원", 0),
+    }
+    sens = run_sensitivity_analysis(baseline)
+
+    sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+        "보조금율 ±",
+        "보강비용 ±",
+        "절감액 ±",
+        "🎯 손익분기",
+    ])
+
+    with sub_tab1:
+        st.caption("정부 보조금율이 변하면 ROI는 어떻게 변할까?")
+        rows = sens["subsidy_table"]
+        df = pd.DataFrame([{
+            "보조율": r["보조금율_pct"] + (" ◀기준" if r["_is_baseline"] else ""),
+            "자부담": f"{r['자부담_억']:.2f}억",
+            "GR 회수기간": f"{r['GR_단독_회수년']:.1f}년"
+                if r["GR_단독_회수년"] < 99 else "∞",
+            "통합 회수기간": f"{r['통합_회수년']:.1f}년"
+                if r["통합_회수년"] < 99 else "∞",
+            "30년 ROI": f"{r['자산화_ROI_pct']:.0f}%",
+        } for r in rows])
+        st.dataframe(df, hide_index=True, use_container_width=True)
+
+    with sub_tab2:
+        st.caption("자재비/인건비 변동(±30%)에 사업성이 얼마나 민감한가?")
+        rows = sens["cost_table"]
+        df = pd.DataFrame([{
+            "변화율": r["비용_변화_pct"] + (" ◀기준" if r["_is_baseline"] else ""),
+            "보강비용": f"{r['보강비용_억']:.2f}억",
+            "자부담": f"{r['자부담_억']:.2f}억",
+            "GR 회수기간": f"{r['GR_단독_회수년']:.1f}년"
+                if r["GR_단독_회수년"] < 99 else "∞",
+            "30년 ROI": f"{r['자산화_ROI_pct']:.0f}%",
+        } for r in rows])
+        st.dataframe(df, hide_index=True, use_container_width=True)
+
+    with sub_tab3:
+        st.caption("에너지 절감 예측은 ±20% 오차 가능. 그 영향은?")
+        rows = sens["saving_table"]
+        df = pd.DataFrame([{
+            "변화율": r["절감_변화_pct"] + (" ◀기준" if r["_is_baseline"] else ""),
+            "연간절감": f"{r['연간절감_만원']:.0f}만원",
+            "GR 회수기간": f"{r['GR_단독_회수년']:.1f}년"
+                if r["GR_단독_회수년"] < 99 else "∞",
+            "통합 회수기간": f"{r['통합_회수년']:.1f}년"
+                if r["통합_회수년"] < 99 else "∞",
+            "30년 ROI": f"{r['자산화_ROI_pct']:.0f}%",
+        } for r in rows])
+        st.dataframe(df, hide_index=True, use_container_width=True)
+
+    with sub_tab4:
+        st.caption("**손익분기점** — 목표 회수기간 달성에 필요한 조건")
+        bk = sens["breakeven"]
+        cols2 = st.columns(2)
+        with cols2[0]:
+            st.metric("무보조 회수년", f"{bk['무보조_회수년']:.1f}년")
+            st.metric("50% 보조 회수년", f"{bk['50%보조_회수년']:.1f}년")
+            st.metric("현재(70%) 회수년", f"{bk['현재_회수년']:.1f}년")
+        with cols2[1]:
+            st.metric(
+                "회수 8년 달성 필요 보조율",
+                f"{bk['회수8년_필요_보조율']*100:.0f}%",
+            )
+            st.metric(
+                "회수 10년 달성 필요 보조율",
+                f"{bk['회수10년_필요_보조율']*100:.0f}%",
+            )
+        st.info(
+            "💡 **해석**: 보조금율이 위 임계값보다 낮으면 회수기간 목표 미달. "
+            "사업 신청 전 보조율 협의 필수."
+        )
+
+
+
     """탭4: 마크다운 전체 리포트 + 다운로드 (마크다운/PDF 2종)."""
     import streamlit as st
 
