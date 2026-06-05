@@ -1,3 +1,6 @@
+import os
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 """
 ZEB-ROI 그린리모델링 의사결정 플랫폼 — 메인 앱
 ============================================
