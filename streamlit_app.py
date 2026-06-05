@@ -48,7 +48,8 @@ def _check_rag_index() -> bool:
 def _auto_unzip_chroma_if_needed():
     """
     배포 환경에서 data/chroma_db.zip이 있으면 자동으로 압축 해제.
-    GitHub 단일 파일 100MB 제한 우회.
+    zip 내부 구조(폴더째 압축 / 내용물만 압축)와 무관하게
+    항상 data/chroma_db/ 안에 인덱스가 놓이도록 처리.
     """
     from pathlib import Path
     import zipfile
@@ -56,13 +57,23 @@ def _auto_unzip_chroma_if_needed():
     chroma_dir = Path("./data/chroma_db")
     chroma_zip = Path("./data/chroma_db.zip")
 
-    # zip이 있고 폴더가 없으면 압축 해제
-    if chroma_zip.exists() and not chroma_dir.exists():
-        try:
-            with zipfile.ZipFile(chroma_zip, "r") as zf:
-                zf.extractall("./data/")
-        except Exception:
-            pass  # 실패해도 앱은 계속 실행
+    # 이미 인덱스 폴더가 있고 비어있지 않으면 스킵
+    if chroma_dir.exists() and any(chroma_dir.iterdir()):
+        return
+    if not chroma_zip.exists():
+        return
+
+    try:
+        with zipfile.ZipFile(chroma_zip, "r") as zf:
+            names = [n for n in zf.namelist() if n.strip()]
+            # chroma.sqlite3가 zip 최상위에 있으면 "내용물만" 압축된 것
+            contents_only = any(n == "chroma.sqlite3" for n in names)
+            if contents_only:
+                zf.extractall("./data/chroma_db/")   # 내용물 → 폴더 안으로
+            else:
+                zf.extractall("./data/")             # chroma_db/ 폴더째 → data/ 로
+    except Exception:
+        pass  # 실패해도 앱은 계속 실행
 
 
 # 앱 시작 시 1회 실행
