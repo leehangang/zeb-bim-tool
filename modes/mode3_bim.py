@@ -994,12 +994,13 @@ def _render_sensitivity_tab(result: dict) -> None:
         st.info(
             "💡 **해석**: 보조금율이 위 임계값보다 낮으면 회수기간 목표 미달. "
             "사업 신청 전 보조율 협의 필수."
-        )
+)
 
 
-
+def _render_full_report_tab(result: dict, source_name: str) -> None:
     """탭4: 마크다운 전체 리포트 + 다운로드 (마크다운/PDF 2종)."""
     import streamlit as st
+    from pathlib import Path
 
     report = result["report"]
     st.markdown(report)
