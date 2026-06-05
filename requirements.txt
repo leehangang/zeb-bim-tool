@@ -15,6 +15,7 @@ llama-index-embeddings-openai>=0.2.0
 llama-index-vector-stores-chroma>=0.2.0
 llama-index-readers-file>=0.1.0   # PDF 로더
 chromadb>=0.4.20
+protobuf==3.20.3    
 
 # === 데이터 처리 ===
 pandas>=2.0.0
