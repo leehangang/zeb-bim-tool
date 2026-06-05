@@ -815,6 +815,7 @@ def diagnose_from_json(
     report = generate_diagnosis_report(gr_mapping, score, bim, roi_plan=roi_plan)
 
     return {
+        "bim_data": bim,
         "gr_mapping": gr_mapping,
         "score": score,
         "report": report,
@@ -1680,4 +1681,5 @@ def format_optimization_report(opt_result: dict, mode: str = "budget") -> str:
                     f"— {s.get('_skip_reason', '')}"
                 )
 
+    return "\n".join(lines)
     return "\n".join(lines)
