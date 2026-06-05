@@ -212,11 +212,12 @@ def render_bim_panel() -> None:
     )
 
     # 탭 구성
-    tab1, tab2, tab3, tab_sens, tab4 = st.tabs([
+    tab1, tab2, tab3, tab_sens, tab_zeb, tab4 = st.tabs([
         "📊 진단 결과",
         "💰 ROI 보강 계획",
         "🎯 최적화",
         "📈 민감도·시나리오",
+        "🏆 ZEB 평가",
         "📄 전체 리포트",
     ])
 
@@ -239,6 +240,8 @@ def render_bim_panel() -> None:
         _render_optimization_tab(result)
     with tab_sens:
         _render_sensitivity_tab(result)
+    with tab_zeb:
+        _render_zeb_tab(result)
     with tab4:
         _render_full_report_tab(result, source_name)
 
@@ -994,7 +997,200 @@ def _render_sensitivity_tab(result: dict) -> None:
         st.info(
             "💡 **해석**: 보조금율이 위 임계값보다 낮으면 회수기간 목표 미달. "
             "사업 신청 전 보조율 협의 필수."
-)
+        )
+
+
+def _render_zeb_tab(result: dict) -> None:
+    """🏆 ZEB 평가 탭 — BIM 데이터에서 자립률 자동 계산 + 등급 산정.
+    
+    두 가지 모드:
+    - 자동 추정: BIM JSON의 11개 GR 요소 충족도 기반
+    - DesignBuilder 입력: 정확한 시뮬레이션 결과 직접 입력
+    """
+    import streamlit as st
+    from core.zeb_evaluator import evaluate_zeb, BASE_ENERGY_BY_USE
+
+    bim = result.get("bim_data") or result.get("bim") or {}
+    gr_mapping = result.get("gr_mapping", {})
+
+    if not bim or not gr_mapping:
+        st.info("ZEB 평가를 위해서는 BIM 진단 데이터가 필요합니다.")
+        return
+
+    st.markdown("### 🏆 ZEB 인증 평가")
+    st.caption(
+        "BIM 데이터로 1차 에너지 소요량 + 신재생 발전량 → 에너지자립률 → 등급 자동 산정. "
+        "(ZEB 인증기준 고시 + ISO 13790 간이 방법 기반)"
+    )
+
+    # 모드 선택
+    mode = st.radio(
+        "평가 모드",
+        ["🤖 자동 추정 (BIM 기반)", "📊 DesignBuilder 입력 (정밀)"],
+        horizontal=True,
+        help="자동: 11개 GR 충족도 기반. DesignBuilder: 시뮬레이션 결과 직접 입력."
+    )
+
+    overrides = None
+    if "DesignBuilder" in mode:
+        st.markdown("#### DesignBuilder 시뮬레이션 결과 입력")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            base_e = st.number_input(
+                "기본 에너지 소요량 (kWh/㎡·년)",
+                min_value=50.0, max_value=600.0, value=200.0, step=10.0,
+                help="DesignBuilder의 보강 전 1차 에너지 소요량",
+            )
+        with col2:
+            saving = st.number_input(
+                "절감률 (%)",
+                min_value=0.0, max_value=80.0, value=30.0, step=1.0,
+                help="보강 시뮬레이션 절감 비율",
+            )
+        with col3:
+            pv_kwh = st.number_input(
+                "PV 연간 발전량 (kWh)",
+                min_value=0.0, max_value=1_000_000.0, value=7020.0, step=100.0,
+                help="신재생 시뮬레이션 결과",
+            )
+        overrides = {
+            "base_energy_kwh_m2": base_e,
+            "annual_saving_pct": saving,
+            "pv_generation_kwh": pv_kwh,
+        }
+
+    # 건물 용도 선택
+    use_options = list(BASE_ENERGY_BY_USE.keys())
+    default_use = "어린이집"
+    selected_use = st.selectbox(
+        "건물 용도",
+        use_options,
+        index=use_options.index(default_use),
+        help="용도에 따라 기본 에너지 소요량이 달라집니다.",
+    )
+
+    # ZEB 평가 실행
+    eval_result = evaluate_zeb(
+        bim, gr_mapping,
+        building_use=selected_use,
+        manual_overrides=overrides,
+    )
+
+    st.markdown("---")
+
+    # ─────────────────────────────────────
+    # 핵심 결과 — 자립률 + 등급
+    # ─────────────────────────────────────
+    autonomy = eval_result["autonomy_pct"]
+    grade = eval_result["grade"]
+    grade_num = grade["grade"]
+
+    # 등급별 색상
+    grade_colors = {
+        1: "#4CAF50", 2: "#8BC34A", 3: "#FFC107",
+        4: "#FF9800", 5: "#FF5722", 0: "#9E9E9E",
+    }
+    color = grade_colors.get(grade_num, "#9E9E9E")
+
+    st.markdown(
+        f"""
+<div style="background:{color}; color:white; padding:20px; border-radius:12px; text-align:center; margin-bottom:16px;">
+<div style="font-size:0.95em; opacity:0.9;">에너지자립률</div>
+<div style="font-size:2.8em; font-weight:800; margin:6px 0;">{autonomy:.1f}%</div>
+<div style="font-size:1.3em; font-weight:600;">{grade['label']}</div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ─────────────────────────────────────
+    # 지표 4개 — 메트릭
+    # ─────────────────────────────────────
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric(
+            "기본 소요량",
+            f"{eval_result['base_energy_kwh_m2']:.0f} kWh/㎡·년",
+            help=f"{eval_result['building_use']} 용도 기준",
+        )
+    with c2:
+        st.metric(
+            "에너지 절감률",
+            f"{eval_result['reduction']['total_reduction_pct']:.1f}%",
+            help=eval_result["reduction"].get("_source", ""),
+        )
+    with c3:
+        st.metric(
+            "보강 후 소요량",
+            f"{eval_result['post_energy_kwh_m2']:.1f} kWh/㎡·년",
+        )
+    with c4:
+        st.metric(
+            "PV 발전(㎡당)",
+            f"{eval_result['pv']['yield_per_m2_kwh']:.1f} kWh/㎡·년",
+            help=eval_result["pv"].get("_source", ""),
+        )
+
+    # ─────────────────────────────────────
+    # 등급 도달 가이드
+    # ─────────────────────────────────────
+    st.markdown("#### 🎯 등급 도달 가이드")
+
+    target_grades = [(1, 100), (2, 80), (3, 60), (4, 40), (5, 20)]
+    post_e = eval_result["post_energy_kwh_m2"]
+    area = eval_result["area_m2"]
+
+    grade_table = []
+    for g, threshold in target_grades:
+        # 자립률 X% 도달에 필요한 PV (kW)
+        required_kwh_m2 = post_e * threshold / 100
+        required_total_kwh = required_kwh_m2 * area
+        required_kw = required_total_kwh / eval_result["pv"].get(
+            "region_yield_per_kw", 1300
+        ) if eval_result["pv"].get("region_yield_per_kw") else (
+            required_total_kwh / 1300
+        )
+        is_achieved = autonomy >= threshold
+        grade_table.append({
+            "등급": f"ZEB {g}등급",
+            "필요 자립률": f"{threshold}%",
+            "필요 PV": f"{required_kw:.1f} kW",
+            "현재 상태": "✅ 달성" if is_achieved else "❌ 부족",
+        })
+
+    import pandas as pd
+    df = pd.DataFrame(grade_table)
+    st.dataframe(df, hide_index=True, use_container_width=True)
+
+    # ─────────────────────────────────────
+    # 절감 분해 (자동 모드일 때만)
+    # ─────────────────────────────────────
+    if eval_result["mode"] == "estimated" and eval_result["reduction"]["breakdown"]:
+        with st.expander("📊 11개 GR 요소별 절감 기여도", expanded=False):
+            br = eval_result["reduction"]["breakdown"]
+            df2 = pd.DataFrame([
+                {
+                    "GR 요소": k.split("_", 1)[1] if "_" in k else k,
+                    "이론 최대": f"{v['이론최대_pct']}%",
+                    "적용도": f"{v['적용도_pct']:.0f}%",
+                    "실제 절감": f"{v['실제절감_pct']:.2f}%",
+                }
+                for k, v in br.items()
+            ])
+            st.dataframe(df2, hide_index=True, use_container_width=True)
+
+    # ─────────────────────────────────────
+    # 해석
+    # ─────────────────────────────────────
+    st.info(
+        f"💡 **해석**: 이 건물은 보강 후 자립률 **{autonomy:.1f}%**로 "
+        f"**{grade['label']}**에 해당합니다. "
+        + (
+            f"ZEB {grade_num - 1}등급 도달까지 추가 PV 또는 절감이 필요합니다."
+            if grade_num > 1 else
+            "최고 등급에 도달했습니다. 🎉"
+        )
+    )
 
 
 def _render_full_report_tab(result: dict, source_name: str) -> None:
