@@ -109,15 +109,34 @@ def render_rag_panel() -> None:
     # 인덱스 상태 확인
     ready, msg, count = is_index_ready()
     if not ready:
-        st.error(f"❌ {msg}")
-        with st.expander("인덱싱 실행 방법"):
-            st.code(
-                "# 프로젝트 루트에서 (가상환경 활성화 상태)\n"
-                "python scripts/build_index.py\n\n"
-                "# 또는 무료 로컬 임베딩 사용\n"
-                "python scripts/build_index.py --provider local",
-                language="bash",
-            )
+        st.info(
+            "**정책 Q&A는 로컬 환경에서 작동합니다.** "
+            "클라우드(Streamlit Community) 배포는 핵심 엔진인 BIM 진단·ROI를 "
+            "가볍고 안정적으로 운영하기 위해 경량 구성으로 두었고, "
+            "RAG 검색 모듈은 로컬에서 실행합니다."
+        )
+        st.markdown(
+            "**동작 방식** — 7개 법·고시·가이드라인(01 GR 가이드라인, 03 ZEB 인증기준, "
+            "04 녹색건축법, 05 지방세특례, 06 에너지절약설계기준, 09 영유아보육법)을 "
+            "ChromaDB로 벡터 인덱싱(16,048개 청크)하고, 질문과 의미가 가까운 조항을 "
+            "검색해 **근거 조항을 인용**하며 답변합니다."
+        )
+        st.markdown("**이런 질문에 답합니다**")
+        _ex = [
+            "ZEB 등급별 취득세 감면율은?",
+            "그린리모델링 사업 신청 자격은?",
+            "녹색건축법상 용적률 완화는 어떻게 적용되는가?",
+            "어린이집의 일조·채광 기준은?",
+            "보조금 지원 한도는 얼마인가?",
+            "에너지절약설계기준에서 외벽 열관류율 기준은?",
+        ]
+        _c = st.columns(2)
+        for _i, _q in enumerate(_ex):
+            _c[_i % 2].markdown(f"- {_q}")
+        st.caption(
+            "로컬 실행: `python scripts/build_index.py --provider local` → "
+            "`streamlit run streamlit_app.py`"
+        )
         return
 
     st.success(f"✅ {msg}")
