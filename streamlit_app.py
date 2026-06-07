@@ -180,11 +180,23 @@ def render_home():
 
     # 핵심 수치 (KEPCO 도담 검증 기준)
     st.markdown("### 검증 결과 — KEPCO 도담어린이집")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("자산화 ROI", "16.92%", help="KEPCO 검증 목표 16.9% 일치")
-    col2.metric("점수 상승", "+50점", "D → A 등급")
-    col3.metric("보강 비용", "5.31억", "11개 항목 전체")
-    col4.metric("회수 기간", "7.3년", "GR 단독 (에너지 절감만)")
+
+    st.markdown("**① BIM 정밀 진단**")
+    d1, d2, d3 = st.columns(3)
+    d1.metric("현재 등급", "D", "25 / 100점")
+    d2.metric("보강 후 등급", "A", "+50점")
+    d3.metric("BIM 정밀 보강비", "5.07억", "점수 기여 항목 기준")
+
+    st.markdown("**② 재무성 — 에너지 절감 회수**")
+    f1, f2, f3 = st.columns(3)
+    f1.metric("외피 보강 Max Cost", "1.81억", "50% 보조 → 자부담 0.91억")
+    f2.metric("연간 에너지 절감", "1,238만원", "BIM 정밀 산정")
+    f3.metric("회수 기간", "7.3년", "GR 단독 (에너지 절감만)")
+
+    st.caption(
+        "※ 자산화 ROI(약 16.9%)는 용적률 완화 증축을 가정한 조건부 민감도 결과로, "
+        "별도 시나리오로 분리 제시합니다."
+    )
 
     st.markdown("---")
 
