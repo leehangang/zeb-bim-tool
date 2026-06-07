@@ -29,7 +29,3 @@ python-dotenv>=1.0.0
 tenacity>=8.2.0            # API 재시도 로직
 reportlab>=4.0.0           # PDF 진단 리포트 생성
 
-# === 로컬 임베딩 (모드 1, EMBEDDING_PROVIDER=local) ===
---extra-index-url https://download.pytorch.org/whl/cpu
-torch
-sentence-transformers
