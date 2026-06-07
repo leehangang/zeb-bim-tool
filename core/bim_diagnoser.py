@@ -747,6 +747,8 @@ def generate_diagnosis_report(
         lines.append("|---|---|---|---|---|---|---|")
         cumulative_cost = 0
         cumulative_uplift = 0
+        excluded_cost = 0
+        excluded_labels = []
         for i, p in enumerate(roi_plan, 1):
             qty_str = f"{p['수량']:.1f} {p['단위']}" if p.get("수량") else "-"
             cost_str = f"{p['Max_Cost']:,}" if p.get("Max_Cost") else "산정불가"
@@ -754,18 +756,30 @@ def generate_diagnosis_report(
             new = p["보강후점수"]
             delta = p["점수상승"]
             eff = p.get("효율_점수당억", 0)
-            cumulative_cost += p.get("Max_Cost", 0)
-            cumulative_uplift += delta
+            if delta > 0:
+                cumulative_cost += p.get("Max_Cost", 0)
+                cumulative_uplift += delta
+                mark = ""
+            else:
+                # 점수표에 반영되지 않는 항목(예: 쿨루프)은 누적 총액에서 제외
+                excluded_cost += p.get("Max_Cost", 0)
+                excluded_labels.append(p["label"])
+                mark = " ※"
             lines.append(
-                f"| {i} | {p['label']} | {qty_str} | {cost_str} | "
+                f"| {i} | {p['label']}{mark} | {qty_str} | {cost_str} | "
                 f"{cur} → {new} | +{delta} | {eff:.2f} |"
             )
 
         lines.append("")
-        lines.append(f"**누적 보강 비용**: {cumulative_cost:,}원 "
+        lines.append(f"**누적 보강 비용(점수 기여 항목)**: {cumulative_cost:,}원 "
                      f"({cumulative_cost/100_000_000:.2f}억)")
         lines.append(f"**누적 점수 상승**: +{cumulative_uplift}점 "
                      f"({score['total_score']}점 → {score['total_score']+cumulative_uplift}점)")
+        if excluded_labels:
+            lines.append(
+                f"※ {', '.join(excluded_labels)}: 점수표 미반영(에너지 보조수단)으로 "
+                f"위 총액에서 제외 (별도 {excluded_cost:,}원)"
+            )
         lines.append("")
         lines.append("*효율 = 점수상승 ÷ (보강비용/억). 높을수록 가성비 좋음.*")
 
