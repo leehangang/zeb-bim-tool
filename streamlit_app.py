@@ -50,9 +50,9 @@ def _check_rag_index() -> bool:
 
 def _auto_unzip_chroma_if_needed():
     """
-    배포 환경에서 data/chroma_db.zip이 있으면 자동으로 압축 해제.
-    zip 내부 구조(폴더째 압축 / 내용물만 압축)와 무관하게
-    항상 data/chroma_db/ 안에 인덱스가 놓이도록 처리.
+    data/chroma_db.zip을 항상 data/chroma_db/ 안에 올바른 폴더 구조로 압축 해제.
+    Windows(PowerShell) zip의 역슬래시 경로를 슬래시로 정규화해
+    배포 환경(Linux)에서도 UUID 폴더가 폴더로 풀리게 한다.
     """
     from pathlib import Path
     import zipfile
@@ -60,24 +60,21 @@ def _auto_unzip_chroma_if_needed():
     chroma_dir = Path("./data/chroma_db")
     chroma_zip = Path("./data/chroma_db.zip")
 
-    # 이미 인덱스 폴더가 있고 비어있지 않으면 스킵
-    if chroma_dir.exists() and any(chroma_dir.iterdir()):
+    if (chroma_dir / "chroma.sqlite3").exists():
         return
     if not chroma_zip.exists():
         return
 
-    try:
-        with zipfile.ZipFile(chroma_zip, "r") as zf:
-            names = [n for n in zf.namelist() if n.strip()]
-            # chroma.sqlite3가 zip 최상위에 있으면 "내용물만" 압축된 것
-            contents_only = any(n == "chroma.sqlite3" for n in names)
-            if contents_only:
-                zf.extractall("./data/chroma_db/")   # 내용물 → 폴더 안으로
-            else:
-                zf.extractall("./data/")             # chroma_db/ 폴더째 → data/ 로
-    except Exception:
-        pass  # 실패해도 앱은 계속 실행
-
+    chroma_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(chroma_zip, "r") as zf:
+        for info in zf.infolist():
+            rel = info.filename.replace("\\", "/").lstrip("/")
+            if not rel or rel.endswith("/"):
+                continue
+            target = chroma_dir / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info) as src, open(target, "wb") as dst:
+                dst.write(src.read())
 
 # 앱 시작 시 1회 실행
 _auto_unzip_chroma_if_needed()
