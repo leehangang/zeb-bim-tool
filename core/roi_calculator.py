@@ -536,6 +536,37 @@ def calculate_acquisition_tax_relief(
     }
 
 
+def calculate_asset_value_noi(
+    annual_saving: float,
+    cap_rate: float = 0.05,
+    self_burden: float = 0.0,
+) -> Optional[dict]:
+    """
+    수익환원법 기반 자산가치 상승 (ΔValue = ΔNOI ÷ 환원율).
+
+    에너지 절감 → 운영비↓ → NOI(순영업이익)↑ → 자산가치↑.
+    감정평가 3방식(원가법·거래사례비교법·수익환원법) 중 수익환원법이라,
+    용적률 완화 증축 가정과 무관하게 기존 건물(증축 요건 미충족 포함)에도
+    적용 가능 — 2014년 준공 등 GR 용적률 완화 대상이 아닌 건물에 특히 유효.
+
+    ※ 주의: NPV(현금흐름)와 같은 절감 스트림을 다른 방식으로 환산한 것이므로
+       NPV와 자산가치 상승액을 더해서 "총 효익"으로 제시하면 이중계산.
+    """
+    if not annual_saving or annual_saving <= 0 or not cap_rate or cap_rate <= 0:
+        return None
+    asset_uplift = annual_saving / cap_rate
+    out = {
+        "방식": "수익환원법 (ΔNOI ÷ 환원율)",
+        "연_NOI_증가_원": int(annual_saving),
+        "환원율": cap_rate,
+        "자산가치_상승_원": int(asset_uplift),
+    }
+    if self_burden and self_burden > 0:
+        out["자부담_대비_pct"] = round(asset_uplift / self_burden * 100, 1)
+        out["자산_순증_원"] = int(asset_uplift - self_burden)  # 자산가치상승 − 자부담
+    return out
+
+
 # ====================================================================
 # Phase E2 - 현금흐름 수익성 (NPV / IRR / B-C / 할인회수)
 # ====================================================================
@@ -702,8 +733,17 @@ def calculate_roi(
     total_investment = subsidy_info["자부담"] + build_cost
     immediate_benefit = far["자산가치"] + tax["감면액"]
 
-    # 자산화 ROI: 신축비 대비 즉시 자산가치
-    asset_roi_pct = (far["자산가치"] / build_cost * 100) if build_cost > 0 else 0
+    # 자산가치(수익환원법): 에너지 절감 → NOI↑ → 자산가치↑ (증축 가정 무관)
+    asset_value = calculate_asset_value_noi(
+        annual_saving=annual_saving,
+        cap_rate=building_info.get("cap_rate", 0.05),
+        self_burden=subsidy_info["자부담"],
+    )
+    # 자산화 ROI: (구) 용적률 증축 신축비 대비 → (신) 수익환원 자산가치/자부담
+    asset_roi_pct = (
+        asset_value["자부담_대비_pct"]
+        if asset_value and "자부담_대비_pct" in asset_value else 0
+    )
 
     # 회수기간 두 가지로 분리 표시
     # 1. GR 단독 회수기간 (자부담 / 연간 절감)
@@ -724,6 +764,7 @@ def calculate_roi(
         "subsidy": subsidy_info,
         "build_cost": int(build_cost),
         "far_bonus": far,
+        "asset_value": asset_value,
         "tax_relief": tax,
         "annual_saving": int(annual_saving),
         "total_investment": int(total_investment),
