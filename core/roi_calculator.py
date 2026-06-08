@@ -537,6 +537,110 @@ def calculate_acquisition_tax_relief(
 
 
 # ====================================================================
+# Phase E2 - 현금흐름 수익성 (NPV / IRR / B-C / 할인회수)
+# ====================================================================
+# 정적 회수기간(자부담 ÷ 연절감)은 화폐의 시간가치를 무시합니다.
+# 공공시설(어린이집) 경제성 평가는 예비타당성조사(KDI) 방식의
+# NPV / B-C / 할인회수기간이 표준입니다.
+#
+# 기본 가정 (모두 출처 있는 보수적 값, 노란 셀처럼 조정 가능):
+#   - 할인율 4.5%      : KDI 사회적 할인율 (2017~, 비SOC 4.5%)
+#   - 에너지상승률 2.5%: 전기·도시가스 장기 평균 추세 (보수적)
+#   - 분석기간 20년    : 외피 단열·창호 내용연수 기준
+# --------------------------------------------------------------------
+
+def _npv_at(rate: float, flows: list) -> float:
+    """현금흐름 벡터의 순현재가치 (flows[0] = 0년차)."""
+    return sum(cf / ((1 + rate) ** i) for i, cf in enumerate(flows))
+
+
+def _irr(flows: list, lo: float = -0.9, hi: float = 5.0,
+         tol: float = 1e-8, maxit: int = 300) -> Optional[float]:
+    """이분법 내부수익률 (의존성 없이 IRR 산출). 부호변화 없으면 None."""
+    f_lo = _npv_at(lo, flows)
+    f_hi = _npv_at(hi, flows)
+    if f_lo * f_hi > 0:
+        return None
+    for _ in range(maxit):
+        mid = (lo + hi) / 2.0
+        f = _npv_at(mid, flows)
+        if abs(f) < tol or (hi - lo) < tol:
+            return mid
+        if f_lo * f < 0:
+            hi = mid
+        else:
+            lo = mid
+            f_lo = f
+    return (lo + hi) / 2.0
+
+
+def calculate_cashflow_metrics(
+    self_burden: float,
+    annual_saving: float,
+    analysis_years: int = 20,
+    energy_escalation: float = 0.025,
+    discount_rate: float = 0.045,
+    annual_maintenance: float = 0.0,
+) -> Optional[dict]:
+    """
+    GR 투자 현금흐름 기반 수익성 지표.
+
+    - 투자: 0년차에 자부담(Equity) 유출
+    - 편익: 매년 에너지 절감액(상승률 반영), 유지보수비 차감
+    - 할인: 사회적 할인율로 현재가치 환산
+    → NPV / IRR / B-C / 단순·할인 회수기간
+    """
+    if not self_burden or self_burden <= 0 or not annual_saving or annual_saving <= 0:
+        return None
+
+    self_burden = float(self_burden)
+    annual_saving = float(annual_saving)
+
+    flows = [-self_burden]
+    pv_benefit = nom_benefit = cum_nom = cum_disc = 0.0
+    nom_payback = disc_payback = None
+    yearly = []
+
+    for t in range(1, analysis_years + 1):
+        saving = annual_saving * ((1 + energy_escalation) ** (t - 1)) - annual_maintenance
+        flows.append(saving)
+        disc = saving / ((1 + discount_rate) ** t)
+        pv_benefit += disc
+        nom_benefit += saving
+        prev_nom, prev_disc = cum_nom, cum_disc
+        cum_nom += saving
+        cum_disc += disc
+        if nom_payback is None and cum_nom >= self_burden:
+            nom_payback = (t - 1) + (self_burden - prev_nom) / saving
+        if disc_payback is None and cum_disc >= self_burden:
+            disc_payback = (t - 1) + (self_burden - prev_disc) / disc
+        yearly.append({
+            "연차": t,
+            "절감액": int(saving),
+            "할인편익": int(disc),
+            "누적할인편익": int(cum_disc),
+        })
+
+    npv = pv_benefit - self_burden
+    irr = _irr(flows)
+
+    return {
+        "분석기간_년": analysis_years,
+        "할인율": discount_rate,
+        "에너지상승률": energy_escalation,
+        "자부담_원": int(self_burden),
+        "명목총절감_원": int(nom_benefit),
+        "편익현재가치_원": int(pv_benefit),
+        "NPV_원": int(npv),
+        "BC_ratio": round(pv_benefit / self_burden, 2),
+        "IRR": round(irr, 4) if irr is not None else None,
+        "단순회수_년": round(nom_payback, 1) if nom_payback else None,
+        "할인회수_년": round(disc_payback, 1) if disc_payback else None,
+        "_yearly": yearly,
+    }
+
+
+# ====================================================================
 # Phase F - 통합 ROI
 # ====================================================================
 
@@ -585,6 +689,15 @@ def calculate_roi(
     annual_saving_per_m2 = building_info.get("annual_energy_saving_won_per_m2", 9_900)
     annual_saving = building_info["total_area_m2"] * annual_saving_per_m2
 
+    # 현금흐름 기반 수익성 (NPV / IRR / B-C / 할인회수) — 자부담 기준
+    cashflow = calculate_cashflow_metrics(
+        self_burden=subsidy_info["자부담"],
+        annual_saving=annual_saving,
+        analysis_years=building_info.get("analysis_years", 20),
+        energy_escalation=building_info.get("energy_escalation", 0.025),
+        discount_rate=building_info.get("discount_rate", 0.045),
+    )
+
     # ROI 산출
     total_investment = subsidy_info["자부담"] + build_cost
     immediate_benefit = far["자산가치"] + tax["감면액"]
@@ -619,4 +732,5 @@ def calculate_roi(
         "asset_roi_pct": round(asset_roi_pct, 2),
         "gr_only_payback_years": round(gr_only_payback, 1) if gr_only_payback else None,
         "combined_payback_years": round(combined_payback, 1) if combined_payback else None,
+        "cashflow": cashflow,
     }
