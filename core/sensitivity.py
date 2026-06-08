@@ -23,6 +23,11 @@ core/sensitivity.py — 민감도 분석 엔진
 
 from typing import Dict, List, Optional
 
+from .roi_calculator import (
+    calculate_asset_value_noi,
+    calculate_cashflow_metrics,
+)
+
 
 # ────────────────────────────────────────────────────
 # 핵심 ROI 계산 (단순화 버전)
@@ -35,50 +40,75 @@ def compute_metrics(
     area_m2: float,
     far_bonus_value_won: float = 0,
     tax_relief_won: float = 0,
-    lifespan_years: int = 30,
+    lifespan_years: int = 20,
+    discount_rate: float = 0.045,
+    energy_escalation: float = 0.025,
+    cap_rate: float = 0.05,
 ) -> Dict[str, float]:
     """
     단일 시나리오의 핵심 ROI 지표 계산.
 
-    Returns:
-        {
-            "자부담_원": 자기부담금,
-            "GR_단독_회수년": 자부담 / 연간절감,
-            "통합_회수년": 자부담 / (절감 + 보너스 분할),
-            "자산화_ROI_pct": 30년 누적 효익 / 자부담 × 100,
-            "30년_총효익_원": 절감×30 + 보너스 + 세금감면,
-        }
+    ③-b 개편: 비할인 30년 단순합산(+용적률 포함) → 할인 현금흐름(NPV/IRR/B-C)
+    + 수익환원 자산가치로 교체. 분석기간 20년으로 Mode 2와 통일.
+
+    Returns(신):
+        NPV_원 / IRR / BC_ratio / 할인회수_년 / 편익현재가치_원
+        자산가치_수익환원_원 (ΔNOI÷환원율)
+        취득세감면_원 / 용적률자산가치_원 (조건부, 별도 표시용)
+    Returns(구·호환): 자부담_원 / GR_단독_회수년 / 통합_회수년 /
+        자산화_ROI_pct / 30년_총효익_원
     """
     own_burden = total_cost_won * (1 - subsidy_rate)
 
-    if annual_saving_won <= 0:
-        gr_payback = float("inf")
-    else:
-        gr_payback = own_burden / annual_saving_won
+    gr_payback = (
+        own_burden / annual_saving_won if annual_saving_won > 0 else float("inf")
+    )
 
-    # 통합 회수기간: 보너스를 30년 동안 분할 환산
+    # ── 신(방어 가능): 할인 현금흐름 + 수익환원 ──
+    cf = calculate_cashflow_metrics(
+        self_burden=own_burden,
+        annual_saving=annual_saving_won,
+        analysis_years=lifespan_years,
+        discount_rate=discount_rate,
+        energy_escalation=energy_escalation,
+    )
+    av = calculate_asset_value_noi(
+        annual_saving=annual_saving_won,
+        cap_rate=cap_rate,
+        self_burden=own_burden,
+    )
+
+    # ── 구(호환용): 비할인 합산 — 표시엔 안 쓰지만 키 보존 ──
     annual_bonus = (far_bonus_value_won + tax_relief_won) / lifespan_years
     total_annual = annual_saving_won + annual_bonus
-    if total_annual <= 0:
-        combined_payback = float("inf")
-    else:
-        combined_payback = own_burden / total_annual
-
-    total_benefit_30y = (
-        annual_saving_won * lifespan_years
-        + far_bonus_value_won
-        + tax_relief_won
+    combined_payback = (
+        own_burden / total_annual if total_annual > 0 else float("inf")
+    )
+    total_benefit = (
+        annual_saving_won * lifespan_years + far_bonus_value_won + tax_relief_won
     )
     asset_roi_pct = (
-        (total_benefit_30y / own_burden * 100) if own_burden > 0 else float("inf")
+        (total_benefit / own_burden * 100) if own_burden > 0 else float("inf")
     )
 
     return {
         "자부담_원": own_burden,
         "GR_단독_회수년": gr_payback,
         "통합_회수년": combined_payback,
-        "자산화_ROI_pct": asset_roi_pct,
-        "30년_총효익_원": total_benefit_30y,
+        "자산화_ROI_pct": asset_roi_pct,          # (구) 호환용
+        "30년_총효익_원": total_benefit,           # (구) 호환용
+        # ── 신 ──
+        "NPV_원": cf["NPV_원"] if cf else 0.0,
+        "IRR": cf["IRR"] if cf else None,
+        "BC_ratio": cf["BC_ratio"] if cf else 0.0,
+        "할인회수_년": cf["할인회수_년"] if cf else None,
+        "편익현재가치_원": cf["편익현재가치_원"] if cf else 0.0,
+        "자산가치_수익환원_원": av["자산가치_상승_원"] if av else 0.0,
+        "취득세감면_원": tax_relief_won,
+        "용적률자산가치_원": far_bonus_value_won,
+        "분석기간_년": lifespan_years,
+        "할인율": discount_rate,
+        "환원율": cap_rate,
     }
 
 
@@ -111,6 +141,9 @@ def sensitivity_subsidy(
             "자부담_억": m["자부담_원"] / 1e8,
             "GR_단독_회수년": m["GR_단독_회수년"],
             "통합_회수년": m["통합_회수년"],
+            "할인회수_년": m["할인회수_년"],
+            "NPV_억": m["NPV_원"] / 1e8,
+            "BC_ratio": m["BC_ratio"],
             "자산화_ROI_pct": m["자산화_ROI_pct"],
             "_is_baseline": abs(r - baseline["subsidy_rate"]) < 0.001,
         })
@@ -142,6 +175,9 @@ def sensitivity_cost(
             "보강비용_억": b["total_cost_won"] / 1e8,
             "자부담_억": m["자부담_원"] / 1e8,
             "GR_단독_회수년": m["GR_단독_회수년"],
+            "할인회수_년": m["할인회수_년"],
+            "NPV_억": m["NPV_원"] / 1e8,
+            "BC_ratio": m["BC_ratio"],
             "자산화_ROI_pct": m["자산화_ROI_pct"],
             "_is_baseline": abs(d) < 0.001,
         })
@@ -172,6 +208,9 @@ def sensitivity_saving(
             "연간절감_만원": b["annual_saving_won"] / 1e4,
             "GR_단독_회수년": m["GR_단독_회수년"],
             "통합_회수년": m["통합_회수년"],
+            "할인회수_년": m["할인회수_년"],
+            "NPV_억": m["NPV_원"] / 1e8,
+            "BC_ratio": m["BC_ratio"],
             "자산화_ROI_pct": m["자산화_ROI_pct"],
             "_is_baseline": abs(d) < 0.001,
         })
