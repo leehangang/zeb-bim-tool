@@ -122,6 +122,11 @@ def apply_scenario(
         "세금감면_만원": tax_relief / 1e4,
         "GR_단독_회수년": metrics["GR_단독_회수년"],
         "통합_회수년": metrics["통합_회수년"],
+        "할인회수년": metrics["할인회수_년"],
+        "NPV_억": metrics["NPV_원"] / 1e8,
+        "IRR": metrics["IRR"],
+        "BC_ratio": metrics["BC_ratio"],
+        "자산가치_수익환원_억": metrics["자산가치_수익환원_원"] / 1e8,
         "자산화_ROI_pct": metrics["자산화_ROI_pct"],
         "30년_총효익_억": metrics["30년_총효익_원"] / 1e8,
     }
@@ -161,11 +166,11 @@ def recommend_scenario(
             "보조금과 인센티브를 다 챙길 때 가장 빨리 본전 회수."
         )
     elif user_priority == "ROI":
-        # 30년 자산화 ROI 가장 높은 시나리오
-        best = max(scenarios, key=lambda s: s["자산화_ROI_pct"])
+        # 편익/비용(B-C)이 가장 높은 시나리오
+        best = max(scenarios, key=lambda s: s["BC_ratio"])
         reason = (
-            f"30년 자산화 ROI가 가장 높음 ({best['자산화_ROI_pct']:.1f}%). "
-            "장기적으로 가장 큰 총 수익."
+            f"편익/비용(B-C)이 가장 높음 ({best['BC_ratio']:.2f}배). "
+            "투입 1원당 할인편익이 가장 큼 (장기 경제성 최고)."
         )
     elif user_priority == "초기부담":
         # 자부담이 가장 적은 시나리오
@@ -175,13 +180,14 @@ def recommend_scenario(
             "예산 제약이 큰 케이스에 적합."
         )
     else:
-        # 기본: 균형 (회수기간 + ROI 조합 점수)
+        # 기본: 균형 (회수기간 + B-C 조합 점수)
         def balance_score(s):
-            payback_score = max(0, 30 - s["통합_회수년"]) / 30 * 100
-            roi_score = min(s["자산화_ROI_pct"], 200) / 2  # 최대 100
+            payback = s["할인회수년"] if s["할인회수년"] else 99
+            payback_score = max(0, 30 - payback) / 30 * 100
+            roi_score = min(s["BC_ratio"], 4) / 4 * 100  # 최대 100
             return payback_score + roi_score
         best = max(scenarios, key=balance_score)
-        reason = "회수기간과 ROI의 균형이 가장 좋음."
+        reason = "할인회수기간과 B-C의 균형이 가장 좋음."
 
     return {
         "best_scenario": best,
