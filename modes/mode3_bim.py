@@ -872,8 +872,10 @@ def _render_sensitivity_tab(result: dict) -> None:
     colors = ["#FFE0B2", "#C8E6C9", "#BBDEFB"]  # 주황 / 초록 / 파랑
     for col, sc, color in zip(cols, scenarios, colors):
         with col:
-            payback = sc["통합_회수년"]
-            payback_str = f"{payback:.1f}년" if payback < 99 else "∞"
+            payback = sc["할인회수년"]
+            payback_str = f"{payback:.1f}년" if (payback and payback < 99) else "∞"
+            irr = sc["IRR"]
+            irr_str = f"{irr*100:.1f}%" if irr is not None else "—"
             st.markdown(
                 f"""
 <div style="background:{color}; padding:14px; border-radius:10px; min-height:240px;">
@@ -881,13 +883,20 @@ def _render_sensitivity_tab(result: dict) -> None:
 <div style="color:#555; font-size:0.85em; margin-bottom:10px;">{sc['desc']}</div>
 <div>보조율: <b>{sc['subsidy_pct']:.0f}%</b></div>
 <div>자부담: <b>{sc['자부담_억']:.2f}억</b></div>
-<div>회수기간: <b>{payback_str}</b></div>
-<div>30년 ROI: <b>{sc['자산화_ROI_pct']:.0f}%</b></div>
-<div>총효익(30y): <b>{sc['30년_총효익_억']:.2f}억</b></div>
+<div>할인회수: <b>{payback_str}</b></div>
+<div>NPV: <b>+{sc['NPV_억']:.2f}억</b> · IRR <b>{irr_str}</b></div>
+<div>B-C: <b>{sc['BC_ratio']:.2f}배</b></div>
+<div style="font-size:0.85em; color:#555; margin-top:4px;">자산가치(수익환원): {sc['자산가치_수익환원_억']:.2f}억</div>
 </div>
                 """,
                 unsafe_allow_html=True,
             )
+
+    st.caption(
+        "※ NPV·IRR·B-C는 자부담 대비 20년 할인 현금흐름 기준. "
+        "자산가치(수익환원)는 ΔNOI÷환원율(5%)로 환산한 별도 관점이며 NPV와 합산하지 않습니다. "
+        "용적률 완화 자산가치는 증축 계획 시에만 적용되는 조건부 항목으로 분리합니다."
+    )
 
     # 우선순위별 추천
     st.markdown("##### 🏆 우선순위별 최적 시나리오")
@@ -946,7 +955,8 @@ def _render_sensitivity_tab(result: dict) -> None:
                 if r["GR_단독_회수년"] < 99 else "∞",
             "통합 회수기간": f"{r['통합_회수년']:.1f}년"
                 if r["통합_회수년"] < 99 else "∞",
-            "30년 ROI": f"{r['자산화_ROI_pct']:.0f}%",
+            "NPV": f"{r['NPV_억']:+.2f}억",
+            "B-C": f"{r['BC_ratio']:.2f}",
         } for r in rows])
         st.dataframe(df, hide_index=True, use_container_width=True)
 
@@ -959,7 +969,8 @@ def _render_sensitivity_tab(result: dict) -> None:
             "자부담": f"{r['자부담_억']:.2f}억",
             "GR 회수기간": f"{r['GR_단독_회수년']:.1f}년"
                 if r["GR_단독_회수년"] < 99 else "∞",
-            "30년 ROI": f"{r['자산화_ROI_pct']:.0f}%",
+            "NPV": f"{r['NPV_억']:+.2f}억",
+            "B-C": f"{r['BC_ratio']:.2f}",
         } for r in rows])
         st.dataframe(df, hide_index=True, use_container_width=True)
 
@@ -973,7 +984,8 @@ def _render_sensitivity_tab(result: dict) -> None:
                 if r["GR_단독_회수년"] < 99 else "∞",
             "통합 회수기간": f"{r['통합_회수년']:.1f}년"
                 if r["통합_회수년"] < 99 else "∞",
-            "30년 ROI": f"{r['자산화_ROI_pct']:.0f}%",
+            "NPV": f"{r['NPV_억']:+.2f}억",
+            "B-C": f"{r['BC_ratio']:.2f}",
         } for r in rows])
         st.dataframe(df, hide_index=True, use_container_width=True)
 
