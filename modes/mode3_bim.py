@@ -98,9 +98,13 @@ def render_bim_panel() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    # 샘플 갤러리 (1-클릭 시연용)
-    with st.expander("🎯 데모용 샘플 케이스 (1-클릭)", expanded=False):
-        st.caption("실제 BIM 파일이 없어도 가상 케이스로 진단 흐름을 체험할 수 있습니다.")
+    # 입력 영역 — 진단 결과가 있으면 접어서 결과를 먼저 보이게 (UX)
+    _has_result = st.session_state.get("_mode3_result") is not None
+    with st.expander(
+        "🏢 분석할 건물 선택 — 데모 케이스 클릭 또는 BIM 파일 업로드",
+        expanded=not _has_result,
+    ):
+        st.caption("실제 BIM 파일이 없어도 데모 케이스로 진단 흐름을 체험할 수 있습니다.")
         sample_cols = st.columns(3)
         samples = [
             ("doam_archi_sample.json",
@@ -125,23 +129,21 @@ def render_bim_panel() -> None:
                     st.session_state["_mode3_sample_name"] = fname
                     st.rerun()
 
-    # 입력 영역
-    col_upload, col_opts = st.columns([2, 1])
-
-    with col_upload:
-        uploaded = st.file_uploader(
-            "또는 BIM JSON 파일 직접 업로드",
-            type=["json"],
-            help="BIM에서 추출한 건물 객체 정보(벽·창·문·지붕·바닥·설비 등) JSON",
-        )
-
-    with col_opts:
-        duration = st.slider(
-            "예상 공사 기간 (개월)",
-            min_value=3, max_value=24, value=8, step=1,
-            help="조달청 간접공사비 기준 적용. 공사기간 구간별 요율을 반영합니다.",
-        )
-        run_btn = st.button("진단 실행", type="primary", width="stretch")
+        st.markdown("")  # 간격
+        col_upload, col_opts = st.columns([2, 1])
+        with col_upload:
+            uploaded = st.file_uploader(
+                "또는 BIM JSON 파일 직접 업로드",
+                type=["json"],
+                help="BIM에서 추출한 건물 객체 정보(벽·창·문·지붕·바닥·설비 등) JSON",
+            )
+        with col_opts:
+            duration = st.slider(
+                "예상 공사 기간 (개월)",
+                min_value=3, max_value=24, value=8, step=1,
+                help="조달청 간접공사비 기준 적용. 공사기간 구간별 요율을 반영합니다.",
+            )
+            run_btn = st.button("진단 실행", type="primary", width="stretch")
 
     # ---------------------------------------------------------------
     # 진단 결과 캐싱 (session_state)
@@ -197,6 +199,10 @@ def render_bim_panel() -> None:
 
         st.session_state["_mode3_result"] = result
         st.session_state["_mode3_input_key"] = input_key
+        try:
+            st.toast("진단 완료 — 결과를 아래에서 확인하세요.", icon="✅")
+        except Exception:
+            pass
     else:
         result = cached_result
 

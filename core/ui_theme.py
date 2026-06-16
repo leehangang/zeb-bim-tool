@@ -290,6 +290,18 @@ code { background: var(--brand-050) !important; color: var(--brand-700) !importa
 
 /* 푸터 */
 .zeb-footer { margin-top: 3.5rem; padding-top: 1.4rem; border-top: 1px solid var(--border); text-align: center; color: var(--ink-300); font-size: 0.82rem; }
+
+/* ── 반응형 (좁은 화면·모바일) ───────────────────── */
+@media (max-width: 700px) {
+    .main .block-container { padding-left: 0.9rem; padding-right: 0.9rem; }
+    .zeb-topbar { flex-direction: column; align-items: flex-start; gap: 0.55rem; }
+    .zeb-topbar .ctx { justify-content: flex-start; }
+    .zeb-hero { padding: 1.2rem 0 1rem 0; }
+    .zeb-hero h1 { font-size: 1.7rem !important; }
+    .zeb-hero .lede { font-size: 0.98rem; }
+    [data-testid="stMetricValue"] { font-size: 1.4rem !important; }
+    .stTabs [data-baseweb="tab"] { padding: 0.5rem 0.7rem !important; font-size: 0.86rem !important; }
+}
 </style>
 """
 
