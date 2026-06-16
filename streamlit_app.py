@@ -1,5 +1,6 @@
 import os
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+# redeploy: 전문 플랫폼 리디자인 + ZEB 인증 정밀도 (클린 재배포 트리거)
 
 """
 ZEB-ROI 그린리모델링 의사결정 플랫폼 — 메인 앱
