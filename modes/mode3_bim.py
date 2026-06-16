@@ -132,14 +132,14 @@ def render_bim_panel() -> None:
         uploaded = st.file_uploader(
             "또는 BIM JSON 파일 직접 업로드",
             type=["json"],
-            help="Dynamo 노드로 추출한 walls/windows/doors/.../bems_installed 스키마 JSON",
+            help="BIM에서 추출한 건물 객체 정보(벽·창·문·지붕·바닥·설비 등) JSON",
         )
 
     with col_opts:
         duration = st.slider(
             "예상 공사 기간 (개월)",
             min_value=3, max_value=24, value=8, step=1,
-            help="08 간접공사비 매트릭스 적용용. 6/12/36개월 구간별 율 다름.",
+            help="조달청 간접공사비 기준 적용. 공사기간 구간별 요율을 반영합니다.",
         )
         run_btn = st.button("진단 실행", type="primary", width="stretch")
 
@@ -172,8 +172,8 @@ def render_bim_panel() -> None:
 
     if source_for_diagnosis is None and cached_result is None:
         st.info(
-            "👈 위에서 데모 케이스를 클릭하거나 BIM JSON 파일을 업로드하세요.\n\n"
-            "스키마 예시: `data/sample_bim/doam_archi_sample.json`"
+            "위에서 데모 케이스를 클릭하거나 BIM JSON 파일을 업로드하면 "
+            "진단이 시작됩니다."
         )
         return
 

@@ -148,8 +148,8 @@ def render_intake_panel() -> None:
         </div>
         <h1 style="margin:0.2rem 0;">📋 사업 신청 인테이크</h1>
         <div style="color:#757575;">
-            공공건축물 그린리모델링 사업 신청에 필요한 정보를 챗봇과 대화로 수집하고
-            신청서 초안 마크다운을 자동 생성합니다. 출처: 01 GR 가이드라인.
+            공공건축물 그린리모델링 사업 신청에 필요한 정보를 대화로 수집하고
+            신청서 초안을 자동 생성합니다. 근거: 그린리모델링 가이드라인.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -372,7 +372,7 @@ def _render_draft_tab(session) -> None:
     # 현재까지의 상태로 임시 미리보기 (필수 부족해도)
     st.subheader("📄 신청서 미리보기 (현재 상태 기준)")
     preview_md = render_application_markdown(session.application)
-    with st.expander("마크다운 보기/숨기기", expanded=progress["is_ready_for_draft"]):
+    with st.expander("초안 전문 보기/숨기기", expanded=progress["is_ready_for_draft"]):
         st.markdown(preview_md)
 
     # 다운로드 (필수 모두 채워졌을 때만)

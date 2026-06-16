@@ -94,9 +94,6 @@ with st.sidebar:
     # 모드 선택
     st.markdown("**모드 선택**")
 
-    has_api = _check_anthropic_key()
-    has_index = _check_rag_index()
-
     mode_options = [
         "🏠 홈",
         "🏢 BIM 진단 + ROI",
@@ -112,17 +109,6 @@ with st.sidebar:
     )
 
     st.markdown("---")
-
-    # 시스템 상태
-    with st.expander("🔧 시스템 상태", expanded=False):
-        st.markdown(f"- Claude API: {'🟢 연결됨' if has_api else '🔴 키 미설정'}")
-        st.markdown(f"- RAG 인덱스: {'🟢 준비됨' if has_index else '🟡 미생성'}")
-        st.markdown(f"- 단가DB: 🟢 로드 가능")
-
-        if not has_api:
-            st.caption("→ Mode 1, 2, 4 사용 시 .env에 ANTHROPIC_API_KEY 필요")
-        if not has_index:
-            st.caption("→ Mode 1 사용 시 `python scripts/build_index.py` 실행")
 
     # 프로젝트 정보
     with st.expander("ℹ️ 프로젝트 정보", expanded=False):
@@ -209,87 +195,32 @@ def render_home():
         st.markdown(card_html(
             "🏢",
             "BIM 진단 + ROI 분석",
-            "Dynamo로 추출한 Revit BIM JSON을 업로드하면 11개 GR 기술요소를 자동 매핑하고, "
-            "01 가이드라인 정량평가표로 채점하며, 보강 우선순위를 효율 순으로 산출합니다.",
-            badge="API 키 불필요"
+            "BIM 모델을 업로드하면 11개 그린리모델링 기술요소를 자동 진단하고, "
+            "보강 우선순위·비용·보조금·ZEB 등급·회수기간을 한 번에 산출합니다.",
+            badge="핵심 엔진"
         ), unsafe_allow_html=True)
 
         st.markdown(card_html(
             "💰",
             "ROI 시뮬레이션",
-            "자연어로 \"연면적 1,200㎡, ZEB 5등급 목표\"라고 말하면 Claude가 파라미터를 추출해 "
-            "Max Cost·보조금·취득세 감면·회수기간을 한 번에 산출합니다.",
-            badge=None if has_api else "API 키 필요"
+            "자연어로 건물 조건(연면적·목표 등급 등)을 입력하면 공사비·보조금·"
+            "취득세 감면·회수기간을 즉시 계산합니다.",
         ), unsafe_allow_html=True)
 
     with col2:
         st.markdown(card_html(
             "💬",
-            "정책 Q&A (RAG)",
-            "01/03/04/05/06/09 7개 법·고시·가이드라인을 ChromaDB로 인덱싱한 검색-증강 챗봇. "
-            "근거 조항을 인용해 답변합니다.",
-            badge=None if (has_api and has_index) else (
-                "인덱스 필요" if not has_index else "API 키 필요"
-            )
+            "정책 Q&A",
+            "그린리모델링 관련 법·고시·가이드라인 원문에서 근거 조항을 찾아 "
+            "인용하며 답변합니다.",
         ), unsafe_allow_html=True)
 
         st.markdown(card_html(
             "📋",
             "사업 신청 인테이크",
-            "공공건축물 그린리모델링 사업 신청에 필요한 21개 항목을 챗봇과 대화로 수집하고 "
-            "신청서 초안 마크다운을 자동 생성합니다.",
-            badge=None if has_api else "API 키 필요"
+            "공공건축물 그린리모델링 사업 신청에 필요한 항목을 대화로 수집하고 "
+            "신청서 초안을 자동 생성합니다.",
         ), unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # 빠른 시작
-    st.markdown("### 빠른 시작")
-    quickstart = st.columns([1, 1, 1])
-    with quickstart[0]:
-        st.markdown(
-            """
-            **01 · 데모 데이터로 체험**
-
-            왼쪽 메뉴에서 **BIM 진단 + ROI** 선택 →
-            `doam_archi_sample.json` 업로드 → 진단 실행
-            """
-        )
-    with quickstart[1]:
-        st.markdown(
-            """
-            **02 · Claude API 키 설정**
-
-            `.env` 파일에 `ANTHROPIC_API_KEY` 입력 →
-            재시작 → Mode 1 / 2 / 4 활성화
-            """
-        )
-    with quickstart[2]:
-        st.markdown(
-            """
-            **03 · 정책 자료 인덱싱**
-
-            `python scripts/build_index.py` 실행 →
-            7개 PDF가 ChromaDB로 벡터화 → Mode 1 활성화
-            """
-        )
-
-    # 기술 스택
-    st.markdown("---")
-    st.markdown("### 기술 스택")
-    tech_col1, tech_col2, tech_col3, tech_col4 = st.columns(4)
-    with tech_col1:
-        st.markdown("**BIM 진단 엔진**")
-        st.caption("• Python 3.10+\n• 11개 GR 매핑 규칙\n• 효율 기반 우선순위")
-    with tech_col2:
-        st.markdown("**ROI 계산기**")
-        st.caption("• 07 조달청 단가DB\n• 08 간접공사비 매트릭스\n• 보조금·감면·인센티브")
-    with tech_col3:
-        st.markdown("**RAG 검색**")
-        st.caption("• ChromaDB\n• OpenAI/Local 임베딩\n• 페이지 단위 청킹")
-    with tech_col4:
-        st.markdown("**Function Calling**")
-        st.caption("• Claude Haiku 4.5\n• 자연어 → 도구 호출\n• 멀티턴 대화")
 
 
 # 상단 브랜드 바 (모든 페이지 공통 프레임)

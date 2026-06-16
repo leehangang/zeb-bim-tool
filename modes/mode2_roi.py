@@ -178,25 +178,16 @@ def _render_history() -> None:
             st.markdown("**🤖 답변**")
             st.markdown(result["answer"])
 
-            # 도구 호출 정보
+            # 계산 내역 (결정적 ROI 엔진 입력·결과 — 투명성)
             if result.get("tool_calls"):
                 with st.expander(
-                    f"🔧 도구 호출 ({len(result['tool_calls'])}회)"
+                    f"📋 계산 내역 ({len(result['tool_calls'])}건)"
                 ):
                     for j, tc in enumerate(result["tool_calls"], 1):
-                        st.markdown(f"**호출 {j}: `{tc['name']}`**")
-                        st.markdown("**입력:**")
+                        st.markdown("**입력 조건**")
                         st.json(tc["input"])
-                        st.markdown("**결과:**")
+                        st.markdown("**산출 결과**")
                         if tc.get("is_error"):
                             st.error(tc["result"])
                         else:
                             st.json(tc["result"])
-
-            # 메타 (모델 + 토큰)
-            with st.expander("ℹ️ API 호출 정보"):
-                st.json({
-                    "model": result.get("model"),
-                    "usage": result.get("usage", {}),
-                    "iterations": result.get("iterations"),
-                })
