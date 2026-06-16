@@ -33,13 +33,17 @@ GR_ENERGY_REDUCTION = {
     "11_BEMS":          0.05,
 }
 
-ZEB_GRADE_THRESHOLDS = [
-    (100, 1, "ZEB 1등급 (Net Zero)"),
-    (80,  2, "ZEB 2등급"),
-    (60,  3, "ZEB 3등급"),
-    (40,  4, "ZEB 4등급"),
-    (20,  5, "ZEB 5등급"),
+# 제1호: 에너지자립률(%) 기준 ZEB 등급 (자립률_하한, 등급키, 라벨, rank).
+# rank 클수록 상위 등급. ZEB 등급은 +등급·1~5등급 (ABCDE 아님).
+ZEB_AUTONOMY_THRESHOLDS = [
+    (120, "+", "ZEB 플러스등급", 6),
+    (100, "1", "ZEB 1등급",     5),
+    (80,  "2", "ZEB 2등급",     4),
+    (60,  "3", "ZEB 3등급",     3),
+    (40,  "4", "ZEB 4등급",     2),
+    (20,  "5", "ZEB 5등급",     1),
 ]
+NO_GRADE = {"grade": "-", "label": "등급 미달 (ZEB 인증 불가)", "rank": 0}
 
 PV_YIELD_BY_REGION = {
     "중부1": 1250,
@@ -58,23 +62,26 @@ PRIMARY_ENERGY_FACTORS = {
 }
 ELECTRICITY_PEF = PRIMARY_ENERGY_FACTORS["전력"]   # PV 발전(전력) 1차에너지 환산
 
-# 비주거 건축물 에너지효율등급 — 보강 후 단위면적당 1차에너지소요량(kWh/㎡·년) 상한.
-# (국토부·산업부 「건축물 에너지효율등급 인증 및 ZEB 인증 기준」 별표 표준값)
-NONRES_EFFICIENCY_GRADES = [
-    ("1+++",  80),
-    ("1++",  140),
-    ("1+",   200),
-    ("1",    260),
-    ("2",    320),
-    ("3",    380),
-    ("4",    450),
-    ("5",    520),
-    ("6",    610),
-    ("7",    700),
+# 제2호: 연간 단위면적당 1차에너지소요량(kWh/㎡·년) '미만' 기준 ZEB 등급.
+# (PV 신재생 차감 후 순(net) 1차에너지소요량. 값이 작을수록(음수 포함) 상위 등급)
+# (소요량_상한, 등급키, 라벨, rank).  출처: ZEB 인증기준 별표 제2호.
+ZEB_PRIMARY_THRESHOLDS_NONRES = [   # 비주거용
+    (-70, "+", "ZEB 플러스등급", 6),
+    (-30, "1", "ZEB 1등급",     5),
+    (10,  "2", "ZEB 2등급",     4),
+    (50,  "3", "ZEB 3등급",     3),
+    (90,  "4", "ZEB 4등급",     2),
+    (130, "5", "ZEB 5등급",     1),
 ]
-# ZEB 인증 의무요건: 에너지효율 1++ 이상이어야 함 (1차에너지소요량 < 140)
-ZEB_REQUIRED_EFFICIENCY_GRADES = {"1+++", "1++"}
-ZEB_MIN_AUTONOMY_PCT = 20.0   # 자립률 최소 20% (ZEB 5등급)
+ZEB_PRIMARY_THRESHOLDS_RES = [      # 주거용
+    (-10, "+", "ZEB 플러스등급", 6),
+    (10,  "1", "ZEB 1등급",     5),
+    (30,  "2", "ZEB 2등급",     4),
+    (50,  "3", "ZEB 3등급",     3),
+    (70,  "4", "ZEB 4등급",     2),
+    (90,  "5", "ZEB 5등급",     1),
+]
+RESIDENTIAL_USES = {"공동주택", "주택", "기숙사", "아파트", "오피스텔"}
 
 
 def get_base_energy(building_use: str = "어린이집") -> float:
@@ -144,60 +151,62 @@ def calculate_pv_generation(bim: dict) -> dict:
 
 
 def determine_grade(autonomy_pct: float) -> dict:
-    for threshold, grade, label in ZEB_GRADE_THRESHOLDS:
-        if autonomy_pct >= threshold:
-            return {
-                "grade": grade,
-                "label": label,
-                "threshold_pct": threshold,
-            }
-    return {
-        "grade": 0,
-        "label": "등급 미달 (ZEB 인증 불가)",
-        "threshold_pct": 20,
-    }
+    """제1호 — 에너지자립률(%) 기준 ZEB 등급."""
+    for lo, g, label, rank in ZEB_AUTONOMY_THRESHOLDS:
+        if autonomy_pct >= lo:
+            return {"grade": g, "label": label, "rank": rank, "threshold": lo}
+    return {**NO_GRADE, "threshold": 20}
 
 
-def determine_efficiency_grade(primary_energy_req: float) -> dict:
-    """보강 후 단위면적당 1차에너지소요량(kWh/㎡·년) → 비주거 에너지효율등급."""
-    for grade, upper in NONRES_EFFICIENCY_GRADES:
-        if primary_energy_req < upper:
-            return {
-                "grade": grade,
-                "upper_limit": upper,
-                "meets_zeb_min": grade in ZEB_REQUIRED_EFFICIENCY_GRADES,
-            }
-    return {"grade": "등급외", "upper_limit": None, "meets_zeb_min": False}
+def determine_grade_clause2(net_primary_kwh_m2: float,
+                            is_residential: bool = False) -> dict:
+    """제2호 — 연간 단위면적당 1차에너지소요량(PV 차감 후 net) 기준 ZEB 등급."""
+    table = ZEB_PRIMARY_THRESHOLDS_RES if is_residential else ZEB_PRIMARY_THRESHOLDS_NONRES
+    for upper, g, label, rank in table:
+        if net_primary_kwh_m2 < upper:
+            return {"grade": g, "label": label, "rank": rank, "threshold": upper}
+    return {**NO_GRADE, "threshold": table[-1][0]}
+
+
+def pick_higher_grade(g1: dict, g2: dict) -> dict:
+    """제1호·제2호 중 더 높은 등급을 ZEB 인증등급으로."""
+    return g1 if g1.get("rank", 0) >= g2.get("rank", 0) else g2
 
 
 def check_zeb_requirements(
-    efficiency_grade: dict,
-    autonomy_pct: float,
+    grade_clause1: dict,
+    grade_clause2: dict,
     bems_installed: bool,
+    autonomy_pct: float,
+    net_primary_kwh_m2: float,
 ) -> dict:
-    """ZEB 인증 3대 의무요건 판정.
+    """ZEB 인증요건 판정 — (제1호 또는 제2호) 그리고 제3호.
 
-    ① 건축물 에너지효율등급 1++ 이상
-    ② 에너지자립률 20% 이상
-    ③ BEMS 또는 전자식 원격검침계량기 설치
-    셋 다 충족해야 ZEB 인증 가능.
+    제1호: 에너지자립률 20% 이상 (= 자립률로 5등급 이상 산정)
+    제2호: 연간 단위면적당 1차에너지소요량 기준 충족 (= 소요량으로 5등급 이상)
+    제3호: BEMS·전자식 원격검침 설치
+    → (제1호 OR 제2호) AND 제3호 이면 인증 가능. 세 개 모두 충족할 필요는 없음.
     """
-    eff_ok = bool(efficiency_grade.get("meets_zeb_min"))
-    autonomy_ok = autonomy_pct >= ZEB_MIN_AUTONOMY_PCT
+    c1_ok = grade_clause1.get("rank", 0) >= 1     # 제1호로 5등급 이상
+    c2_ok = grade_clause2.get("rank", 0) >= 1     # 제2호로 5등급 이상
     bems_ok = bool(bems_installed)
+    certifiable = (c1_ok or c2_ok) and bems_ok
     return {
-        "효율등급_충족": eff_ok,
-        "자립률_충족": autonomy_ok,
-        "BEMS_충족": bems_ok,
-        "인증가능": eff_ok and autonomy_ok and bems_ok,
+        "제1호_충족": c1_ok,
+        "제2호_충족": c2_ok,
+        "제3호_BEMS_충족": bems_ok,
+        "인증가능": certifiable,
         "items": [
-            {"요건": "건축물 에너지효율등급 1++ 이상",
-             "현재": efficiency_grade.get("grade", "-"), "충족": eff_ok},
-            {"요건": "에너지자립률 20% 이상",
-             "현재": f"{autonomy_pct:.1f}%", "충족": autonomy_ok},
-            {"요건": "BEMS·원격검침 설치",
+            {"요건": "제1호 · 에너지자립률 20% 이상",
+             "현재": f"{autonomy_pct:.1f}%", "충족": c1_ok},
+            {"요건": "제2호 · 1차에너지소요량 기준",
+             "현재": (grade_clause2.get("label", "-") if c2_ok else
+                      f"{net_primary_kwh_m2:.0f} kWh/㎡ (미달)"),
+             "충족": c2_ok},
+            {"요건": "제3호 · BEMS·원격검침 설치",
              "현재": "설치" if bems_ok else "미설치", "충족": bems_ok},
         ],
+        "note": "제1호 또는 제2호 중 하나 + 제3호(BEMS)를 충족하면 인증 가능",
     }
 
 
@@ -248,27 +257,37 @@ def evaluate_zeb(
     pv["yield_per_m2_primary_kwh"] = round(pv_primary_per_m2, 2)
     pv["primary_energy_factor"] = ELECTRICITY_PEF
 
+    # 자립률(제1호) = 1차에너지 생산 ÷ 1차에너지 소비(보강 후 gross)
     if post_energy > 0:
         autonomy_pct = (pv_primary_per_m2 / post_energy) * 100
     else:
         autonomy_pct = 0
 
-    grade = determine_grade(autonomy_pct)
-    efficiency = determine_efficiency_grade(post_energy)
+    # 제2호용 순(net) 1차에너지소요량 = gross 소요량 − 신재생(PV) 생산
+    net_primary = post_energy - pv_primary_per_m2
+    is_residential = use in RESIDENTIAL_USES
+
+    grade_c1 = determine_grade(autonomy_pct)                          # 제1호 (자립률)
+    grade_c2 = determine_grade_clause2(net_primary, is_residential)   # 제2호 (소요량)
+    grade = pick_higher_grade(grade_c1, grade_c2)                     # 인증등급 = 더 높은 등급
     requirements = check_zeb_requirements(
-        efficiency, autonomy_pct, bim.get("bems_installed", False)
+        grade_c1, grade_c2, bim.get("bems_installed", False),
+        autonomy_pct, net_primary,
     )
 
     return {
         "building_use": use,
+        "is_residential": is_residential,
         "area_m2": bim.get("total_area_m2", 0),
         "base_energy_kwh_m2": round(base_kwh, 1),
         "reduction": reduction,
         "post_energy_kwh_m2": round(post_energy, 2),
+        "net_primary_kwh_m2": round(net_primary, 2),
         "pv": pv,
         "autonomy_pct": round(autonomy_pct, 1),
-        "grade": grade,
-        "efficiency_grade": efficiency,
+        "grade": grade,                 # 최종 ZEB 인증등급 (제1호·제2호 중 상위)
+        "grade_clause1": grade_c1,      # 제1호 (자립률 기준)
+        "grade_clause2": grade_c2,      # 제2호 (1차에너지소요량 기준)
         "zeb_requirements": requirements,
         "primary_energy_factor": ELECTRICITY_PEF,
         "mode": "designbuilder" if use_db else "estimated",

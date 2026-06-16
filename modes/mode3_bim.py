@@ -1096,22 +1096,27 @@ def _render_zeb_tab(result: dict) -> None:
     # 핵심 결과 — 자립률 + 등급
     # ─────────────────────────────────────
     autonomy = eval_result["autonomy_pct"]
-    grade = eval_result["grade"]
-    grade_num = grade["grade"]
+    grade = eval_result["grade"]              # 최종 인증등급 (제1호·제2호 중 상위)
+    gc1 = eval_result.get("grade_clause1", {})
+    gc2 = eval_result.get("grade_clause2", {})
+    net_primary = eval_result.get("net_primary_kwh_m2", 0)
 
-    # 등급별 색상
-    grade_colors = {
-        1: "#4CAF50", 2: "#8BC34A", 3: "#FFC107",
-        4: "#FF9800", 5: "#FF5722", 0: "#9E9E9E",
+    # 등급별 색상 (rank 기준: +등급 6 ~ 5등급 1, 미달 0)
+    rank_colors = {
+        6: "#1B5E20", 5: "#388E3C", 4: "#7CB342",
+        3: "#FBC02D", 2: "#FB8C00", 1: "#F4511E", 0: "#9E9E9E",
     }
-    color = grade_colors.get(grade_num, "#9E9E9E")
+    color = rank_colors.get(grade.get("rank", 0), "#9E9E9E")
 
     st.markdown(
         f"""
-<div style="background:{color}; color:white; padding:20px; border-radius:12px; text-align:center; margin-bottom:16px;">
-<div style="font-size:0.95em; opacity:0.9;">에너지자립률</div>
-<div style="font-size:2.8em; font-weight:800; margin:6px 0;">{autonomy:.1f}%</div>
-<div style="font-size:1.3em; font-weight:600;">{grade['label']}</div>
+<div style="background:{color}; color:white; padding:20px; border-radius:14px; text-align:center; margin-bottom:16px;">
+<div style="font-size:0.9em; opacity:0.9;">ZEB 인증등급 (제1호·제2호 중 상위)</div>
+<div style="font-size:2.4em; font-weight:800; margin:6px 0;">{grade['label']}</div>
+<div style="font-size:0.98em; opacity:0.95;">
+  제1호 에너지자립률 <b>{autonomy:.1f}%</b> ({gc1.get('label','-')}) &nbsp;·&nbsp;
+  제2호 1차에너지소요량 <b>{net_primary:.0f}</b> kWh/㎡·년 ({gc2.get('label','-')})
+</div>
 </div>
         """,
         unsafe_allow_html=True,
@@ -1150,23 +1155,22 @@ def _render_zeb_tab(result: dict) -> None:
         )
 
     # ─────────────────────────────────────
-    # ZEB 인증 의무요건 (효율등급 + 자립률 + BEMS)
+    # ZEB 인증요건 판정 — (제1호 또는 제2호) 그리고 제3호
     # ─────────────────────────────────────
-    eff = eval_result.get("efficiency_grade", {})
     req = eval_result.get("zeb_requirements", {})
-    st.markdown("#### 📋 ZEB 인증 의무요건 충족 판정")
+    st.markdown("#### 📋 ZEB 인증요건 충족 판정")
     st.caption(
-        "ZEB 인증은 ① 건축물 에너지효율등급 1++ 이상 ② 에너지자립률 20% 이상 "
-        "③ BEMS·원격검침 설치 — 3가지를 모두 충족해야 합니다."
+        "ZEB 인증 = **(제1호 에너지자립률 또는 제2호 1차에너지소요량) 그리고 제3호(BEMS)**. "
+        "제1호·제2호는 둘 중 하나만 충족하면 되고, 인증등급은 둘 중 **높은 등급**으로 산정합니다."
     )
 
     can_certify = req.get("인증가능", False)
     banner_color = "#1B5E20" if can_certify else "#C62828"
     banner_bg = "#E8F5E9" if can_certify else "#FFEBEE"
     banner_msg = (
-        "✅ ZEB 인증 3대 의무요건을 모두 충족합니다."
+        f"✅ ZEB 인증요건 충족 — 인증등급 <b>{grade['label']}</b>."
         if can_certify else
-        "⚠️ 일부 의무요건 미충족 — 아래 항목 보완 시 ZEB 인증 가능합니다."
+        "⚠️ 인증요건 미충족 — 제1호·제2호 중 하나(+제3호 BEMS)를 충족해야 합니다."
     )
     st.markdown(
         f'<div style="background:{banner_bg};border-left:4px solid {banner_color};'
@@ -1183,18 +1187,18 @@ def _render_zeb_tab(result: dict) -> None:
         with col:
             st.markdown(
                 f'<div style="border:1px solid #E0E0E0;border-radius:10px;padding:14px;'
-                f'text-align:center;background:#fff;">'
+                f'text-align:center;background:#fff;min-height:118px;">'
                 f'<div style="font-size:1.6rem;">{ic}</div>'
                 f'<div style="font-size:0.82rem;color:#757575;margin:4px 0;">{item["요건"]}</div>'
-                f'<div style="font-size:1.05rem;font-weight:700;color:{c};">{item["현재"]}</div>'
+                f'<div style="font-size:1.0rem;font-weight:700;color:{c};">{item["현재"]}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
     st.caption(
-        f"건축물 에너지효율등급: **{eff.get('grade','-')}** "
-        f"(보강 후 1차에너지소요량 {eval_result['post_energy_kwh_m2']:.0f} kWh/㎡·년 기준) · "
-        "비주거 효율등급 표준 고시값"
+        "제1호·제2호는 OR 관계(택1). 제3호 BEMS는 필수. "
+        + ("주거용" if eval_result.get("is_residential") else "비주거용")
+        + " 1차에너지소요량 기준 적용 · ZEB 인증기준 별표."
     )
 
     st.markdown("---")
@@ -1202,16 +1206,18 @@ def _render_zeb_tab(result: dict) -> None:
     # ─────────────────────────────────────
     # 등급 도달 가이드
     # ─────────────────────────────────────
-    st.markdown("#### 🎯 등급 도달 가이드")
+    st.markdown("#### 🎯 등급 도달 가이드 (제1호 · 자립률 기준)")
+    st.caption("각 ZEB 등급의 자립률 기준(제1호) 도달에 필요한 PV 용량. 제2호(소요량)로도 등급 산정 가능.")
 
-    target_grades = [(1, 100), (2, 80), (3, 60), (4, 40), (5, 20)]
+    target_grades = [("+등급", 120), ("1등급", 100), ("2등급", 80),
+                     ("3등급", 60), ("4등급", 40), ("5등급", 20)]
     post_e = eval_result["post_energy_kwh_m2"]
     area = eval_result["area_m2"]
 
     pef = eval_result.get("primary_energy_factor", 2.75)
     region_yield = eval_result["pv"].get("region_yield_per_kw") or 1300
     grade_table = []
-    for g, threshold in target_grades:
+    for label, threshold in target_grades:
         # 자립률 X% 도달에 필요한 PV (kW)
         # 필요 1차에너지 생산(㎡당) = post_e × threshold/100 → 실발전(÷PEF) → 전체(×면적) → kW(÷지역수율)
         required_primary_kwh_m2 = post_e * threshold / 100
@@ -1219,7 +1225,7 @@ def _render_zeb_tab(result: dict) -> None:
         required_kw = required_site_total_kwh / region_yield
         is_achieved = autonomy >= threshold
         grade_table.append({
-            "등급": f"ZEB {g}등급",
+            "ZEB 등급": f"ZEB {label}",
             "필요 자립률": f"{threshold}%",
             "필요 PV": f"{required_kw:.1f} kW",
             "현재 상태": "✅ 달성" if is_achieved else "❌ 부족",
@@ -1249,14 +1255,18 @@ def _render_zeb_tab(result: dict) -> None:
     # ─────────────────────────────────────
     # 해석
     # ─────────────────────────────────────
+    rank = grade.get("rank", 0)
+    if rank == 0:
+        tail = ("ZEB 인증 최소 기준(제1호 자립률 20% 또는 제2호 1차에너지소요량 "
+                "비주거 130 미만)에 미달 — PV 증설 또는 외피·설비 보강이 필요합니다.")
+    elif rank >= 6:
+        tail = "최고 등급(ZEB 플러스등급)에 도달했습니다. 🎉"
+    else:
+        tail = "상위 등급은 자립률 향상(PV 증설) 또는 1차에너지소요량 절감으로 달성할 수 있습니다."
     st.info(
-        f"💡 **해석**: 이 건물은 보강 후 자립률 **{autonomy:.1f}%**로 "
-        f"**{grade['label']}**에 해당합니다. "
-        + (
-            f"ZEB {grade_num - 1}등급 도달까지 추가 PV 또는 절감이 필요합니다."
-            if grade_num > 1 else
-            "최고 등급에 도달했습니다. 🎉"
-        )
+        f"💡 **해석**: 보강 후 자립률 **{autonomy:.1f}%**(제1호 {gc1.get('label','-')}) · "
+        f"1차에너지소요량(순) **{net_primary:.0f}** kWh/㎡(제2호 {gc2.get('label','-')}) "
+        f"→ 인증등급 **{grade['label']}**. " + tail
     )
 
 
