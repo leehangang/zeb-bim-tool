@@ -25,7 +25,7 @@ st.set_page_config(
 )
 
 from core.ui_theme import (
-    apply_global_style, render_logo, render_footer,
+    apply_global_style, render_logo, render_footer, render_topbar,
     card_html, GRADE_COLORS, COLORS,
 )
 
@@ -163,17 +163,12 @@ def render_home():
 
     # 히어로 영역
     st.markdown("""
-    <div style="padding: 2.5rem 0 2rem 0; text-align: center;">
-        <div style="font-size: 0.95rem; color: #2E7D32; font-weight: 600; letter-spacing: 0.1em;">
-            ZERO ENERGY BUILDING · ROI ANALYSIS PLATFORM
-        </div>
-        <h1 style="font-size: 2.6rem !important; margin-top: 0.5rem; line-height: 1.2;">
-            BIM 한 번으로 <span style="color: #1B5E20;">그린리모델링</span> 전 과정을<br>
-            한 자리에서 분석하세요
-        </h1>
-        <p style="font-size: 1.1rem; color: #757575; margin-top: 1rem; max-width: 700px; margin-left: auto; margin-right: auto;">
-            Revit BIM 모델 업로드 → 11개 GR 기술요소 자동 평가 →
-            보강 우선순위 + Max Cost + 보조금 + 회수기간 통합 산출
+    <div class="zeb-hero">
+        <div class="eyebrow">ZERO ENERGY BUILDING · ROI ANALYSIS</div>
+        <h1>BIM 한 번으로 <span class="accent">그린리모델링</span> 전 과정을<br>한 자리에서 분석합니다</h1>
+        <p class="lede">
+            Revit BIM 모델을 업로드하면 11개 GR 기술요소를 자동 평가하고,
+            보강 우선순위 · Max Cost · 보조금 · ZEB 등급 · 회수기간을 통합 산출합니다.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -253,31 +248,31 @@ def render_home():
     st.markdown("---")
 
     # 빠른 시작
-    st.markdown("### 🚀 빠른 시작")
+    st.markdown("### 빠른 시작")
     quickstart = st.columns([1, 1, 1])
     with quickstart[0]:
         st.markdown(
             """
-            **1️⃣ 데모 데이터로 체험**
-            
-            왼쪽 사이드바에서 **🏢 BIM 진단 + ROI** 선택 →
+            **01 · 데모 데이터로 체험**
+
+            왼쪽 메뉴에서 **BIM 진단 + ROI** 선택 →
             `doam_archi_sample.json` 업로드 → 진단 실행
             """
         )
     with quickstart[1]:
         st.markdown(
             """
-            **2️⃣ Claude API 키 설정**
-            
+            **02 · Claude API 키 설정**
+
             `.env` 파일에 `ANTHROPIC_API_KEY` 입력 →
-            챗봇 재시작 → Mode 1/2/4 활성화
+            재시작 → Mode 1 / 2 / 4 활성화
             """
         )
     with quickstart[2]:
         st.markdown(
             """
-            **3️⃣ 정책 자료 인덱싱**
-            
+            **03 · 정책 자료 인덱싱**
+
             `python scripts/build_index.py` 실행 →
             7개 PDF가 ChromaDB로 벡터화 → Mode 1 활성화
             """
@@ -285,7 +280,7 @@ def render_home():
 
     # 기술 스택
     st.markdown("---")
-    st.markdown("### 🛠 기술 스택")
+    st.markdown("### 기술 스택")
     tech_col1, tech_col2, tech_col3, tech_col4 = st.columns(4)
     with tech_col1:
         st.markdown("**BIM 진단 엔진**")
@@ -300,6 +295,9 @@ def render_home():
         st.markdown("**Function Calling**")
         st.caption("• Claude Haiku 4.5\n• 자연어 → 도구 호출\n• 멀티턴 대화")
 
+
+# 상단 브랜드 바 (모든 페이지 공통 프레임)
+render_topbar()
 
 # 모드 라우팅
 if mode == "🏠 홈":
