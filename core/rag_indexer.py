@@ -302,16 +302,45 @@ class HashEmbedder(Embedder):
         return out
 
 
+class FastEmbedEmbedder(Embedder):
+    """
+    fastembed 다국어 ONNX 임베딩 (paraphrase-multilingual-MiniLM-L12-v2, 384d).
+    torch·외부 API 키 불필요 — 클라우드 호환. 한국어 검색 품질 양호.
+    모델은 클래스 레벨로 1회만 로드(캐시).
+    """
+    dim = 384
+    DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    _model = None
+
+    def __init__(self, model_name: str = None):
+        self.model_name = model_name or self.DEFAULT_MODEL
+
+    def _get_model(self):
+        if FastEmbedEmbedder._model is None:
+            try:
+                from fastembed import TextEmbedding
+            except ImportError:
+                raise RuntimeError("fastembed 미설치. pip install fastembed")
+            FastEmbedEmbedder._model = TextEmbedding(self.model_name)
+        return FastEmbedEmbedder._model
+
+    def embed(self, texts: list) -> list:
+        model = self._get_model()
+        return [list(map(float, v)) for v in model.embed(list(texts))]
+
+
 def get_embedder(provider: Optional[str] = None) -> Embedder:
     """
     환경변수 EMBEDDING_PROVIDER 또는 매개변수로 임베더 선택.
 
-    값: 'openai' (기본), 'local', 'hash'
+    값: 'fastembed' (기본·다국어 ONNX), 'openai', 'local', 'hash'
     """
     if provider is None:
-        provider = os.getenv("EMBEDDING_PROVIDER", "openai")
+        provider = os.getenv("EMBEDDING_PROVIDER", "fastembed")
     provider = provider.lower()
-    if provider == "openai":
+    if provider == "fastembed":
+        return FastEmbedEmbedder()
+    elif provider == "openai":
         return OpenAIEmbedder()
     elif provider == "local":
         return LocalEmbedder()
