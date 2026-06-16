@@ -167,9 +167,15 @@ p, li, .stMarkdown { color: var(--ink-700); }
 .stButton > button[kind="primary"] {
     background: var(--brand-700) !important;
     border: none !important; border-radius: var(--radius-sm) !important;
-    font-weight: 600 !important; letter-spacing: -0.01em;
+    font-weight: 700 !important; letter-spacing: -0.01em;
     box-shadow: var(--shadow-sm) !important;
     transition: background .18s ease, transform .18s ease, box-shadow .18s ease !important;
+}
+/* 라벨 흰색 강제 (전역 p 색상이 버튼 글씨를 어둡게 칠하는 문제 방지) */
+.stButton > button[kind="primary"],
+.stButton > button[kind="primary"] *,
+.stButton > button[kind="primary"] p {
+    color: #ffffff !important;
 }
 .stButton > button[kind="primary"]:hover {
     background: var(--brand-900) !important;
