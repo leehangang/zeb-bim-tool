@@ -112,7 +112,7 @@ def render_roi_panel() -> None:
              "자부담 얼마인지 ZEB 3등급 기준으로 알려줘."),
         ]
         for i, (label, prompt) in enumerate(examples):
-            if st.button(label, key=f"ex_roi_{i}", use_container_width=True):
+            if st.button(label, key=f"ex_roi_{i}", width="stretch"):
                 st.session_state["_mode2_question_seed"] = prompt
                 st.rerun()
 
@@ -131,7 +131,7 @@ def render_roi_panel() -> None:
 
     col_run, col_clear = st.columns([1, 4])
     with col_run:
-        run_btn = st.button("시뮬레이션 실행", type="primary", use_container_width=True)
+        run_btn = st.button("시뮬레이션 실행", type="primary", width="stretch")
     with col_clear:
         if st.button("히스토리 지우기"):
             st.session_state["_mode2_history"] = []

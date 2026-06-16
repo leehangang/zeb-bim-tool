@@ -224,7 +224,7 @@ def _render_chat_tab(session) -> None:
                  "ZEB 3등급 목표 종합형으로 진행 예정이고 사업기간 12개월입니다."),
             ]
             for i, (label, seed) in enumerate(seeds):
-                if st.button(label, key=f"intake_seed_{i}", use_container_width=True):
+                if st.button(label, key=f"intake_seed_{i}", width="stretch"):
                     st.session_state["_mode4_input_seed"] = seed
                     st.rerun()
 
@@ -341,7 +341,7 @@ def _render_state_tab(session) -> None:
                 "값": v_str,
             })
         df = pd.DataFrame(rows)
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width="stretch")
 
     if st.button("🔄 신청서 전체 초기화"):
         st.session_state["_mode4_session"] = __import__(

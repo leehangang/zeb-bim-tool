@@ -119,7 +119,7 @@ def render_bim_panel() -> None:
         for i, (fname, title, meta, desc) in enumerate(samples):
             with sample_cols[i]:
                 if st.button(f"**{title}**\n\n{meta}\n\n{desc}",
-                             key=f"sample_{i}", use_container_width=True):
+                             key=f"sample_{i}", width="stretch"):
                     # 샘플 파일을 직접 진단
                     st.session_state["_mode3_sample_path"] = f"data/sample_bim/{fname}"
                     st.session_state["_mode3_sample_name"] = fname
@@ -141,7 +141,7 @@ def render_bim_panel() -> None:
             min_value=3, max_value=24, value=8, step=1,
             help="08 간접공사비 매트릭스 적용용. 6/12/36개월 구간별 율 다름.",
         )
-        run_btn = st.button("진단 실행", type="primary", use_container_width=True)
+        run_btn = st.button("진단 실행", type="primary", width="stretch")
 
     # ---------------------------------------------------------------
     # 진단 결과 캐싱 (session_state)
@@ -599,7 +599,7 @@ def _render_roi_tab(result: dict) -> None:
                 "효율(점/억)": f"{p['효율_점수당억']:.2f}",
             })
         df = pd.DataFrame(rows)
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width="stretch")
 
     # ─────────────────────────────────────────────────────────
     # 누적 보강 효과 SVG 차트
@@ -765,7 +765,7 @@ def _render_optimization_tab(result: dict) -> None:
                 "Δ점수": f"+{p['점수상승']}",
                 "효율": f"{p['효율_점수당억']:.2f}",
             } for i, p in enumerate(opt['selected'])])
-            st.dataframe(df, hide_index=True, use_container_width=True)
+            st.dataframe(df, hide_index=True, width="stretch")
         else:
             st.info("예산 범위 내 채택 가능한 항목 없음")
 
@@ -778,7 +778,7 @@ def _render_optimization_tab(result: dict) -> None:
                     "Δ점수": f"+{s['점수상승']}",
                     "제외 사유": s.get("_skip_reason", ""),
                 } for s in skipped])
-                st.dataframe(df_s, hide_index=True, use_container_width=True)
+                st.dataframe(df_s, hide_index=True, width="stretch")
 
     else:
         # 목표 등급 선택
@@ -817,7 +817,7 @@ def _render_optimization_tab(result: dict) -> None:
                 "비용": f"{p['Max_Cost']:,}원",
                 "Δ점수": f"+{p['점수상승']}",
             } for i, p in enumerate(opt['selected'])])
-            st.dataframe(df, hide_index=True, use_container_width=True)
+            st.dataframe(df, hide_index=True, width="stretch")
 
 
 def _render_sensitivity_tab(result: dict) -> None:
@@ -960,7 +960,7 @@ def _render_sensitivity_tab(result: dict) -> None:
             "NPV": f"{r['NPV_억']:+.2f}억",
             "B-C": f"{r['BC_ratio']:.2f}",
         } for r in rows])
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width="stretch")
 
     with sub_tab2:
         st.caption("자재비/인건비 변동(±30%)에 사업성이 얼마나 민감한가?")
@@ -974,7 +974,7 @@ def _render_sensitivity_tab(result: dict) -> None:
             "NPV": f"{r['NPV_억']:+.2f}억",
             "B-C": f"{r['BC_ratio']:.2f}",
         } for r in rows])
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width="stretch")
 
     with sub_tab3:
         st.caption("에너지 절감 예측은 ±20% 오차 가능. 그 영향은?")
@@ -989,7 +989,7 @@ def _render_sensitivity_tab(result: dict) -> None:
             "NPV": f"{r['NPV_억']:+.2f}억",
             "B-C": f"{r['BC_ratio']:.2f}",
         } for r in rows])
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width="stretch")
 
     with sub_tab4:
         st.caption("**손익분기점** — 목표 회수기간 달성에 필요한 조건")
@@ -1174,7 +1174,7 @@ def _render_zeb_tab(result: dict) -> None:
 
     import pandas as pd
     df = pd.DataFrame(grade_table)
-    st.dataframe(df, hide_index=True, use_container_width=True)
+    st.dataframe(df, hide_index=True, width="stretch")
 
     # ─────────────────────────────────────
     # 절감 분해 (자동 모드일 때만)
@@ -1191,7 +1191,7 @@ def _render_zeb_tab(result: dict) -> None:
                 }
                 for k, v in br.items()
             ])
-            st.dataframe(df2, hide_index=True, use_container_width=True)
+            st.dataframe(df2, hide_index=True, width="stretch")
 
     # ─────────────────────────────────────
     # 해석
@@ -1216,6 +1216,7 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
     st.markdown(report)
 
     st.divider()
+    source_name = source_name or "bim.json"  # None 방어 (캐시 경로에서 None 가능)
     file_stem = Path(source_name).stem
 
     # 다운로드 버튼 2개 (마크다운 / PDF)
@@ -1227,7 +1228,7 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
             data=report,
             file_name=f"진단리포트_{file_stem}.md",
             mime="text/markdown",
-            use_container_width=True,
+            width="stretch",
             help="GitHub, Notion, Obsidian 등에서 바로 사용 가능",
         )
 
@@ -1241,7 +1242,7 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
                 data=pdf_bytes,
                 file_name=f"진단리포트_{file_stem}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width="stretch",
                 help="인쇄·이메일 첨부·결재용 (한글 폰트 자동 적용)",
                 type="primary",
             )

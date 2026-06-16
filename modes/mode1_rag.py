@@ -165,7 +165,7 @@ def render_rag_panel() -> None:
         cols = st.columns(2)
         for i, ex in enumerate(examples):
             with cols[i % 2]:
-                if st.button(ex, key=f"ex_{i}", use_container_width=True):
+                if st.button(ex, key=f"ex_{i}", width="stretch"):
                     st.session_state["_mode1_question_seed"] = ex
                     st.rerun()
 
