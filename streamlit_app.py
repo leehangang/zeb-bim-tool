@@ -1,17 +1,12 @@
 import os
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
-# redeploy: 전문 플랫폼 리디자인 + ZEB 인증 정밀도 (클린 재배포 트리거)
 
-"""
-ZEB-ROI 그린리모델링 의사결정 플랫폼 — 메인 앱
-============================================
-4개 모드 통합 Streamlit 챗봇 + 랜딩 페이지.
+# ZEB-ROI 그린리모델링 의사결정 플랫폼 — 메인 앱
+# 4개 모드 통합 Streamlit 앱 + 랜딩 페이지.
+# 실행: streamlit run streamlit_app.py
+# (주의: 위 설명을 트리플쿼트 문자열로 두면 import os 다음이라 docstring이
+#  아니라 bare expression이 되어 Streamlit magic으로 화면에 렌더됨 → 주석 유지)
 
-실행:
-    streamlit run streamlit_app.py
-"""
-
-import os
 import streamlit as st
 from dotenv import load_dotenv
 
