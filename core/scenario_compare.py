@@ -214,9 +214,10 @@ def build_inputs_from_diagnosis(diagnosis_result: dict) -> Dict:
     plan = diagnosis_result.get("roi_plan", []) or []
     total_cost = sum(p.get("Max_Cost", 0) for p in plan)
     scenario = diagnosis_result.get("scenario", {})
+    bim_data = diagnosis_result.get("bim_data", {})
 
-    # 연면적 (BIM 진단 결과에서)
-    area_m2 = scenario.get("연면적_m2", 1000)
+    # 연면적: BIM 추출값(total_area_m2) 우선, 구버전 scenario 키 fallback
+    area_m2 = bim_data.get("total_area_m2") or scenario.get("연면적_m2", 1000)
 
     # 연간 절감액 추정 (단가DB 기반 보강 시 평균 12,400원/m2/year 적용)
     annual_saving_per_m2 = 9900  # 보수적

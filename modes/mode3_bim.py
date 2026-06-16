@@ -843,7 +843,9 @@ def _render_sensitivity_tab(result: dict) -> None:
 
     scenario = result.get("scenario", {})
     roi_summary = result.get("roi_summary", {})
-    area_m2 = scenario.get("연면적_m2", 1000)
+    bim_data = result.get("bim_data", {})
+    # 연면적: 진단 결과의 BIM 추출값(total_area_m2) 우선, 구버전 scenario 키 fallback
+    area_m2 = bim_data.get("total_area_m2") or scenario.get("연면적_m2", 1000)
     total_cost = sum(p.get("Max_Cost", 0) for p in plan)
     annual_saving = area_m2 * 9_900  # 보수적 단가 (원/m2/year)
 
