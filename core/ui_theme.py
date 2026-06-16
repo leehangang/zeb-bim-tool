@@ -82,18 +82,21 @@ GLOBAL_CSS = """
 }
 
 /* ── Streamlit 기본 chrome 숨김 (전문 플랫폼 프레임) ── */
+/* 주의: stToolbar 전체를 숨기면 그 안의 사이드바 '펼침' 버튼까지 죽어
+   접힌 사이드바를 다시 못 연다. 메뉴·배포 버튼만 개별 숨김. */
 #MainMenu,
-[data-testid="stToolbar"],
+[data-testid="stMainMenu"],
+[data-testid="stAppDeployButton"],
 [data-testid="stDecoration"],
 [data-testid="stStatusWidget"],
-header [data-testid="stHeaderActionElements"],
 [class*="viewerBadge"],
 a[href*="streamlit.io"][target="_blank"],
-footer { display: none !important; visibility: hidden !important; }
-[data-testid="stHeader"] { height: 0 !important; background: transparent !important; }
-/* 사이드바 토글은 유지 (네비게이션 필수) */
+footer { display: none !important; }
+[data-testid="stHeader"] { background: transparent !important; }
+/* 툴바·사이드바 토글·펼침 컨트롤은 항상 보이게 (네비게이션 필수) */
+[data-testid="stToolbar"],
 [data-testid="stSidebarCollapseButton"],
-[data-testid="stSidebarCollapsedControl"] { visibility: visible !important; display: flex !important; }
+[data-testid="stExpandSidebarButton"] { visibility: visible !important; }
 
 /* 모든 Material 아이콘 폰트 강제 보호 (텍스트로 깨지지 않도록) */
 [class*="material-symbols"],
