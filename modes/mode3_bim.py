@@ -1140,10 +1140,64 @@ def _render_zeb_tab(result: dict) -> None:
         )
     with c4:
         st.metric(
-            "PV 발전(㎡당)",
-            f"{eval_result['pv']['yield_per_m2_kwh']:.1f} kWh/㎡·년",
-            help=eval_result["pv"].get("_source", ""),
+            "PV 발전 1차E(㎡당)",
+            f"{eval_result['pv'].get('yield_per_m2_primary_kwh', 0):.1f} kWh/㎡·년",
+            help=(
+                f"실발전 {eval_result['pv']['yield_per_m2_kwh']:.1f} × 전력 1차에너지환산계수 "
+                f"{eval_result.get('primary_energy_factor', 2.75)} · "
+                + eval_result["pv"].get("_source", "")
+            ),
         )
+
+    # ─────────────────────────────────────
+    # ZEB 인증 의무요건 (효율등급 + 자립률 + BEMS)
+    # ─────────────────────────────────────
+    eff = eval_result.get("efficiency_grade", {})
+    req = eval_result.get("zeb_requirements", {})
+    st.markdown("#### 📋 ZEB 인증 의무요건 충족 판정")
+    st.caption(
+        "ZEB 인증은 ① 건축물 에너지효율등급 1++ 이상 ② 에너지자립률 20% 이상 "
+        "③ BEMS·원격검침 설치 — 3가지를 모두 충족해야 합니다."
+    )
+
+    can_certify = req.get("인증가능", False)
+    banner_color = "#1B5E20" if can_certify else "#C62828"
+    banner_bg = "#E8F5E9" if can_certify else "#FFEBEE"
+    banner_msg = (
+        "✅ ZEB 인증 3대 의무요건을 모두 충족합니다."
+        if can_certify else
+        "⚠️ 일부 의무요건 미충족 — 아래 항목 보완 시 ZEB 인증 가능합니다."
+    )
+    st.markdown(
+        f'<div style="background:{banner_bg};border-left:4px solid {banner_color};'
+        f'padding:12px 16px;border-radius:8px;color:{banner_color};font-weight:600;'
+        f'margin-bottom:12px;">{banner_msg}</div>',
+        unsafe_allow_html=True,
+    )
+
+    req_cols = st.columns(3)
+    for col, item in zip(req_cols, req.get("items", [])):
+        ok = item["충족"]
+        ic = "✅" if ok else "❌"
+        c = "#2E7D32" if ok else "#C62828"
+        with col:
+            st.markdown(
+                f'<div style="border:1px solid #E0E0E0;border-radius:10px;padding:14px;'
+                f'text-align:center;background:#fff;">'
+                f'<div style="font-size:1.6rem;">{ic}</div>'
+                f'<div style="font-size:0.82rem;color:#757575;margin:4px 0;">{item["요건"]}</div>'
+                f'<div style="font-size:1.05rem;font-weight:700;color:{c};">{item["현재"]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.caption(
+        f"건축물 에너지효율등급: **{eff.get('grade','-')}** "
+        f"(보강 후 1차에너지소요량 {eval_result['post_energy_kwh_m2']:.0f} kWh/㎡·년 기준) · "
+        "비주거 효율등급 표준 고시값"
+    )
+
+    st.markdown("---")
 
     # ─────────────────────────────────────
     # 등급 도달 가이드
@@ -1154,16 +1208,15 @@ def _render_zeb_tab(result: dict) -> None:
     post_e = eval_result["post_energy_kwh_m2"]
     area = eval_result["area_m2"]
 
+    pef = eval_result.get("primary_energy_factor", 2.75)
+    region_yield = eval_result["pv"].get("region_yield_per_kw") or 1300
     grade_table = []
     for g, threshold in target_grades:
         # 자립률 X% 도달에 필요한 PV (kW)
-        required_kwh_m2 = post_e * threshold / 100
-        required_total_kwh = required_kwh_m2 * area
-        required_kw = required_total_kwh / eval_result["pv"].get(
-            "region_yield_per_kw", 1300
-        ) if eval_result["pv"].get("region_yield_per_kw") else (
-            required_total_kwh / 1300
-        )
+        # 필요 1차에너지 생산(㎡당) = post_e × threshold/100 → 실발전(÷PEF) → 전체(×면적) → kW(÷지역수율)
+        required_primary_kwh_m2 = post_e * threshold / 100
+        required_site_total_kwh = (required_primary_kwh_m2 / pef) * area
+        required_kw = required_site_total_kwh / region_yield
         is_achieved = autonomy >= threshold
         grade_table.append({
             "등급": f"ZEB {g}등급",
