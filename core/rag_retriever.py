@@ -68,9 +68,8 @@ class RagRetriever:
                 f"build_index.py가 먼저 실행됐는지 확인하세요. ({e})"
             )
 
-        if embedder is None:
-            from core.rag_indexer import get_embedder
-            embedder = get_embedder()
+        # embedder=None → ChromaDB 내장 ONNX 임베더로 query_texts 검색
+        # (torch·외부 API 키 불필요 — 클라우드 호환). 외부 임베더는 명시 전달 시에만 사용.
         self.embedder = embedder
 
     def retrieve(
@@ -94,12 +93,20 @@ class RagRetriever:
               ...
             ]
         """
-        query_vec = self.embedder.embed([query])[0]
-        results = self.collection.query(
-            query_embeddings=[query_vec],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"],
-        )
+        if self.embedder is None:
+            # ChromaDB 내장 ONNX EF로 질의 임베딩 (네이티브)
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=top_k,
+                include=["documents", "metadatas", "distances"],
+            )
+        else:
+            query_vec = self.embedder.embed([query])[0]
+            results = self.collection.query(
+                query_embeddings=[query_vec],
+                n_results=top_k,
+                include=["documents", "metadatas", "distances"],
+            )
 
         out = []
         if not results["documents"] or not results["documents"][0]:

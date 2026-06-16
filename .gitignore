@@ -53,3 +53,4 @@ ENV/
 # data/policy_docs/*.xlsx
 # → 주석 해제 시 PDF/엑셀이 git에서 제외됨
 #   민회님 본인 PC에서만 작업할 거면 위 주석 풀기 권장
+data/chroma_db.zip.bak
