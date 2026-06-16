@@ -210,11 +210,24 @@ def check_zeb_requirements(
     }
 
 
+def apply_full_reinforcement(gr_mapping: dict) -> dict:
+    """모든 GR 기술요소를 '적용'(100%)으로 만든 가상 매핑 — 보강 후 시나리오용."""
+    out = {}
+    for k, v in gr_mapping.items():
+        nv = dict(v)
+        nv["status"] = "적용"
+        nv["적용비율"] = 1.0
+        out[k] = nv
+    return out
+
+
 def evaluate_zeb(
     bim: dict,
     gr_mapping: dict,
     building_use: Optional[str] = None,
     manual_overrides: Optional[dict] = None,
+    assume_full_reinforcement: bool = False,
+    assume_bems: bool = False,
 ) -> dict:
     overrides = manual_overrides or {}
     use_db = bool(overrides.get("annual_saving_pct"))
@@ -230,6 +243,9 @@ def evaluate_zeb(
             "breakdown": {},
             "_source": "DesignBuilder 입력",
         }
+    elif assume_full_reinforcement:
+        reduction = calculate_reduction_ratio(apply_full_reinforcement(gr_mapping))
+        reduction["_source"] = "권장 전체 GR 보강 적용 가정"
     else:
         reduction = calculate_reduction_ratio(gr_mapping)
         reduction["_source"] = "11개 GR 요소 적용도 기반 추정"
@@ -270,9 +286,9 @@ def evaluate_zeb(
     grade_c1 = determine_grade(autonomy_pct)                          # 제1호 (자립률)
     grade_c2 = determine_grade_clause2(net_primary, is_residential)   # 제2호 (소요량)
     grade = pick_higher_grade(grade_c1, grade_c2)                     # 인증등급 = 더 높은 등급
+    bems = bool(bim.get("bems_installed", False)) or assume_bems
     requirements = check_zeb_requirements(
-        grade_c1, grade_c2, bim.get("bems_installed", False),
-        autonomy_pct, net_primary,
+        grade_c1, grade_c2, bems, autonomy_pct, net_primary,
     )
 
     return {

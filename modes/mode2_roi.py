@@ -94,8 +94,9 @@ def render_roi_panel() -> None:
     if "_mode2_history" not in st.session_state:
         st.session_state["_mode2_history"] = []
 
-    # 예시 입력
-    with st.expander("💡 예시 입력"):
+    # 예시 입력 (첫 사용 시 펼쳐서 노출)
+    with st.expander("💡 예시 입력 (클릭하면 자동 입력)",
+                     expanded=not st.session_state.get("_mode2_history")):
         examples = [
             ("도담어린이집 시나리오",
              "도담어린이집인데, 연면적 1,251㎡짜리 어린이집이고 "

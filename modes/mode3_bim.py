@@ -1096,6 +1096,16 @@ def _render_zeb_tab(result: dict) -> None:
         manual_overrides=overrides,
     )
 
+    # 보강 후 시나리오 (자동 추정 모드에서만 — 권장 전체 GR 보강 + BEMS 가정)
+    eval_after = None
+    if eval_result["mode"] == "estimated":
+        eval_after = evaluate_zeb(
+            bim, gr_mapping,
+            building_use=selected_use,
+            assume_full_reinforcement=True,
+            assume_bems=True,
+        )
+
     st.markdown("---")
 
     # ─────────────────────────────────────
@@ -1127,6 +1137,36 @@ def _render_zeb_tab(result: dict) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    # ─────────────────────────────────────
+    # 현재 → 보강 후 예상 등급 (자동 추정 모드)
+    # ─────────────────────────────────────
+    if eval_after is not None:
+        ag = eval_after["grade"]
+        acolor = rank_colors.get(ag.get("rank", 0), "#9E9E9E")
+        a_cert = eval_after["zeb_requirements"]["인증가능"]
+        st.markdown(
+            f'''
+<div style="display:flex;align-items:stretch;gap:10px;margin-bottom:8px;">
+  <div style="flex:1;border:1px solid #E0E0E0;border-radius:12px;padding:14px;text-align:center;background:#FAFAFA;">
+    <div style="font-size:0.78rem;color:#757575;">현재 상태</div>
+    <div style="font-size:1.2rem;font-weight:800;color:{color};margin:4px 0;">{grade['label']}</div>
+    <div style="font-size:0.76rem;color:#9E9E9E;">자립률 {autonomy:.1f}% · 절감 {eval_result['reduction']['total_reduction_pct']:.0f}%</div>
+  </div>
+  <div style="display:flex;align-items:center;font-size:1.7rem;color:#BDBDBD;font-weight:700;">→</div>
+  <div style="flex:1;border:2px solid {acolor};border-radius:12px;padding:14px;text-align:center;background:#fff;box-shadow:0 4px 16px rgba(27,94,32,0.10);">
+    <div style="font-size:0.78rem;color:{acolor};font-weight:700;">권장 전체 보강 적용 시</div>
+    <div style="font-size:1.45rem;font-weight:800;color:{acolor};margin:4px 0;">{ag['label']}</div>
+    <div style="font-size:0.76rem;color:#757575;">자립률 {eval_after['autonomy_pct']:.1f}% · 절감 {eval_after['reduction']['total_reduction_pct']:.0f}% · {'인증 가능 ✅' if a_cert else '추가 보완 필요'}</div>
+  </div>
+</div>
+            ''',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "‘보강 후’는 11개 GR 기술요소 전체 적용 + BEMS 설치를 가정한 잠재 등급입니다. "
+            "실제 달성 등급은 보강 범위·예산·신재생 추가량에 따라 달라집니다."
+        )
 
     # ─────────────────────────────────────
     # 지표 4개 — 메트릭
