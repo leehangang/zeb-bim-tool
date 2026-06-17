@@ -70,6 +70,11 @@ def is_index_ready(persist_dir: str = "./data/chroma_db") -> tuple:
             "ChromaDB 인덱스가 없습니다. "
             "프로젝트 루트에서 `python scripts/build_index.py` 를 실행해 인덱스를 만드세요."
         ), 0
+    # 임베더 의존성 확인 — 클라우드(무료 티어)엔 fastembed 미설치 → 안내 패널.
+    try:
+        import fastembed  # noqa: F401
+    except ImportError:
+        return False, "임베딩 엔진(fastembed) 미설치 — 정책 Q&A는 로컬 전용입니다.", 0
     try:
         from core.rag_retriever import RagRetriever
         retriever = RagRetriever(persist_dir=persist_dir)
@@ -109,9 +114,6 @@ def render_rag_panel() -> None:
     # 인덱스 상태 확인
     ready, msg, count = is_index_ready()
     if not ready:
-        import os as _os
-        if _os.getenv("RAG_DEBUG", "1") == "1":
-            st.warning(f"[진단] 인덱스 미준비 사유: {msg}")
         st.info(
             "**정책 Q&A**는 그린리모델링 관련 법·고시·가이드라인 원문에서 "
             "근거 조항을 찾아 인용하는 기능입니다. 현재 라이브 데모는 핵심인 "
