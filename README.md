@@ -1,3 +1,14 @@
+---
+title: ZEB-ROI 그린리모델링 플랫폼
+emoji: 🌱
+colorFrom: green
+colorTo: blue
+sdk: streamlit
+app_file: streamlit_app.py
+pinned: false
+short_description: BIM 기반 ZEB 그린리모델링 진단 + ROI + 정책 Q&A
+---
+
 # 🌱 ZEB-ROI · 그린리모델링 의사결정 플랫폼
 
 **BIM 한 번으로 공공건축물 그린리모델링 전 과정을 자동 분석하는 챗봇**

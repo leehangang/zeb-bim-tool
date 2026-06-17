@@ -9,11 +9,10 @@ streamlit>=1.30.0
 anthropic>=0.39.0          # Claude Haiku 4.5
 openai>=1.50.0             # 임베딩 전용 (text-embedding-3-small)
 
-# === RAG (모드 1, 로컬 전용) ===
-# 클라우드(무료 티어)는 메모리·빌드 한계로 RAG 비활성 → 안내 패널 표시(의도된 설계).
-# 로컬에서 정책 Q&A를 쓰려면: pip install fastembed (다국어 ONNX 임베딩).
-# llama-index 제거 — 코드에서 import 0건인 죽은 의존성.
+# === RAG (모드 1) ===  HF Spaces는 RAM 충분 → 정책 Q&A 실작동
+# (llama-index 제거 — 코드에서 import 0건인 죽은 의존성)
 chromadb>=0.4.20
+fastembed>=0.3.0           # 다국어 ONNX 임베딩 (paraphrase-multilingual-MiniLM)
 protobuf==3.20.3
 
 # === 데이터 처리 ===
