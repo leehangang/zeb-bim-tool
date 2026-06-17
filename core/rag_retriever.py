@@ -145,9 +145,26 @@ from collections import Counter
 _KEYWORD_INDEX_CACHE: dict = {}
 
 
-def _tokenize_ko(text: str) -> list:
-    """한글·영문·숫자 토큰 추출 (2자 이상)."""
-    return [t for t in re.findall(r"[가-힣A-Za-z0-9]+", text.lower()) if len(t) >= 2]
+def _featurize(text: str) -> list:
+    """검색 피처 추출 (한국어 조사 변형에 강하게).
+
+    - 영문/숫자 토큰(ZEB, BEMS, LED, 5 등): 통째로 1개 피처 → 정확 매칭.
+    - 한글 단어: 글자 2-gram(bigram)으로 분해 → '완화/완화는/완화기준'이 모두
+      '완화' 바이그램을 공유하므로 조사·어미 변형에도 매칭됨.
+      (형태소 분석기 없이 한국어 검색을 안정화하는 표준 기법)
+    - 한 글자 토큰은 노이즈라 제외.
+    """
+    feats = []
+    for tok in re.findall(r"[가-힣]+|[A-Za-z0-9]+", text.lower()):
+        if re.match(r"[a-z0-9]", tok):
+            if len(tok) >= 2 or tok.isdigit():
+                feats.append(tok)
+        else:
+            if len(tok) < 2:
+                continue
+            for i in range(len(tok) - 1):
+                feats.append(tok[i:i + 2])
+    return feats
 
 
 class KeywordRetriever:
@@ -181,7 +198,7 @@ class KeywordRetriever:
             got = collection.get(include=["documents", "metadatas"])
             docs = got["documents"] or []
             metas = got["metadatas"] or []
-            doc_tokens = [_tokenize_ko(d) for d in docs]
+            doc_tokens = [_featurize(d) for d in docs]
             doc_counters = [Counter(dt) for dt in doc_tokens]
             df: dict = {}
             for dt in doc_tokens:
@@ -213,7 +230,7 @@ class KeywordRetriever:
         df = self._cache["df"]
         N = self._cache["N"]
 
-        q_terms = _tokenize_ko(query)
+        q_terms = _featurize(query)
         if not q_terms:
             return []
         idf = {t: math.log((N + 1) / (df.get(t, 0) + 1)) + 1 for t in set(q_terms)}
