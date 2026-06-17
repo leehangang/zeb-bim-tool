@@ -196,13 +196,3 @@ def render_rag_panel() -> None:
                 f"유사도 {1-src['distance']:.2f}"
             ):
                 st.text(src["snippet"])
-
-    # 토큰 사용량 (디버그)
-    usage = result.get("usage", {})
-    if usage and usage.get("input_tokens", 0) > 0:
-        with st.expander("🔍 API 호출 정보"):
-            st.json({
-                "model": result.get("model"),
-                "input_tokens": usage.get("input_tokens", 0),
-                "output_tokens": usage.get("output_tokens", 0),
-            })

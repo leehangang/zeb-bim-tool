@@ -156,11 +156,10 @@ def render_intake_panel() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    # 그린리모델링 vs ZEB 역할 구분 (헷갈림 방지)
+    # 그린리모델링 사업 신청 안내 (ZEB 평가는 BIM 모드에서 다룸)
     st.markdown(
         concept_divider(
             gr_text="이 인테이크는 <b>그린리모델링 사업 신청서</b>를 작성합니다 (기관·대상·사업비·기간 등).",
-            zeb_text="<b>목표 ZEB 등급</b>은 신청서의 사업 목표 항목 중 하나로 입력됩니다.",
         ),
         unsafe_allow_html=True,
     )

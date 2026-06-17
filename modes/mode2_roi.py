@@ -85,7 +85,7 @@ def render_roi_panel() -> None:
         </div>
         <h1 style="margin:0.2rem 0;">💰 ROI 시뮬레이션</h1>
         <div style="color:#757575;">
-            자연어로 건물 정보를 알려주시면 Claude가 파라미터를 추출해
+            자연어로 건물 정보를 알려주시면 입력 조건을 자동 추출해
             07 단가DB · 08 간접공사비 · 01 보조금 · 04 용적률 · 05 취득세 감면을
             한 번에 산출합니다.
         </div>
@@ -191,17 +191,3 @@ def _render_history() -> None:
 
             st.markdown("**🤖 답변**")
             st.markdown(result["answer"])
-
-            # 계산 내역 (결정적 ROI 엔진 입력·결과 — 투명성)
-            if result.get("tool_calls"):
-                with st.expander(
-                    f"📋 계산 내역 ({len(result['tool_calls'])}건)"
-                ):
-                    for j, tc in enumerate(result["tool_calls"], 1):
-                        st.markdown("**입력 조건**")
-                        st.json(tc["input"])
-                        st.markdown("**산출 결과**")
-                        if tc.get("is_error"):
-                            st.error(tc["result"])
-                        else:
-                            st.json(tc["result"])

@@ -466,20 +466,30 @@ def concept_badge(kind: str) -> str:
     )
 
 
-def concept_divider(gr_text: str, zeb_text: str) -> str:
-    """그린리모델링·ZEB 두 개념의 역할을 나란히 보여주는 안내 박스 HTML."""
-    return (
-        '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin:0.2rem 0 1.1rem 0;">'
+def concept_divider(gr_text: str, zeb_text: str = None) -> str:
+    """그린리모델링·ZEB 역할 안내 박스 HTML.
+
+    zeb_text가 None이면 그린리모델링 박스만 단독 표시.
+    """
+    gr_box = (
         '<div style="flex:1;min-width:220px;background:#F1F8F2;border:1px solid #C8E6C9;'
         'border-radius:10px;padding:0.7rem 0.9rem;">'
         f'{concept_badge("gr")}'
         f'<div style="font-size:0.82rem;color:#37474F;margin-top:0.35rem;line-height:1.5;">{gr_text}</div>'
         '</div>'
-        '<div style="flex:1;min-width:220px;background:#F0F7FE;border:1px solid #BBDEFB;'
-        'border-radius:10px;padding:0.7rem 0.9rem;">'
-        f'{concept_badge("zeb")}'
-        f'<div style="font-size:0.82rem;color:#37474F;margin-top:0.35rem;line-height:1.5;">{zeb_text}</div>'
-        '</div>'
+    )
+    zeb_box = ""
+    if zeb_text:
+        zeb_box = (
+            '<div style="flex:1;min-width:220px;background:#F0F7FE;border:1px solid #BBDEFB;'
+            'border-radius:10px;padding:0.7rem 0.9rem;">'
+            f'{concept_badge("zeb")}'
+            f'<div style="font-size:0.82rem;color:#37474F;margin-top:0.35rem;line-height:1.5;">{zeb_text}</div>'
+            '</div>'
+        )
+    return (
+        '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin:0.2rem 0 1.1rem 0;">'
+        f'{gr_box}{zeb_box}'
         '</div>'
     )
 
