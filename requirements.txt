@@ -10,10 +10,7 @@ anthropic>=0.39.0          # Claude Haiku 4.5
 openai>=1.50.0             # 임베딩 전용 (text-embedding-3-small)
 
 # === RAG (모드 1) ===
-llama-index-core>=0.10.0
-llama-index-embeddings-openai>=0.2.0
-llama-index-vector-stores-chroma>=0.2.0
-llama-index-readers-file>=0.1.0   # PDF 로더
+# (llama-index 제거 — 코드에서 import 0건인 죽은 의존성, 무료티어 메모리 절감)
 chromadb>=0.4.20
 fastembed>=0.3.0           # 다국어 ONNX 임베딩 (torch 불필요, 클라우드 정책 Q&A)
 protobuf==3.20.3

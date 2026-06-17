@@ -173,7 +173,10 @@ def render_rag_panel() -> None:
 
     # 답변 생성
     try:
-        with st.spinner(f"7개 정책 자료에서 검색 중... (top-{top_k})"):
+        with st.spinner(
+            "7개 정책 자료에서 검색 중... "
+            "(첫 질문은 검색엔진 로딩으로 20~40초 걸릴 수 있어요)"
+        ):
             result = answer_question(question, top_k=top_k)
     except Exception as e:
         from core.error_messages import friendly_error
