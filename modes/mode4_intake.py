@@ -236,9 +236,8 @@ def _render_chat_tab(session) -> None:
             st.markdown(entry["answer"])
             tc = entry.get("tool_calls", [])
             if tc:
-                with st.expander(f"🔧 도구 호출 {len(tc)}회"):
-                    for j, t in enumerate(tc, 1):
-                        st.markdown(f"**{j}. `{t['name']}`**")
+                with st.expander(f"📋 추출·반영된 항목 ({len(tc)}건)"):
+                    for t in tc:
                         if t.get("is_error"):
                             st.error(t["result"])
                         else:
@@ -275,9 +274,8 @@ def _render_chat_tab(session) -> None:
 
         tc = result.get("tool_calls", [])
         if tc:
-            with st.expander(f"🔧 도구 호출 {len(tc)}회"):
-                for j, t in enumerate(tc, 1):
-                    st.markdown(f"**{j}. `{t['name']}`**")
+            with st.expander(f"📋 추출·반영된 항목 ({len(tc)}건)"):
+                for t in tc:
                     if t.get("is_error"):
                         st.error(t["result"])
                     else:

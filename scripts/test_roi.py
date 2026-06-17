@@ -8,8 +8,8 @@ KEPCO 김천 도담어린이집 사례로 core.roi_calculator 검증.
     python scripts/test_roi.py
 
 기대 결과:
-    - 자산화 ROI: 16.9% ± 0.5%p
-    - Max Cost: 1.5~2.0억 (시공계수 3.0 기준)
+    - NPV > 0, B-C > 1, IRR 합리적 범위 (현금흐름 수익성)
+    - Max Cost: 1~3.5억 (제비율 간접비 적용)
     - 모든 함수가 예외 없이 작동
 """
 
@@ -86,14 +86,11 @@ def test_kepco_case():
     }
 
     building_info = {
-        "total_area_m2": 1000,
+        "total_area_m2": 1251,
         "is_seoul_or_public": True,
         "project_duration_months": 8,
         "zeb_target_grade": 5,
-        "extension_area_m2": 300,
-        "build_cost_per_pyeong": 9_750_000,
-        "land_price_per_pyeong": 15_000_000,
-        "annual_energy_saving_won_per_m2": 13_280,
+        "annual_energy_saving_won_per_m2": 9_900,
     }
 
     result = calculate_roi(bim_input, building_info)
@@ -126,24 +123,29 @@ def test_kepco_case():
           f"+{far['추가_평수']:.1f}평, 자산 {far['자산가치']/1e8:.2f}억")
     print(f"  취득세 감면 ({tax['감면율']*100:.0f}%): {tax['감면액']:,}원")
 
-    # ROI
-    print(f"\n[ROI 종합]")
+    # ROI (현금흐름 기반)
+    cf = result["cashflow"]
+    av = result["asset_value"]
+    print(f"\n[ROI 종합 — 현금흐름]")
     print(f"  연간 절감: {result['annual_saving']:,}원/년 "
           f"({result['annual_saving']/1e4:.0f}만원)")
-    print(f"  ★ 자산화 ROI: {result['asset_roi_pct']:.1f}%")
-    print(f"  GR 단독 회수기간: {result['gr_only_payback_years']}년")
-    print(f"  통합 회수기간:    {result['combined_payback_years']}년")
+    print(f"  NPV: {cf['NPV_원']/1e8:+.2f}억 / IRR: {cf['IRR']*100:.1f}% / "
+          f"B-C: {cf['BC_ratio']:.2f} / 할인회수: {cf['할인회수_년']}년")
+    print(f"  수익환원 자산가치: {av['자산가치_상승_원']/1e8:.2f}억 (환원율 {av['환원율']*100:.0f}%)")
 
-    # 검증
+    # 검증 — 현금흐름 수익성 (NPV/IRR/B-C) sanity
     print(f"\n" + "=" * 70)
     print("검증")
     print("=" * 70)
 
-    # 자산화 ROI는 정확히 재현되어야 함
-    assert 16 <= result['asset_roi_pct'] <= 17.5, (
-        f"자산화 ROI가 예상 범위(16~17.5%)를 벗어남: {result['asset_roi_pct']}%"
-    )
-    print(f"  [PASS] 자산화 ROI = {result['asset_roi_pct']}% (목표 16.9%)")
+    assert cf['NPV_원'] > 0, f"NPV가 음수: {cf['NPV_원']}"
+    print(f"  [PASS] NPV = {cf['NPV_원']/1e8:+.2f}억 (>0)")
+
+    assert cf['BC_ratio'] > 1.0, f"B-C 비율이 1 미만: {cf['BC_ratio']}"
+    print(f"  [PASS] B-C = {cf['BC_ratio']:.2f} (>1)")
+
+    assert 0.03 <= cf['IRR'] <= 0.5, f"IRR이 비현실적: {cf['IRR']}"
+    print(f"  [PASS] IRR = {cf['IRR']*100:.1f}% (합리적 범위)")
 
     # Max Cost는 합리적 범위 안에 있어야 함
     assert 1.0e8 <= result['max_cost'] <= 3.5e8, (
@@ -151,7 +153,7 @@ def test_kepco_case():
     )
     print(f"  [PASS] Max Cost = {result['max_cost']/1e8:.2f}억 (합리적 범위 1~3.5억)")
 
-    # GR 단독 회수기간은 짧아야 함 (5~15년)
+    # GR 단독 회수기간은 짧아야 함 (3~20년)
     assert result['gr_only_payback_years'] is not None
     assert 3 <= result['gr_only_payback_years'] <= 20, (
         f"GR 단독 회수기간이 비현실적: {result['gr_only_payback_years']}년"

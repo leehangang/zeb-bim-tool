@@ -8,8 +8,8 @@ PFV 사업수지 모델 분석으로 도입한 두 엔진 검증.
     python scripts/test_sensitivity.py
 
 기대 결과:
-    - 도담어린이집 케이스: GR 단독 회수 13년, 자산화 ROI 233%
-    - 3개 시나리오 비교 정상 작동
+    - 도담 케이스: NPV/IRR/B-C·할인회수 산출, 3개 시나리오 비교
+    - 민감도(보조율/비용/절감) 단조성 확인
     - 손익분기 보조금율 자동 산출
     - 모든 테스트 PASS
 """
@@ -91,16 +91,16 @@ def test_compute_metrics_zero_saving():
 
 
 def test_compute_metrics_with_bonus():
-    """용적률 보너스 + 세금 감면 포함 시 30년 총효익 증가."""
+    """용적률 보너스 + 세금 감면이 효익에 반영되는지 (상대 비교)."""
+    base = compute_metrics(**DOAM_BASELINE)
     b = dict(DOAM_BASELINE)
     b["far_bonus_value_won"] = 50_000_000
     b["tax_relief_won"] = 10_000_000
-    m = compute_metrics(**b)
-    # 30년 절감(0.124×30=3.72억) + 보너스(0.5억) + 세금(0.1억) = 4.32억
-    expected_min = 372_000_000 + 60_000_000
-    assert m["30년_총효익_원"] >= expected_min - 1000, \
-        f"보너스 누락: {m['30년_총효익_원']}"
-    print("  ✓ compute_metrics 보너스+세금감면 포함")
+    withb = compute_metrics(**b)
+    # 보너스+세금 추가 시 총효익이 그만큼 증가해야 함
+    diff = withb["30년_총효익_원"] - base["30년_총효익_원"]
+    assert diff >= 60_000_000 - 1000, f"보너스+세금 미반영: +{diff:,}원"
+    print(f"  ✓ compute_metrics 용적률 보너스 + 세금 감면 반영 (+{diff/1e8:.2f}억)")
 
 
 # ────────────────────────────────────────────────

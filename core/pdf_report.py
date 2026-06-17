@@ -99,6 +99,14 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
         fontName=font_name, fontSize=8, leading=11,
         textColor=colors.HexColor("#757575"),
     )
+    title_white = ParagraphStyle(
+        "TitleWhite", parent=styles["Heading1"],
+        fontName=font_name, fontSize=17, leading=21, textColor=colors.white,
+    )
+    subtitle_white = ParagraphStyle(
+        "SubWhite", parent=styles["BodyText"],
+        fontName=font_name, fontSize=9, leading=12, textColor=colors.HexColor("#C8E6C9"),
+    )
 
     # 메모리 버퍼에 PDF 생성
     buf = io.BytesIO()
@@ -113,12 +121,34 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     # ─────────────────────────────────────
     # 헤더
     # ─────────────────────────────────────
-    story.append(Paragraph("🏢 ZEB-ROI 그린리모델링 진단 리포트", h1))
+    import datetime
+    from core.zeb_evaluator import detect_building_use
+    bim = result.get("bim_data", {}) or {}
+    use = detect_building_use(bim)
+    area = bim.get("total_area_m2", "-")
+    today = datetime.date.today().strftime("%Y-%m-%d")
+
+    header_band = Table([[
+        Paragraph("ZEB-ROI 그린리모델링 진단 리포트", title_white),
+        Paragraph(f"발행일<br/>{today}", subtitle_white),
+    ]], colWidths=[120*mm, 54*mm])
+    header_band.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#1B5E20")),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("LEFTPADDING", (0,0), (-1,-1), 12),
+        ("RIGHTPADDING", (0,0), (-1,-1), 12),
+        ("TOPPADDING", (0,0), (-1,-1), 10),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 10),
+        ("ALIGN", (1,0), (1,0), "RIGHT"),
+    ]))
+    story.append(header_band)
+    story.append(Spacer(1, 5))
     story.append(Paragraph(
-        f"<font color='#757575'>원본: {source_name}</font>",
+        f"BIM 정밀 진단 · ROI · ZEB 인증 평가&nbsp;&nbsp;|&nbsp;&nbsp;"
+        f"대상: {use} (연면적 {area}㎡)&nbsp;&nbsp;|&nbsp;&nbsp;원본: {source_name}",
         small,
     ))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 10))
 
     # ─────────────────────────────────────
     # 핵심 지표
@@ -155,9 +185,50 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     story.append(Spacer(1, 12))
 
     # ─────────────────────────────────────
+    # ZEB 인증 평가 (현재 → 권장 보강 후)
+    # ─────────────────────────────────────
+    try:
+        from core.zeb_evaluator import evaluate_zeb
+        gr = result.get("gr_mapping", {})
+        z_cur = evaluate_zeb(bim, gr, building_use=use)
+        z_aft = evaluate_zeb(bim, gr, building_use=use,
+                             assume_full_reinforcement=True, assume_bems=True)
+        story.append(Paragraph("ZEB 인증 평가", h2))
+        zeb_rows = [
+            ["항목", "현재", "권장 보강 후"],
+            ["에너지자립률 (제1호)",
+             f"{z_cur['autonomy_pct']:.1f}%", f"{z_aft['autonomy_pct']:.1f}%"],
+            ["1차에너지소요량 순 (제2호)",
+             f"{z_cur['net_primary_kwh_m2']:.0f} kWh/㎡", f"{z_aft['net_primary_kwh_m2']:.0f} kWh/㎡"],
+            ["ZEB 인증등급",
+             z_cur["grade"]["label"], z_aft["grade"]["label"]],
+            ["인증 가능 여부",
+             "충족" if z_cur["zeb_requirements"]["인증가능"] else "미충족",
+             "충족" if z_aft["zeb_requirements"]["인증가능"] else "미충족"],
+        ]
+        zeb_table = Table(zeb_rows, colWidths=[55*mm, 50*mm, 50*mm])
+        zeb_table.setStyle(TableStyle([
+            ("FONT", (0,0), (-1,-1), font_name, 10),
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#2E7D32")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+            ("GRID", (0,1), (-1,-1), 0.25, colors.HexColor("#E0E0E0")),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.HexColor("#F1F8F1"), colors.white]),
+        ]))
+        story.append(zeb_table)
+        story.append(Paragraph(
+            "ZEB 인증 = (제1호 자립률 또는 제2호 1차에너지소요량) + 제3호 BEMS 설치. "
+            "‘권장 보강 후’는 11개 GR 기술요소 전체 적용 + BEMS 설치를 가정한 잠재 등급입니다.",
+            small,
+        ))
+        story.append(Spacer(1, 12))
+    except Exception:
+        pass
+
+    # ─────────────────────────────────────
     # 11개 GR 매핑
     # ─────────────────────────────────────
-    story.append(Paragraph("📋 11개 GR 기술요소 현황", h2))
+    story.append(Paragraph("11개 GR 기술요소 현황", h2))
 
     gr_rows = [["#", "기술요소", "상태", "적용비율", "비고"]]
     for key, info in result["gr_mapping"].items():
@@ -192,7 +263,7 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     # 보강 우선순위 Top 5
     # ─────────────────────────────────────
     story.append(PageBreak())
-    story.append(Paragraph("🏆 보강 우선순위 Top 5 (효율 기준)", h2))
+    story.append(Paragraph("보강 우선순위 Top 5 (효율 기준)", h2))
 
     top_rows = [["순위", "항목", "수량", "예상 비용", "+점수", "효율"]]
     for i, p in enumerate(plan[:5], 1):
@@ -221,7 +292,7 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     # ─────────────────────────────────────
     # 전체 11개 보강 표
     # ─────────────────────────────────────
-    story.append(Paragraph("📊 전체 11개 보강 계획", h2))
+    story.append(Paragraph("전체 11개 보강 계획", h2))
 
     full_rows = [["#", "항목", "비용", "+점수", "효율(점/억)"]]
     for i, p in enumerate(plan, 1):
@@ -267,8 +338,20 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
         small,
     ))
 
+    # 페이지 푸터 (브랜드 + 페이지 번호)
+    def _footer(canvas, doc_):
+        canvas.saveState()
+        canvas.setFont(font_name, 8)
+        canvas.setFillColor(colors.HexColor("#9E9E9E"))
+        canvas.drawString(18*mm, 10*mm,
+                          "ZEB-ROI · 그린리모델링 의사결정 플랫폼")
+        canvas.drawRightString(A4[0]-18*mm, 10*mm, f"- {doc_.page} -")
+        canvas.setStrokeColor(colors.HexColor("#E0E0E0"))
+        canvas.line(18*mm, 13*mm, A4[0]-18*mm, 13*mm)
+        canvas.restoreState()
+
     # 빌드
-    doc.build(story)
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
 
     pdf_bytes = buf.getvalue()
     buf.close()

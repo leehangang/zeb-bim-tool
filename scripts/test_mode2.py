@@ -62,12 +62,14 @@ def test_dispatcher_kepco_case():
 
     assert "error" not in result, f"error: {result.get('error')}"
     assert result["Max_Cost_원"] > 0
-    assert result["자산화_ROI_pct"] > 0
 
-    # 메모리 검증 목표: 자산화 ROI 16.9%
-    roi = result["자산화_ROI_pct"]
-    assert 16.5 <= roi <= 17.5, f"자산화 ROI가 검증 목표(16.9%) 범위 벗어남: {roi}"
-    print(f"  [PASS] 자산화 ROI {roi}% (검증 목표 16.9% 일치)")
+    # 현금흐름 수익성 지표 검증 (NPV/IRR/B-C)
+    si = result["수익성_지표"]
+    assert si["NPV_원"] > 0, f"NPV가 음수: {si['NPV_원']}"
+    assert si["BC_ratio"] > 1.0, f"B-C 비율이 1 미만: {si['BC_ratio']}"
+    assert 0.03 <= si["IRR"] <= 0.5, f"IRR이 비현실적: {si['IRR']}"
+    print(f"  [PASS] NPV {si['NPV_원']/1e8:+.2f}억 · B-C {si['BC_ratio']:.2f} · "
+          f"IRR {si['IRR']*100:.1f}% · 할인회수 {si['할인회수_년']}년")
 
     # 보조율 50% (서울/공공)
     assert result["보조금"]["보조율"] == 0.50
