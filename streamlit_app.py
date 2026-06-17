@@ -162,7 +162,7 @@ def render_home():
     d1, d2, d3 = st.columns(3)
     d1.metric("현재 등급", "D", "25 / 100점")
     d2.metric("보강 후 등급", "A", "+50점")
-    d3.metric("BIM 정밀 보강비", "5.07억", "점수 기여 항목 기준")
+    d3.metric("전체 보강비 (Max Cost)", "5.31억", "11개 항목 전체")
 
     st.markdown("**② 재무성 — 에너지 절감 회수**")
     f1, f2, f3 = st.columns(3)
@@ -174,7 +174,7 @@ def render_home():
     g1, g2, g3 = st.columns(3)
     g1.metric("NPV (순현재가치)", "+1.08억", "자부담 대비 순이득")
     g2.metric("IRR (내부수익률)", "14.7%", "할인율의 3.3배")
-    g3.metric("B-C 비율", "2.18배", "투입 1원당 편익 2.18원")
+    g3.metric("B-C 비율", "2.19배", "투입 1원당 편익 2.19원")
 
     st.caption(
         "③ 경제성은 자부담(0.91억)을 투자로 본 현금흐름 지표입니다. "

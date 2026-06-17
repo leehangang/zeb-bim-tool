@@ -114,14 +114,16 @@ def render_roi_panel() -> None:
         ]
         for i, (label, prompt) in enumerate(examples):
             if st.button(label, key=f"ex_roi_{i}", width="stretch"):
-                st.session_state["_mode2_question_seed"] = prompt
+                # 위젯 key에 직접 주입 → rerun 후에도 입력창에 유지되고,
+                # '시뮬레이션 실행'을 눌러 다시 rerun돼도 내용이 보존됨.
+                st.session_state["_mode2_input"] = prompt
                 st.rerun()
 
-    # 입력
-    seed = st.session_state.pop("_mode2_question_seed", "")
+    # 입력 — key 사용으로 예시 시드/직접 타이핑 모두 rerun 후에도 유지.
+    # (value=만 쓰면 실행 버튼 클릭 시 rerun에서 초기화돼 빈 입력으로 처리되는 버그)
     user_message = st.text_area(
         "건물 정보를 자연어로 입력하세요",
-        value=seed,
+        key="_mode2_input",
         height=120,
         placeholder=(
             "예: 연면적 1,200㎡짜리 공공도서관을 ZEB 5등급으로 그린리모델링하려고 합니다. "
