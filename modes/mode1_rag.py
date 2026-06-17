@@ -109,6 +109,9 @@ def render_rag_panel() -> None:
     # 인덱스 상태 확인
     ready, msg, count = is_index_ready()
     if not ready:
+        import os as _os
+        if _os.getenv("RAG_DEBUG", "1") == "1":
+            st.warning(f"[진단] 인덱스 미준비 사유: {msg}")
         st.info(
             "**정책 Q&A**는 그린리모델링 관련 법·고시·가이드라인 원문에서 "
             "근거 조항을 찾아 인용하는 기능입니다. 현재 라이브 데모는 핵심인 "
