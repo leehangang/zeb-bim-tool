@@ -263,7 +263,7 @@ code { background: var(--brand-050) !important; color: var(--brand-700) !importa
 .zeb-topbar .brand-mark {
     width:34px; height:34px; border-radius:9px;
     background: linear-gradient(140deg, var(--brand-700), var(--brand-500));
-    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:0.95rem;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:0.78rem; letter-spacing:-0.02em;
     box-shadow: var(--shadow-sm);
 }
 .zeb-topbar .brand-text { line-height:1.1; }
@@ -398,18 +398,15 @@ def render_topbar(context_pills=None):
         context_pills: 우측에 표시할 컨텍스트 칩 HTML 문자열 리스트.
     """
     import streamlit as st
+    # 컨텍스트 칩은 기본 미표시 — 브랜드(ZEB-ROI)만 노출.
     if context_pills is None:
-        context_pills = [
-            "사례 <b>KEPCO 도담어린이집</b>",
-            "중부2 · 연면적 1,251㎡",
-            "목표 <b>ZEB 4등급</b>",
-        ]
+        context_pills = []
     pills = "".join(f'<span class="pill">{p}</span>' for p in context_pills)
     st.markdown(
         f'''
 <div class="zeb-topbar">
   <div class="brand">
-    <div class="brand-mark">ZE</div>
+    <div class="brand-mark">ZEB</div>
     <div class="brand-text">
       <div class="brand-name">ZEB-ROI</div>
       <div class="brand-sub">GREEN REMODELING DECISION PLATFORM</div>
@@ -455,7 +452,7 @@ def render_footer():
     import streamlit as st
     st.markdown(
         '<div class="zeb-footer">'
-        'ZEB-ROI · 그린리모델링 의사결정 플랫폼 · 2026 졸업설계<br>'
+        'ZEB-ROI · 그린리모델링 의사결정 플랫폼<br>'
         '본 진단은 자동 산출 결과로, 실제 사업 신청 시 그린리모델링 창조센터(1588-8788) 공식 컨설팅 필수'
         '</div>',
         unsafe_allow_html=True,
