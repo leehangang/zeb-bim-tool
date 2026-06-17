@@ -76,8 +76,10 @@ def render_roi_panel() -> None:
     """Mode 2 (ROI 시뮬레이션) Streamlit 패널."""
     import streamlit as st
 
+    from core.ui_theme import concept_divider
+
     st.markdown("""
-    <div style="margin-bottom:1.5rem;">
+    <div style="margin-bottom:1rem;">
         <div style="font-size:0.85rem; color:#2E7D32; font-weight:600; letter-spacing:0.08em;">
             MODE 02 · NATURAL LANGUAGE ROI
         </div>
@@ -89,6 +91,15 @@ def render_roi_panel() -> None:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # 그린리모델링 vs ZEB 역할 구분 (헷갈림 방지)
+    st.markdown(
+        concept_divider(
+            gr_text="공사비(Max Cost) · 보조금 · 자부담 · 회수기간 등 <b>사업 경제성</b>을 계산합니다.",
+            zeb_text="입력한 <b>목표 등급</b>은 취득세 감면·용적률 완화 등 <b>인센티브</b>에 반영됩니다.",
+        ),
+        unsafe_allow_html=True,
+    )
 
     # 세션 상태 — 대화 히스토리 (단순 1턴씩 처리, 멀티턴 미지원)
     if "_mode2_history" not in st.session_state:

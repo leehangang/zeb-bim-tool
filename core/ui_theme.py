@@ -447,6 +447,43 @@ def card_html(icon: str, title: str, desc: str, badge: str = None) -> str:
     )
 
 
+def concept_badge(kind: str) -> str:
+    """개념 구분 뱃지 — '그린리모델링'(사업·비용·신청) vs 'ZEB'(등급·에너지성능).
+
+    두 개념이 한 화면에 섞여 보이지 않도록 색·아이콘으로 시각 구분.
+    kind: 'gr' | 'zeb'
+    """
+    if kind == "gr":
+        return (
+            '<span style="display:inline-block;background:#E8F5E9;color:#2E7D32;'
+            'border:1px solid #C8E6C9;padding:0.14rem 0.6rem;border-radius:999px;'
+            'font-size:0.74rem;font-weight:700;margin-right:0.3rem;">🏗 그린리모델링</span>'
+        )
+    return (
+        '<span style="display:inline-block;background:#E3F2FD;color:#1565C0;'
+        'border:1px solid #BBDEFB;padding:0.14rem 0.6rem;border-radius:999px;'
+        'font-size:0.74rem;font-weight:700;margin-right:0.3rem;">⚡ ZEB 제로에너지</span>'
+    )
+
+
+def concept_divider(gr_text: str, zeb_text: str) -> str:
+    """그린리모델링·ZEB 두 개념의 역할을 나란히 보여주는 안내 박스 HTML."""
+    return (
+        '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin:0.2rem 0 1.1rem 0;">'
+        '<div style="flex:1;min-width:220px;background:#F1F8F2;border:1px solid #C8E6C9;'
+        'border-radius:10px;padding:0.7rem 0.9rem;">'
+        f'{concept_badge("gr")}'
+        f'<div style="font-size:0.82rem;color:#37474F;margin-top:0.35rem;line-height:1.5;">{gr_text}</div>'
+        '</div>'
+        '<div style="flex:1;min-width:220px;background:#F0F7FE;border:1px solid #BBDEFB;'
+        'border-radius:10px;padding:0.7rem 0.9rem;">'
+        f'{concept_badge("zeb")}'
+        f'<div style="font-size:0.82rem;color:#37474F;margin-top:0.35rem;line-height:1.5;">{zeb_text}</div>'
+        '</div>'
+        '</div>'
+    )
+
+
 def render_footer():
     """페이지 푸터."""
     import streamlit as st

@@ -143,34 +143,45 @@ with st.sidebar:
 def render_home():
     """랜딩 페이지 — 4개 모드 카드 + 핵심 지표"""
 
-    # 히어로 영역
+    # 히어로 영역 — 제로에너지건축물(ZEB) 등급 평가 중심
     st.markdown("""
     <div class="zeb-hero">
-        <div class="eyebrow">ZERO ENERGY BUILDING · ROI ANALYSIS</div>
-        <h1>BIM 한 번으로 <span class="accent">그린리모델링</span> 전 과정을<br>한 자리에서 분석합니다</h1>
+        <div class="eyebrow">ZERO ENERGY BUILDING · GREEN REMODELING</div>
+        <h1>BIM 한 번으로 <span class="accent">제로에너지건축물(ZEB)</span> 등급을 평가하고<br>그린리모델링 전 과정을 설계합니다</h1>
         <p class="lede">
-            Revit BIM 모델을 업로드하면 11개 GR 기술요소를 자동 평가하고,
-            보강 우선순위 · Max Cost · 보조금 · ZEB 등급 · 회수기간을 통합 산출합니다.
+            Revit BIM 모델을 업로드하면 건물의 <b>ZEB 인증 등급</b>을 자동 평가하고,
+            그 등급에 도달하기 위한 <b>그린리모델링</b> 보강 우선순위 · 비용(Max Cost) ·
+            보조금 · 회수기간까지 한 자리에서 산출합니다.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # 핵심 수치 (KEPCO 도담 검증 기준)
+    # 핵심 수치 (KEPCO 도담 검증 기준) — ZEB 등급 평가가 우리 플랫폼의 출발점
     st.markdown("### 검증 결과 — KEPCO 도담어린이집")
 
-    st.markdown("**① BIM 정밀 진단**")
+    st.markdown("**① ZEB 인증 등급 평가** — 본 플랫폼의 핵심")
+    z1, z2, z3 = st.columns(3)
+    z1.metric("현재 ZEB", "인증 미달", "에너지 자립률 9.3%")
+    z2.metric("보강 후 ZEB", "4등급", "인증 요건 충족 ✅")
+    z3.metric("에너지 자립률", "23.4%", "9.3% → 23.4%")
+    st.caption(
+        "ZEB(제로에너지건축물) 인증등급은 (제1호 에너지자립률 또는 제2호 1차에너지소요량)과 "
+        "제3호(BEMS)로 판정합니다. ‘보강 후’는 11개 GR 기술요소 전체 적용 + BEMS 설치 가정 기준입니다."
+    )
+
+    st.markdown("**② BIM 정밀 진단** — 11개 그린리모델링 기술요소 채점")
     d1, d2, d3 = st.columns(3)
     d1.metric("현재 등급", "D", "25 / 100점")
     d2.metric("보강 후 등급", "A", "+50점")
     d3.metric("전체 보강비 (Max Cost)", "5.31억", "11개 항목 전체")
 
-    st.markdown("**② 재무성 — 에너지 절감 회수**")
+    st.markdown("**③ 재무성 — 에너지 절감 회수**")
     f1, f2, f3 = st.columns(3)
     f1.metric("외피 보강 Max Cost", "1.81억", "50% 보조 → 자부담 0.91억")
     f2.metric("연간 에너지 절감", "1,238만원", "BIM 정밀 산정")
     f3.metric("단순 회수 기간", "7.3년", "GR 단독 (에너지 절감만)")
 
-    st.markdown("**③ 경제성 — 현금흐름 기반 (20년 · 할인율 4.5%)**")
+    st.markdown("**④ 경제성 — 현금흐름 기반 (20년 · 할인율 4.5%)**")
     g1, g2, g3 = st.columns(3)
     g1.metric("NPV (순현재가치)", "+1.08억", "자부담 대비 순이득")
     g2.metric("IRR (내부수익률)", "14.7%", "할인율의 3.3배")
@@ -192,9 +203,9 @@ def render_home():
     with col1:
         st.markdown(card_html(
             "🏢",
-            "BIM 진단 + ROI 분석",
-            "BIM 모델을 업로드하면 11개 그린리모델링 기술요소를 자동 진단하고, "
-            "보강 우선순위·비용·보조금·ZEB 등급·회수기간을 한 번에 산출합니다.",
+            "BIM 진단 + ZEB 등급 평가",
+            "BIM 모델을 업로드하면 ZEB 인증 등급을 평가하고, 목표 등급 달성을 위한 "
+            "11개 그린리모델링 기술요소별 보강 우선순위·비용·보조금·회수기간을 산출합니다.",
             badge="핵심 엔진"
         ), unsafe_allow_html=True)
 
