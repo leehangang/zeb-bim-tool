@@ -50,8 +50,9 @@ def answer_question(
           "usage": {"input_tokens": int, "output_tokens": int},
         }
     """
-    from core.rag_retriever import RagRetriever, answer_with_rag
-    retriever = RagRetriever(persist_dir=persist_dir)
+    from core.rag_retriever import KeywordRetriever, answer_with_rag
+    # 키워드 검색기 사용 — 임베더(fastembed) 불필요 → 무료 클라우드 티어에서도 안정.
+    retriever = KeywordRetriever(persist_dir=persist_dir)
     return answer_with_rag(
         question, top_k=top_k, retriever=retriever, max_tokens=max_tokens,
     )
@@ -70,14 +71,10 @@ def is_index_ready(persist_dir: str = "./data/chroma_db") -> tuple:
             "ChromaDB 인덱스가 없습니다. "
             "프로젝트 루트에서 `python scripts/build_index.py` 를 실행해 인덱스를 만드세요."
         ), 0
-    # 임베더 의존성 확인 — 클라우드(무료 티어)엔 fastembed 미설치 → 안내 패널.
+    # 키워드 검색기는 임베더(fastembed) 없이 동작 → 무료 클라우드 티어에서도 준비 완료.
     try:
-        import fastembed  # noqa: F401
-    except ImportError:
-        return False, "임베딩 엔진(fastembed) 미설치 — 정책 Q&A는 로컬 전용입니다.", 0
-    try:
-        from core.rag_retriever import RagRetriever
-        retriever = RagRetriever(persist_dir=persist_dir)
+        from core.rag_retriever import KeywordRetriever
+        retriever = KeywordRetriever(persist_dir=persist_dir)
         count = retriever.count()
         if count == 0:
             return False, "인덱스는 있지만 청크가 0개입니다. 재인덱싱이 필요합니다.", 0
@@ -122,7 +119,7 @@ def render_rag_panel() -> None:
         st.markdown(
             "**동작 방식** — 그린리모델링 관련 7개 법·고시·가이드라인(GR 가이드라인, "
             "ZEB 인증기준, 녹색건축법, 지방세특례, 에너지절약설계기준, 영유아보육법)을 "
-            "의미 기반으로 색인(16,048개 단위)하고, 질문과 가까운 조항을 찾아 "
+            "조항 단위로 색인하고, 질문과 관련된 조항을 찾아 "
             "**근거 조항을 인용**해 답변합니다."
         )
         st.markdown("**이런 질문에 답합니다**")
@@ -178,10 +175,7 @@ def render_rag_panel() -> None:
 
     # 답변 생성
     try:
-        with st.spinner(
-            "7개 정책 자료에서 검색 중... "
-            "(첫 질문은 검색엔진 로딩으로 20~40초 걸릴 수 있어요)"
-        ):
+        with st.spinner("7개 정책 자료에서 근거 조항 검색 + 답변 생성 중..."):
             result = answer_question(question, top_k=top_k)
     except Exception as e:
         from core.error_messages import friendly_error

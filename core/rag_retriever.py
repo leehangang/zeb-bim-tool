@@ -129,6 +129,130 @@ class RagRetriever:
 
 
 # ====================================================================
+# Phase A' — 키워드 검색 (임베더 불필요, 무료 티어 안정)
+# ====================================================================
+#
+# 벡터 검색(RagRetriever)은 쿼리 임베딩에 fastembed(다국어 ONNX)가 필요한데
+# 무료 클라우드 티어(~1GB RAM)에선 모델 로딩이 메모리를 초과해 죽는다.
+# 인덱스에는 청크 '원문'이 그대로 저장돼 있으므로, 임베더 없이 TF-IDF식
+# 키워드 점수로 top-k를 뽑으면 어떤 환경에서도 안정적으로 동작한다.
+
+import math
+import re
+from collections import Counter
+
+# persist_dir → (docs, metas, doc_token_counters, df, N) 캐시 (쿼리마다 재계산 방지)
+_KEYWORD_INDEX_CACHE: dict = {}
+
+
+def _tokenize_ko(text: str) -> list:
+    """한글·영문·숫자 토큰 추출 (2자 이상)."""
+    return [t for t in re.findall(r"[가-힣A-Za-z0-9]+", text.lower()) if len(t) >= 2]
+
+
+class KeywordRetriever:
+    """임베더 없이 ChromaDB 저장 원문에서 TF-IDF식 키워드 검색.
+
+    벡터 검색과 동일한 인터페이스(retrieve / count)를 제공해
+    answer_with_rag()에 그대로 주입 가능. 무료 티어에서 기본 검색기로 사용.
+    """
+
+    def __init__(
+        self,
+        persist_dir: str = "./data/chroma_db",
+        collection_name: str = "policy_docs",
+    ):
+        try:
+            import chromadb
+        except ImportError:
+            raise RuntimeError("chromadb 미설치. pip install chromadb")
+
+        if not Path(persist_dir).exists():
+            raise RuntimeError(
+                f"ChromaDB 디렉토리 없음: {persist_dir}\n"
+                f"먼저 'python scripts/build_index.py' 실행 필요."
+            )
+
+        cache_key = (persist_dir, collection_name)
+        cached = _KEYWORD_INDEX_CACHE.get(cache_key)
+        if cached is None:
+            client = chromadb.PersistentClient(path=persist_dir)
+            collection = client.get_collection(collection_name)
+            got = collection.get(include=["documents", "metadatas"])
+            docs = got["documents"] or []
+            metas = got["metadatas"] or []
+            doc_tokens = [_tokenize_ko(d) for d in docs]
+            doc_counters = [Counter(dt) for dt in doc_tokens]
+            df: dict = {}
+            for dt in doc_tokens:
+                for t in set(dt):
+                    df[t] = df.get(t, 0) + 1
+            cached = {
+                "docs": docs,
+                "metas": metas,
+                "counters": doc_counters,
+                "df": df,
+                "N": max(len(docs), 1),
+            }
+            _KEYWORD_INDEX_CACHE[cache_key] = cached
+
+        self._cache = cached
+
+    def count(self) -> int:
+        return len(self._cache["docs"])
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 5,
+        max_snippet_chars: int = 800,
+    ) -> list:
+        docs = self._cache["docs"]
+        metas = self._cache["metas"]
+        counters = self._cache["counters"]
+        df = self._cache["df"]
+        N = self._cache["N"]
+
+        q_terms = _tokenize_ko(query)
+        if not q_terms:
+            return []
+        idf = {t: math.log((N + 1) / (df.get(t, 0) + 1)) + 1 for t in set(q_terms)}
+
+        scored = []
+        for i, cnt in enumerate(counters):
+            s = 0.0
+            for t in set(q_terms):
+                tf = cnt.get(t, 0)
+                if tf:
+                    s += idf[t] * (1 + math.log(tf))
+            if s > 0:
+                scored.append((s, i))
+        scored.sort(reverse=True)
+
+        if not scored:
+            return []
+
+        max_s = scored[0][0] or 1.0
+        out = []
+        for s, i in scored[:top_k]:
+            doc = docs[i]
+            meta = metas[i] if i < len(metas) else {}
+            snippet = doc[:max_snippet_chars]
+            if len(doc) > max_snippet_chars:
+                snippet += "..."
+            # 점수를 0~1 유사도로 정규화 → distance = 1 - similarity (UI 표시 호환)
+            similarity = s / max_s
+            out.append({
+                "text": snippet,
+                "file": meta.get("file", "unknown"),
+                "page": meta.get("page", 0),
+                "chunk_idx": meta.get("chunk_idx", 0),
+                "distance": round(1 - similarity, 4),
+            })
+        return out
+
+
+# ====================================================================
 # Phase B — Claude 답변 생성
 # ====================================================================
 
