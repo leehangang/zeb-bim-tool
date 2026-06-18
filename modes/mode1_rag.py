@@ -144,7 +144,7 @@ def render_rag_panel() -> None:
     with col1:
         question = st.text_input(
             "질문",
-            placeholder="예: ZEB 1등급 인증 시 취득세 감면율은 얼마인가요?",
+            placeholder="예: 녹색건축물의 용적률·높이 완화 기준은 얼마인가요?",
         )
     with col2:
         top_k = st.slider("검색 청크 수", 3, 10, 5)

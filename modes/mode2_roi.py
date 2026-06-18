@@ -160,7 +160,7 @@ def render_roi_panel() -> None:
 
     # 실행
     try:
-        with st.spinner("Claude가 파라미터 추출 + ROI 산정 중..."):
+        with st.spinner("입력 조건 추출 + ROI 산정 중..."):
             result = run_roi_simulation(user_message)
     except Exception as e:
         from core.error_messages import friendly_error
