@@ -359,19 +359,35 @@ def map_to_gr_elements(bim: dict) -> dict:
     # ---------------------------------------------------------------
     # 10. 신재생에너지 (태양광)
     # ---------------------------------------------------------------
+    # GR 고시 제7조 제6호: 가목(태양광·전력 생산) / 나목(태양열·급탕 열 생산)은 별개 설비.
+    # 자립률 기여 방식이 다르므로(전력은 1차E ×2.75, 태양열은 급탕 부하 대체) 분리해서 읽는다.
     pv = bim.get("pv_panels", [])
-    total_pv_area = sum(p["area"] for p in pv)
+    total_pv_area = sum(p.get("area", p.get("area_m2", 0)) for p in pv)
     total_kw = sum(p.get("capacity_kw", 0) for p in pv)
-    # 자립률 추정: 1kW PV ≈ 연간 1,300 kWh 발전, 건물 연간 소비 가정 100kWh/㎡
-    building_area = bim.get("total_area_m2", 1)
-    annual_demand = building_area * 100   # kWh/년 (어림)
-    annual_gen = total_kw * 1300          # kWh/년
-    autonomy_ratio = annual_gen / annual_demand if annual_demand > 0 else 0
+
+    st_panels = bim.get("solar_thermal_panels", [])
+    total_st_area = sum(p.get("area_m2", p.get("area", 0)) for p in st_panels)
+
+    # 자립률은 여기서 자체 계산하지 않는다 (단일 소스 원칙).
+    # ZEB 고시 별표1 정식(순생산량 ÷ 총소요량, 1차에너지 기준)은 core.zeb_evaluator가
+    # 유일한 산출처다. 과거 이 자리에서 '최종에너지 ÷ 100kWh/㎡ 어림'으로 별도 계산해
+    # 진단 5.6% vs 홈 9.3%로 값이 갈리는 버그가 있었다.
+    from core.zeb_evaluator import autonomy_for_diagnosis
+    autonomy_ratio = autonomy_for_diagnosis(bim)
+
     out["10_신재생태양광"] = {
-        "status": "적용" if total_pv_area > 0 else "미적용",
+        "status": "적용" if total_kw > 0 else "미적용",
         "PV_면적_m2": total_pv_area,
         "용량_kW": total_kw,
         "자립률_추정": round(autonomy_ratio, 3),
+        "_자립률_출처": "core.zeb_evaluator (ZEB 고시 별표1 정식 · 1차에너지 기준)",
+    }
+    out["6-나_신재생태양열"] = {
+        "status": "적용" if total_st_area > 0 else "미적용",
+        "집열면적_m2": total_st_area,
+        "용도": "급탕",
+        "_근거": "GR 고시 제7조 제6호 나목 — 태양광(가목)과 별개 항목",
+        "_주의": "급탕 열 생산이라 전력 자립률 기여가 작다. 태양광으로 환산 금지.",
     }
 
     # ---------------------------------------------------------------

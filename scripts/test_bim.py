@@ -9,7 +9,7 @@ KEPCO 도담어린이집 가상 BIM JSON 샘플로 core.bim_diagnoser 검증.
 기대 결과:
     - 외벽 단열보강: 부분적용 (43%) — 4점 (10점 만점)
     - 바닥 단열: 적용 — 3점
-    - 신재생: 적용 (자립률 약 5.6%) — 2점
+    - 태양광: 미적용(0kW) · 태양열: 27㎡(급탕) — GR 고시 §7 제6호 가·나목 분리
     - 환기: 부분적용
     - 11개 항목 중 약 4~5개 적용 확인
 """
@@ -88,11 +88,27 @@ def test_full_pipeline():
     assert floor["status"] == "적용"
     print(f"  [PASS] 바닥 단열·난방: 적용 (XL 배관)")
 
-    # 신재생: 적용
+    # 신재생 — 태양광(가목)과 태양열(나목)은 별개 설비 (GR 고시 §7 제6호)
+    # 도담 실측: 태양열집열판 27㎡(급탕). 태양광 객체는 0개.
+    # (과거 이 27㎡를 PV 5.4kW로 오분류해 자립률이 과대 산정되던 버그를 정정)
     pv = mapping["10_신재생태양광"]
-    assert pv["status"] == "적용"
-    assert pv["용량_kW"] == 5.4
-    print(f"  [PASS] 신재생: {pv['용량_kW']}kW, 자립률 {pv['자립률_추정']*100:.1f}%")
+    assert pv["status"] == "미적용", f"태양광은 0이어야 함: {pv}"
+    assert pv["용량_kW"] == 0
+    print(f"  [PASS] 태양광: {pv['용량_kW']}kW (미적용) · 자립률 {pv['자립률_추정']*100:.1f}%")
+
+    st = mapping["6-나_신재생태양열"]
+    assert st["status"] == "적용"
+    assert st["집열면적_m2"] == 27.0
+    assert st["용도"] == "급탕"
+    print(f"  [PASS] 태양열: {st['집열면적_m2']}㎡ ({st['용도']}) — 태양광과 분리됨")
+
+    # 자립률 단일 소스: 진단값이 ZEB 엔진 산출과 동일해야 함
+    from core.zeb_evaluator import evaluate_zeb_from_bim
+    zeb_auto = evaluate_zeb_from_bim(result["bim_data"])["autonomy_pct"]
+    assert abs(pv["자립률_추정"] * 100 - zeb_auto) < 0.05, (
+        f"자립률 불일치: 진단 {pv['자립률_추정']*100:.2f}% vs ZEB엔진 {zeb_auto:.2f}%"
+    )
+    print(f"  [PASS] 자립률 단일 소스: 진단 == ZEB엔진 ({zeb_auto:.1f}%)")
 
     # 환기: 부분적용 (covered 800 / total 1251)
     vent = mapping["6_폐열회수환기"]

@@ -2,13 +2,13 @@
   "_meta": {
     "description": "KEPCO 김천 도담어린이집 가상 BIM 추출 JSON (Step 3 검증용)",
     "source": "Dynamo 스크립트 추출값 + 일부 가정",
-    "note": "실제 Dynamo 출력 포맷과 일치시킬 경우 이 스키마를 표준으로 사용"
+    "note": "실제 Dynamo 출력 포맷과 일치시킬 경우 이 스키마를 표준으로 사용",
+    "renewable_correction": "2026-07: 태양열집열판 27㎡를 태양광 5.4kW로 분류하던 오류 정정. 태양광=전력(1차E ×2.75) / 태양열=급탕 열 → 자립률 기여 방식이 다름."
   },
   "region": "중부2",
   "building_year": 2014,
   "total_area_m2": 1251,
   "directly_owned": true,
-
   "walls": [
     {
       "id": "W001",
@@ -20,14 +20,13 @@
     },
     {
       "id": "W002",
-      "area": 887.50,
+      "area": 887.5,
       "facing": "exterior_direct",
       "insulated": false,
       "u_value": null,
       "material": null
     }
   ],
-
   "windows": [
     {
       "id": "Win01",
@@ -37,7 +36,6 @@
       "type": "일반 단창"
     }
   ],
-
   "doors": [
     {
       "id": "D01",
@@ -48,7 +46,6 @@
       "type": "강철문 SD"
     }
   ],
-
   "roofs": [
     {
       "id": "R001",
@@ -58,7 +55,6 @@
       "cool_roof_applied": false
     }
   ],
-
   "floors": [
     {
       "id": "F001",
@@ -69,15 +65,7 @@
       "type": "1층 XL 배관 매립"
     }
   ],
-
-  "pv_panels": [
-    {
-      "id": "PV001",
-      "area": 27.0,
-      "capacity_kw": 5.4
-    }
-  ],
-
+  "pv_panels": [],
   "hvac": {
     "heating": {
       "type": "EHP",
@@ -99,15 +87,20 @@
       "covered_area_m2": 800
     }
   },
-
   "lighting": {
     "led_count": 0,
     "total_count": 439
   },
-
   "bems_installed": false,
-
   "energy_saving_ratio": 0.25,
   "annual_saving_kwh": 0,
-  "project_cost_million_won": 1
+  "project_cost_million_won": 1,
+  "solar_thermal_panels": [
+    {
+      "id": "ST001",
+      "area_m2": 27.0,
+      "use": "급탕",
+      "_note": "GR 고시 §7 제6호 나목(태양열). 기존 pv_panels 5.4kW 표기는 오분류였음."
+    }
+  ]
 }

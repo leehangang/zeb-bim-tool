@@ -150,6 +150,24 @@ def calculate_pv_generation(bim: dict) -> dict:
     }
 
 
+def autonomy_for_diagnosis(bim: dict) -> float:
+    """
+    진단(정량평가표)용 에너지자립률 — **비율(0~1)** 로 반환.
+
+    ⚠️ 단일 소스 원칙: 자립률은 이 모듈에서만 계산한다.
+    ZEB 고시 별표1 정식(순생산량 ÷ 총소요량, 양쪽 모두 1차에너지)을 그대로 쓴다.
+    과거 core.bim_diagnoser가 '최종에너지 ÷ 100kWh/㎡ 어림'으로 따로 계산해
+    진단 페이지 5.6% vs 홈 9.3%로 값이 갈리는 버그가 있었다.
+
+    반환값은 RENEWABLE_BREAKPOINTS(비율 기준) 채점에 바로 쓰도록 0~1 스케일이다.
+    """
+    try:
+        res = evaluate_zeb_from_bim(bim)
+        return float(res.get("autonomy_pct", 0.0)) / 100.0
+    except Exception:
+        return 0.0
+
+
 def determine_grade(autonomy_pct: float) -> dict:
     """제1호 — 에너지자립률(%) 기준 ZEB 등급."""
     for lo, g, label, rank in ZEB_AUTONOMY_THRESHOLDS:
