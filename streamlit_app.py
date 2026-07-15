@@ -114,18 +114,28 @@ with st.sidebar:
     with st.expander("ℹ️ 프로젝트 정보", expanded=False):
         st.markdown(
             """
-            **ZEB-BIM-Tool**
-            
-            BIM 기반 그린리모델링 자동 진단 + ROI 분석 플랫폼.
-            
+            **ZEB-ROI**
+
+            AI Agent 기반 ZEB / 그린리모델링 평가 및 ROI 산정 플랫폼.
+
+            **설계 원칙**
+            - 파인튜닝이 아닌 **Agent + RAG** — 단가·법령이 수시로 바뀌므로
+            - **계산은 엔진이, 언어만 LLM이** — 숫자는 결정론적으로 산출
+            - 법령은 **RAG로 원문 인용**, 없으면 없다고 답변 (환각 차단)
+            - **ZEB ≠ 그린리모델링** — 판정은 분리, 데이터·해석 기반은 공유
+
             - 케이스: KEPCO 도담어린이집 (김천)
             - 데이터 출처:
               - 01 GR 가이드라인 (LH·국토부)
+              - 02 GR 기술요소
               - 03 ZEB 인증기준 고시
               - 04 녹색건축법
               - 05 지방세특례제한법
+              - 06 에너지절약설계기준
               - 07/08 조달청 단가DB·간접공사비
               - 09 영유아보육법 시행규칙
+
+            상세 아키텍처: `docs/ARCHITECTURE.md`
             """
         )
 
@@ -195,41 +205,72 @@ def render_home():
 
     st.markdown("---")
 
-    # 4개 모드 카드
-    st.markdown("### 4가지 모드를 자유롭게 선택하세요")
+    # ── 두 트랙 구조 (ZEB 인증 ≠ 그린리모델링 사업) ──────────────────
+    st.markdown("### 두 개의 제도, 하나의 BIM 입력")
+    st.markdown(
+        "ZEB 인증과 그린리모델링 사업은 **근거 법령과 판정 방식이 다른 별개의 제도**입니다. "
+        "본 플랫폼은 두 트랙을 나눠 판정하되, **BIM 파싱·에너지 해석·단가DB·법령 RAG는 하나의 공유 코어**로 처리합니다."
+    )
 
-    col1, col2 = st.columns(2)
-
-    with col1:
+    t1, t2 = st.columns(2)
+    with t1:
+        st.markdown(
+            "<div style='border-left:3px solid #C18A2D; padding:0.1rem 0 0.1rem 0.8rem; margin-bottom:0.6rem;'>"
+            "<b>TRACK A · ZEB 인증</b><br>"
+            "<span style='color:#5C665F; font-size:0.88rem;'>목표: 인증 등급 취득 · "
+            "근거: ZEB 인증기준 고시(제1·2·3호)</span></div>",
+            unsafe_allow_html=True,
+        )
         st.markdown(card_html(
             "🏢",
-            "BIM 진단 + ZEB 등급 평가",
-            "BIM 모델을 업로드하면 ZEB 인증 등급을 평가하고, 목표 등급 달성을 위한 "
-            "11개 그린리모델링 기술요소별 보강 우선순위·비용·보조금·회수기간을 산출합니다.",
+            "ZEB 등급 평가",
+            "에너지 자립률 <b>또는</b> 1차에너지소요량, <b>그리고</b> BEMS로 인증 등급(+등급~5등급)을 "
+            "판정합니다. 전력은 1차에너지 환산계수 ×2.75를 적용합니다.",
             badge="핵심 엔진"
         ), unsafe_allow_html=True)
 
+    with t2:
+        st.markdown(
+            "<div style='border-left:3px solid #1B5E20; padding:0.1rem 0 0.1rem 0.8rem; margin-bottom:0.6rem;'>"
+            "<b>TRACK B · 그린리모델링 사업</b><br>"
+            "<span style='color:#5C665F; font-size:0.88rem;'>목표: 사업 선정 + 경제성 · "
+            "근거: GR 가이드라인 정량평가표</span></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(card_html(
+            "🏗️",
+            "BIM 정밀 진단 + 보강 계획",
+            "11개 기술요소를 100점(기술요소 80 + 사업여건 20)으로 채점해 등급(A+~D)을 내고, "
+            "비용 효율순 보강 우선순위·Max Cost를 산출합니다.",
+        ), unsafe_allow_html=True)
+
+    b1, b2 = st.columns(2)
+    with b1:
         st.markdown(card_html(
             "💰",
             "ROI 시뮬레이션",
-            "자연어로 건물 조건(연면적·목표 등급 등)을 입력하면 공사비·보조금·"
-            "취득세 감면·회수기간을 즉시 계산합니다.",
+            "자연어로 건물 조건을 입력하면 단가DB·간접비·보조금·용적률·취득세를 묶어 "
+            "Max Cost·자부담·NPV/IRR·회수기간을 산출합니다.",
         ), unsafe_allow_html=True)
-
-    with col2:
-        st.markdown(card_html(
-            "💬",
-            "정책 Q&A",
-            "그린리모델링 관련 법·고시·가이드라인 원문에서 근거 조항을 찾아 "
-            "인용하며 답변합니다.",
-        ), unsafe_allow_html=True)
-
+    with b2:
         st.markdown(card_html(
             "📋",
             "사업 신청 인테이크",
-            "공공건축물 그린리모델링 사업 신청에 필요한 항목을 대화로 수집하고 "
-            "신청서 초안을 자동 생성합니다.",
+            "신청에 필요한 항목을 대화로 수집하고 신청서 초안을 자동 생성합니다.",
         ), unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='border-left:3px solid #9BA39C; padding:0.1rem 0 0.1rem 0.8rem; margin:0.8rem 0 0.6rem;'>"
+        "<b>공통 · 근거 레이어</b><br>"
+        "<span style='color:#5C665F; font-size:0.88rem;'>두 트랙이 함께 쓰는 법령·고시 근거</span></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(card_html(
+        "💬",
+        "정책 Q&A (RAG)",
+        "7개 법·고시·가이드라인 원문에서 근거 조항을 찾아 <b>인용</b>해 답변합니다. "
+        "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
+    ), unsafe_allow_html=True)
 
 
 # 상단 브랜드 바 (모든 페이지 공통 프레임)
