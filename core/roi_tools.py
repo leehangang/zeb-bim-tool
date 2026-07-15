@@ -261,6 +261,21 @@ def _dispatch_calculate_zeb_roi(args: dict) -> dict:
         "취득세_감면": {
             "감면율": result["tax_relief"]["감면율"],
             "감면액_원": result["tax_relief"]["감면액"],
+            "_주의": (
+                "신축·증축·개축한 부분만 대상(지방세특례 §47의2 제2항). "
+                "증축이 없으면 감면액 0. 재산세 감면은 2018년 종료로 현행 아님."
+            ),
+        },
+        "ZEB_인증수수료": {
+            "수수료_원": result["zeb_cert_fee"]["수수료"],
+            "의무대상": result["zeb_cert_fee"]["의무대상"],
+            "환불율": result["zeb_cert_fee"]["환불율"],
+            "환불액_원": result["zeb_cert_fee"]["환불액"],
+            "순비용_원": result["zeb_cert_fee"]["순비용"],
+            "_근거": (
+                "고시 제2024-893호 별표4(수수료) / 제6조제3항제5호 나목(환불). "
+                "환불은 의무 대상이 아닌 건물이 자율 인증한 경우에만 발생."
+            ),
         },
         "신축비_원": result["build_cost"],
         "연간_절감액_원": result["annual_saving"],

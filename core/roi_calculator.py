@@ -29,47 +29,47 @@ load_dotenv()
 # 상수 정의 (자료 04·05 + 01 가이드라인 기반)
 # ====================================================================
 
-# 녹색건축법 §15 + 시행령 - 용적률 완화 (ZEB 등급별)
-FAR_BONUS_BY_GRADE = {
-    1: 0.15,   # 1등급: 최대 15% (법령 상한)
-    2: 0.14,
-    3: 0.13,
-    4: 0.12,
-    5: 0.11,   # 5등급: 11%
-}
+# ── 제도 파라미터: data/params/*.yaml 에서 로드 (하드코딩 금지) ──────
+# 값·출처·시행일은 전부 data/params/zeb_incentive.yaml, gr_support.yaml 에 있다.
+# 여기서는 기존 사용처 호환을 위해 int 키 dict로 정규화만 한다.
+# 근거 제시가 필요하면 core.params.provenance("zeb_incentive", "취득세감면") 사용.
+from core import params as _P
 
-# 지방세특례 §47의2 제2항 - ZEB 인증 취득세 감면율
-# 근거: 지방세특례제한법 시행령 제24조 (팀 학습문서 v4 부록 B-2에서 확인됨)
-#   3등급 이상 20% / 4등급 18% / 5등급 15%
-# 주의: 이 감면은 '신축(증축·개축 포함)한 부분'만 대상이다.
-#       기존 건축물의 단순 성능개선 리모델링(증축 없음)은 감면 대상이 아니다(감면액 0).
-#       → apply 여부는 has_extension(증축 유무)으로 분기해야 한다.
+
+def _grade_map(path: str) -> dict:
+    """'+'/'1'~'5' 문자열 키 → int 키(1~5) dict. ('+'는 1등급과 동률이라 제외)"""
+    raw = _P.get("zeb_incentive", path)
+    return {int(k): float(v) for k, v in raw.items() if k != "+"}
+
+
+# 지방세특례 §47의2 제2항 — ZEB 취득세 감면율 (3등급↑ 20% / 4등급 18% / 5등급 15%)
+# 주의: '신축(증축·개축 포함)한 부분'만 대상. 증축이 없으면 신축비=0 → 감면액 0으로 귀결된다.
 # 주의: 재산세 감면(§47의2 제5항)은 2018.12.31 종료로 현행 아님. 편익에 넣지 말 것.
-ZEB_TAX_RELIEF_RATE = {
-    1: 0.20,
-    2: 0.20,
-    3: 0.20,   # 문서 확인: 3등급도 20% (기존 0.18 → 정정)
-    4: 0.18,
-    5: 0.15,
-}
+ZEB_TAX_RELIEF_RATE = _grade_map("취득세감면.등급별감면율")
 
-# ZEB 인증 수수료 (고시 제2024-893호 별표4, 비주거·전용면적 구간, 부가세 별도)
+# 녹색건축법 시행령 §11 / 에너지절약설계기준 별표9 — 용적률·높이 최대 완화율
+FAR_BONUS_BY_GRADE = _grade_map("용적률높이완화.등급별최대완화율")
+
+# 업무시설 취득세율
+ACQUISITION_TAX_RATE = float(_P.get("zeb_incentive", "취득세감면.취득세율_업무시설"))
+
+# ZEB 인증 수수료 (고시 별표4, 비주거·전용면적 구간, 부가세 별도)
 ZEB_CERT_FEE_NONRES = [
-    (1_000, 1_900_000), (3_000, 3_900_000), (5_000, 5_900_000),
-    (10_000, 7_900_000), (15_000, 9_900_000), (20_000, 11_900_000),
-    (30_000, 13_900_000), (40_000, 15_900_000), (60_000, 17_800_000),
-    (float("inf"), 19_800_000),
+    (float(lim), int(fee))
+    for lim, fee in _P.get("zeb_incentive", "인증수수료.전용면적구간_원")
 ]
-# 수수료 환불율 (고시 제6조제3항제5호 나목) — '의무 대상이 아닌' 건물이 자율 인증 시에만 적용
-ZEB_CERT_FEE_REFUND = {"+": 1.00, "1": 1.00, "2": 1.00, "3": 1.00, "4": 0.50, "5": 0.30}
+# 수수료 환불율 (고시 제6조제3항제5호 나목) — '의무 대상이 아닌' 건물의 자율 인증에만 적용
+ZEB_CERT_FEE_REFUND = {
+    k: float(v) for k, v in _P.get("zeb_incentive", "수수료환불.등급별환불율").items()
+}
 
 # 업무시설 취득세율
 ACQUISITION_TAX_RATE = 0.022
 
 # GR 가이드라인 - 보조율
 SUBSIDY_RATE = {
-    "서울_중앙_공공": 0.50,
-    "그외_지자체": 0.70,
+    "서울_중앙_공공": _P.gr_subsidy_rate("서울_중앙_공공기관"),
+    "그외_지자체": _P.gr_subsidy_rate("그외_지자체"),
 }
 
 # GR 가이드라인 - 단위면적당 지원한도 (만원/3.3㎡)
@@ -536,11 +536,54 @@ def calculate_far_bonus(
     }
 
 
+def calculate_zeb_cert_fee(
+    exclusive_area_m2: float,
+    zeb_grade: int,
+    is_mandatory: bool = False,
+) -> dict:
+    """
+    ZEB 인증 수수료(비용)와 환불(편익).
+
+    근거: 제로에너지건축물 인증 기준 고시 제2024-893호 별표4(수수료) /
+          제6조제3항제5호 나목(환불).
+    환불은 **의무 대상이 아닌 건물이 자율(임의) 인증**을 받은 경우에만 발생한다.
+    도담은 단순 리모델링이라 ZEB 의무 대상이 아니므로(시행령 별표1 요건2 미충족)
+    자율 인증 시 등급별 환불이 실질 편익이 된다.
+
+    Returns: {수수료, 환불율, 환불액, 순비용}  (순비용 = 수수료 - 환불액)
+    """
+    fee = 0
+    for limit, f in ZEB_CERT_FEE_NONRES:
+        if exclusive_area_m2 < limit:
+            fee = int(f)
+            break
+    refund_rate = 0.0 if is_mandatory else float(
+        ZEB_CERT_FEE_REFUND.get(str(zeb_grade), 0.0)
+    )
+    refund = int(fee * refund_rate)
+    return {
+        "전용면적": exclusive_area_m2,
+        "수수료": fee,
+        "의무대상": is_mandatory,
+        "환불율": refund_rate,
+        "환불액": refund,
+        "순비용": fee - refund,
+        "_근거": "고시 제2024-893호 별표4 / 제6조제3항제5호 나목",
+    }
+
+
 def calculate_acquisition_tax_relief(
     build_cost: float,
     zeb_grade: int,
 ) -> dict:
-    """취득세 감면액 (지방세특례 §47의2)."""
+    """
+    취득세 감면액 (지방세특례 §47의2 제2항).
+
+    ⚠️ '신축(증축·개축 포함)한 부분'만 대상이다. build_cost는 **증축분 신축비**이므로
+       증축이 없으면 build_cost=0 → 감면액 0으로 자연히 귀결된다.
+       기존 건축물의 단순 성능개선 리모델링에는 이 감면이 없다.
+    ⚠️ 재산세 감면(§47의2 제5항)은 2018.12.31 종료 — 편익에 넣지 말 것.
+    """
     relief_rate = ZEB_TAX_RELIEF_RATE.get(zeb_grade, 0.0)
     tax_base = build_cost * ACQUISITION_TAX_RATE
     relief = tax_base * relief_rate
@@ -728,10 +771,19 @@ def calculate_roi(
         building_info.get("land_price_per_pyeong", 15_000_000),
     )
 
-    # 취득세 감면
+    # 취득세 감면 (증축분 신축비 기준 — 증축 없으면 build_cost=0 → 감면 0)
     tax = calculate_acquisition_tax_relief(
         build_cost,
         building_info.get("zeb_target_grade", 5),
+    )
+
+    # ZEB 인증 수수료·환불 (별표4 / 제6조제3항제5호 나목)
+    # 의무 대상 여부: 시행령 별표1 요건2(신축·재축·전부개축·별동증축) 충족 시 의무.
+    # 도담처럼 단순 리모델링이면 자율 → 등급별 환불이 실질 편익.
+    cert_fee = calculate_zeb_cert_fee(
+        building_info["total_area_m2"],
+        building_info.get("zeb_target_grade", 5),
+        is_mandatory=building_info.get("is_zeb_mandatory", False),
     )
 
     # 연간 에너지 절감액
@@ -749,7 +801,11 @@ def calculate_roi(
 
     # ROI 산출
     total_investment = subsidy_info["자부담"] + build_cost
-    immediate_benefit = far["자산가치"] + tax["감면액"]
+    # 즉시 수혜 = 용적률 완화 자산가치 + 취득세 감면 − ZEB 인증 순비용(수수료−환불)
+    # (자율 인증이면 환불이 발생해 순비용이 줄어든다. 의무 대상이면 환불 0.)
+    immediate_benefit = (
+        far["자산가치"] + tax["감면액"] - cert_fee["순비용"]
+    )
 
     # 자산가치(수익환원법): 에너지 절감 → NOI↑ → 자산가치↑ (증축 가정 무관)
     asset_value = calculate_asset_value_noi(
@@ -784,6 +840,7 @@ def calculate_roi(
         "far_bonus": far,
         "asset_value": asset_value,
         "tax_relief": tax,
+        "zeb_cert_fee": cert_fee,
         "annual_saving": int(annual_saving),
         "total_investment": int(total_investment),
         "immediate_benefit": int(immediate_benefit),

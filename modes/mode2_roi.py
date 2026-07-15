@@ -86,8 +86,8 @@ def render_roi_panel() -> None:
         <h1 style="margin:0.2rem 0;">💰 ROI 시뮬레이션</h1>
         <div style="color:#757575;">
             자연어로 건물 정보를 알려주시면 입력 조건을 자동 추출해
-            07 단가DB · 08 간접공사비 · 01 보조금 · 04 용적률 · 05 취득세 감면을
-            한 번에 산출합니다.
+            07 단가DB · 08 간접공사비 · 01 보조금 · 04 용적률 · 05 취득세 감면 ·
+            ZEB 인증 수수료/환불을 한 번에 산출합니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -96,7 +96,11 @@ def render_roi_panel() -> None:
     st.markdown(
         concept_divider(
             gr_text="공사비(Max Cost) · 보조금 · 자부담 · 회수기간 등 <b>사업 경제성</b>을 계산합니다.",
-            zeb_text="입력한 <b>목표 등급</b>은 취득세 감면·용적률 완화 등 <b>인센티브</b>에 반영됩니다.",
+            zeb_text=(
+                "입력한 <b>목표 등급</b>은 취득세 감면·용적률 완화·인증 수수료 환불 등 "
+                "<b>인센티브</b>에 반영됩니다. 단 <b>취득세 감면은 증축·신축분만</b> 해당하고, "
+                "<b>수수료 환불은 의무 대상이 아닌 자율 인증</b>에만 발생합니다."
+            ),
         ),
         unsafe_allow_html=True,
     )
