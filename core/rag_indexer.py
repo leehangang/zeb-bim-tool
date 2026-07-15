@@ -67,7 +67,29 @@ def extract_text_from_file(file_path: str) -> list:
             return []
 
         if not header.startswith(b"%PDF"):
-            # PDF가 아닌 텍스트인 경우 텍스트로 시도
+            # ⚠️ .pdf 확장자지만 실제로는 다른 포맷인 경우가 있다.
+            # ZIP 시그니처(PK)면 docx/hwpx 또는 '이미지(JPEG) 묶음'이다.
+            # 이때 UTF-8로 강제로 읽으면 바이너리가 '텍스트'처럼 뽑혀
+            # 쓰레기 청크가 색인된다(과거 04/06/03이 이 경로로 들어가 있었다).
+            # → 조용히 넣지 말고 건너뛰고 경고한다.
+            if header.startswith(b"PK"):
+                import zipfile
+                inner = ""
+                try:
+                    names = zipfile.ZipFile(path).namelist()
+                    if any(n.lower().endswith((".jpg", ".jpeg", ".png")) for n in names):
+                        inner = " (이미지 스캔본 묶음 — 텍스트 없음, OCR 필요)"
+                    elif any(n.startswith("word/") for n in names):
+                        inner = " (DOCX)"
+                except Exception:
+                    pass
+                print(
+                    f"[SKIP] {path.name}: .pdf 확장자이나 실제로는 ZIP 포맷{inner}. "
+                    f"텍스트 추출 불가 → 색인 제외. 원문 PDF로 교체 필요."
+                )
+                return []
+
+            # PDF가 아닌 순수 텍스트 파일이면 텍스트로 시도
             try:
                 text = path.read_text(encoding="utf-8", errors="ignore")
                 if text.strip():
