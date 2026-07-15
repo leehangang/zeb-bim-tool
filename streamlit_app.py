@@ -100,6 +100,7 @@ with st.sidebar:
         "💬 정책 Q&A",
         "💰 ROI 시뮬레이션",
         "📋 사업 신청 인테이크",
+        "📐 근거·출처",
     ]
     mode = st.radio(
         label="모드 선택",
@@ -189,7 +190,7 @@ def render_home():
         "ZEB 인증등급은 **제1호(에너지자립률) 또는 제2호(1차에너지소요량) 중 상위 등급**으로 정하고, "
         "제3호(BEMS 13항목)를 함께 충족해야 합니다(인증기준 고시 별표2 주1·주2). "
         "**보강 후 4등급은 제2호(소요량 66.0 < 비주거 4등급 기준 90) 근거**입니다. "
-        "도담은 태양광이 없어 **에너지자립률(제1호)은 0%**이며, 4등급은 "
+        "도담은 태양광이 없어 **에너지자립률(제1호)이 0%** 이며, 4등급은 "
         "**태양광이 아니라 외피·설비 효율개선으로 소요량을 낮춰서** 나옵니다. "
         "‘보강 후’는 11개 GR 기술요소 전체 적용 + BEMS 설치를 가정한 잠재 등급입니다."
     )
@@ -202,7 +203,7 @@ def render_home():
     )
     st.warning(
         "⚠️ **확인 필요** — 보강 후 절감률 **67%는 요소별 가정치**(`GR_ENERGY_REDUCTION`)의 합입니다. "
-        "제2호 4등급의 임계는 **절감률 55%**라 여유가 12%p뿐이며, "
+        "제2호 4등급의 임계는 **절감률 55%** 라서 여유가 12%p뿐이며, "
         "**ECO2/EnergyPlus로 재계산하면 등급이 5등급으로 내려갈 수 있습니다.** "
         "(ZEB 자립률 공식 산정 도구는 ECO2, GR 성능개선비율은 EnergyPlus 등 지정 프로그램)",
         icon="⚠️",
@@ -301,12 +302,22 @@ def render_home():
         "<span style='color:#5C665F; font-size:0.88rem;'>두 트랙이 함께 쓰는 법령·고시 근거</span></div>",
         unsafe_allow_html=True,
     )
-    st.markdown(card_html(
-        "💬",
-        "정책 Q&A (RAG)",
-        "<b>11개 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 근거 조항을 찾아 <b>인용</b>해 답변합니다. "
-        "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
-    ), unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(card_html(
+            "💬",
+            "정책 Q&A (RAG)",
+            "<b>11개 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 근거 조항을 찾아 <b>인용</b>해 답변합니다. "
+            "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
+        ), unsafe_allow_html=True)
+    with c2:
+        st.markdown(card_html(
+            "📐",
+            "근거·출처",
+            "위 숫자가 <b>어느 조항의, 언제 시행된 값</b>인지 파라미터 YAML에서 실시간으로 펼쳐 보여주고, "
+            "<b>아직 확인 못 한 값</b>과 등급이 뒤집히는 <b>임계 절감률</b>까지 숨기지 않고 공개합니다.",
+            badge="투명성",
+        ), unsafe_allow_html=True)
 
 
 # 상단 브랜드 바 (모든 페이지 공통 프레임)
@@ -331,6 +342,10 @@ elif mode == "💰 ROI 시뮬레이션":
 elif mode == "📋 사업 신청 인테이크":
     from modes.mode4_intake import render_intake_panel
     render_intake_panel()
+
+elif mode == "📐 근거·출처":
+    from modes.mode5_evidence import render_evidence_panel
+    render_evidence_panel()
 
 
 # 푸터
