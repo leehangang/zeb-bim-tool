@@ -29,3 +29,6 @@ python-dotenv>=1.0.0
 tenacity>=8.2.0            # API 재시도 로직
 reportlab>=4.0.0           # PDF 진단 리포트 생성
 
+
+# 파라미터 테이블(data/params/*.yaml) 로더 — core/params.py
+PyYAML>=6.0
