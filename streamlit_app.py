@@ -22,7 +22,7 @@ st.set_page_config(
 
 from core.ui_theme import (
     apply_global_style, render_logo, render_footer, render_topbar,
-    card_html, GRADE_COLORS, COLORS,
+    card_html, COLORS,
 )
 
 apply_global_style()
@@ -429,7 +429,7 @@ def render_home():
         st.markdown(card_html(
             "🏗️",
             "BIM 정밀 진단 + 보강 계획",
-            "11개 기술요소를 100점(기술요소 80 + 사업여건 20)으로 채점해 등급(A+~D)을 내고, "
+            "11개 기술요소를 100점(기술요소 80 + 사업여건 20)으로 채점합니다 — <b>등급이 아니라 고득점 순 선정용 랭킹 점수</b>입니다. "
             "비용 효율순 보강 우선순위·Max Cost를 산출합니다.",
         ), unsafe_allow_html=True)
 

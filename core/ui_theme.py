@@ -4,7 +4,7 @@ core/ui_theme.py — 글로벌 디자인 시스템
 모든 모드에서 공통 사용하는 컬러, 폰트, CSS 주입, 재사용 UI 컴포넌트.
 
 사용:
-    from core.ui_theme import apply_global_style, render_logo, GRADE_COLORS
+    from core.ui_theme import apply_global_style, render_logo, COLORS
 
     apply_global_style()         # 페이지 시작 시 1회
     render_logo("sidebar")        # 사이드바 또는 헤더에서
@@ -46,13 +46,10 @@ COLORS = {
 }
 
 
-GRADE_COLORS = {
-    "A+": "#1B5E20",     # 진초록
-    "A":  "#388E3C",
-    "B":  "#7CB342",     # 라임그린
-    "C":  "#FB8C00",     # 주황
-    "D":  "#E53935",     # 빨강
-}
+# GRADE_COLORS / grade_badge_html 제거 (2026-07)
+# — A+~D는 GR 정량평가표에 존재하지 않는 등급이었다. 정량평가표는 "고득점 순으로 선정"하는
+#   랭킹 점수다(2026 공공 GR 2.0 가이드라인 p.18). 상수를 남겨두면 등급이 되살아날
+#   통로가 되므로 제거한다. ZEB 등급(+~5)은 별개이며 core.zeb_evaluator가 다룬다.
 
 
 # ====================================================================
@@ -418,17 +415,6 @@ def render_topbar(context_pills=None):
         unsafe_allow_html=True,
     )
 
-
-def grade_badge_html(grade: str, large: bool = False) -> str:
-    """등급 배지 HTML (인라인 사용)."""
-    color = GRADE_COLORS.get(grade, "#757575")
-    font_size = "1.5rem" if large else "1rem"
-    padding = "0.4rem 1rem" if large else "0.2rem 0.6rem"
-    return (
-        f'<span style="background:{color};color:white;padding:{padding};'
-        f'border-radius:8px;font-weight:700;font-size:{font_size};'
-        f'display:inline-block;">{grade}등급</span>'
-    )
 
 
 def card_html(icon: str, title: str, desc: str, badge: str = None) -> str:

@@ -198,7 +198,49 @@ check("ZEB 절감률(base 분모) ≠ GR 성능개선비율(개선전 분모)",
       abs(_zeb_ratio - _imp["성능개선비율_pct"]) > 5.0,
       f"ZEB {_zeb_ratio}% vs GR {_imp['성능개선비율_pct']}% — {abs(_zeb_ratio-_imp['성능개선비율_pct']):.1f}%p 차이")
 
-print("\n⑨ 주거/비주거 기준표 분기")
+print("\n⑨ GR 정량평가표 — 원문 정합 (2026 공공 GR 2.0 가이드라인 p.18~20)")
+from core.bim_diagnoser import score_compliance  # noqa: E402
+
+_sc = score_compliance(_gr, _bim)
+check("등급을 반환하지 않는다 (제도에 없음)", "grade" not in _sc)
+check("평가 성격이 '선정 랭킹 점수'로 명시", "랭킹" in _sc["_평가성격"])
+check("도담 기본점수 = 24 (사업효율성 원문정합 반영)",
+      _sc["total_score"] == 24, f"{_sc['total_score']}")
+check("GR요소 80 + 사업여건 20 = 100 만점", _sc["max_score"] == 100)
+
+# '0점'과 '미평가'는 다르다
+check("미평가 항목을 0점과 구분해 노출", len(_sc["_미평가"]) > 0,
+      f"{len(_sc['_미평가'])}건")
+check("채점가능최대 = 92 (일사조절3 + 인정5는 데이터 없음)",
+      _sc["_채점가능최대"] == 92, f"{_sc['_채점가능최대']}")
+_names = {u["항목"] for u in _sc["_미평가"]}
+check("일사조절·인정이 '미평가'로 잡힌다",
+      any("일사조절" in n for n in _names) and any("녹색건축물" in n for n in _names))
+
+# 가점 14 / 감점 -10 (원문 p.20)
+check("가점 만점 = 14", _sc["breakdown"]["가점"]["만점"] == 14)
+check("감점 한도 = -10", _sc["breakdown"]["감점"]["한도"] == -10)
+check("가점 항목이 미평가로 잡힌다 (BIM에서 산출 불가)",
+      any(n.startswith("가점") for n in _names))
+
+# 사업효율성 원문 구간: "30미만~0이상 = 1점" — 0도 1점이다
+_b0 = {**_bim, "annual_saving_kwh": 0, "project_cost_million_won": 100}
+check("사업효율성 효율 0 → 1점 (원문 '30미만~0이상')",
+      score_compliance(_gr, _b0)["breakdown"]["사업여건"]["사업효율성"]["점수"] == 1)
+_b5 = {**_bim, "annual_saving_kwh": 12000, "project_cost_million_won": 100}   # 120
+check("사업효율성 효율 120 → 5점",
+      score_compliance(_gr, _b5)["breakdown"]["사업여건"]["사업효율성"]["점수"] == 5)
+
+# 가점 입력 시 실제 선정 점수에 반영
+_bb = {**_bim, "bonus_safety": 5, "bonus_meter": 2, "penalty_mgmt": 3}
+_scb = score_compliance(_gr, _bb)
+check("가점·감점이 final_score에 반영",
+      _scb["final_score"] == _scb["total_score"] + 7 - 3,
+      f"기본 {_scb['total_score']} +{_scb['bonus']} {_scb['penalty']} = {_scb['final_score']}")
+check("가점은 항목별 상한을 넘지 않는다",
+      score_compliance(_gr, {**_bim, "bonus_meter": 99})["bonus"] == 2)
+
+print("\n⑩ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",

@@ -240,8 +240,11 @@ def render_bim_panel() -> None:
             unsafe_allow_html=True,
         )
     st.caption(
-        "⚠️ **두 판정은 서로 다른 제도라 등급 체계가 다릅니다** — ZEB는 +등급~5등급(절대성능), "
-        "GR 정량평가는 A+~D(100점 채점)입니다. 같은 건물이 ZEB 5등급이면서 GR D등급일 수 있습니다."
+        "⚠️ **두 판정은 서로 다른 제도이고, 결과의 성격 자체가 다릅니다** — "
+        "**ZEB**(녹색건축법 §17)는 절대성능으로 **등급**(+등급~5등급)을 매깁니다. "
+        "**GR 정량평가**(§27 지원사업)는 **등급이 없습니다** — "
+        "*\"정량평가 100%로 구성, 고득점 순으로 선정\"* 하는 **선정 랭킹 점수**입니다"
+        "(2026 공공 GR 2.0 가이드라인 p.18). 그래서 GR 쪽은 등급 대신 점수만 표시합니다."
     )
 
     # ── 탭 구성 — 판정(2) → 경제성(3) → 산출물(1) ──────────────────
@@ -328,7 +331,7 @@ def _render_diagnosis_tab(result: dict) -> None:
     """탭1: 11개 매핑 표 + 점수 분해 (시각화 강화)."""
     import streamlit as st
     import pandas as pd
-    from core.ui_theme import GRADE_COLORS, COLORS, grade_badge_html
+    from core.ui_theme import COLORS
 
     score = result["score"]
     bd = score["breakdown"]
@@ -369,8 +372,9 @@ def _render_diagnosis_tab(result: dict) -> None:
                 / 100점
               </text>
             </svg>
-            <div style="margin-top: 0.5rem;">
-              {grade_badge_html(grade, large=True)}
+            <div style="margin-top: 0.5rem; font-size: 0.82rem; color: #5C665F;">
+              정량평가 점수<br>
+              <span style="color:#8A9490; font-size:0.76rem;">선정 랭킹 · 등급 아님</span>
             </div>
         </div>
         """
@@ -410,13 +414,15 @@ def _render_diagnosis_tab(result: dict) -> None:
             unsafe_allow_html=True,
         )
 
-        # 등급 가이드
+        # 점수 해석 — 등급이 아니라 '선정 경쟁' 관점으로 설명한다
         st.markdown(
             f'<div style="margin-top:1.5rem; padding:0.8rem 1rem; background:#F9FBF9; '
             f'border-radius:8px; border-left:4px solid {grade_color};">'
-            f'<div style="font-size:0.85rem; color:#757575;">현재 등급</div>'
+            f'<div style="font-size:0.85rem; color:#757575;">정량평가 점수</div>'
             f'<div style="font-weight:700; color:{grade_color}; margin-top:0.2rem;">'
-            f'{grade}등급 · {_grade_label(grade)}</div>'
+            f'{score["total_score"]}/100점 · 선정 랭킹 점수</div>'
+            f'<div style="font-size:0.78rem; color:#8A9490; margin-top:0.3rem;">'
+            f'고득점 순 경쟁 선발이라 커트라인은 해마다 다릅니다 — 등급이 아닙니다.</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -473,17 +479,49 @@ def _render_diagnosis_tab(result: dict) -> None:
     ]
     _render_score_bars(breakdown_rows)
 
+    # ── 미평가 항목 — '0점'과 '데이터 없어 못 매김'을 구분해 공개 ──────
+    unscored = score.get("_미평가") or []
+    if unscored:
+        scorable = score.get("_채점가능최대", 100)
+        st.warning(
+            f"⚠️ **채점 가능 최대 {scorable}/100점** — 아래 {len(unscored)}개 항목은 "
+            "**0점이 아니라 '미평가'** 입니다. BIM이나 사업 신청 정보에 없어서 점수를 "
+            "매기지 못했을 뿐, 실제로는 받을 수 있는 점수입니다. "
+            "선정은 **고득점 순 경쟁**이라 이 차이가 결과를 바꿉니다.",
+            icon="⚠️",
+        )
+        with st.expander(f"📋 미평가 {len(unscored)}개 항목 — 무엇을 채우면 점수가 오르나"):
+            import pandas as pd
+            st.dataframe(
+                pd.DataFrame([
+                    {"항목": u["항목"],
+                     "배점": f"{u['만점']:+d}점" if u["만점"] < 0 else f"{u['만점']}점",
+                     "필요한 정보": u["사유"]}
+                    for u in unscored
+                ]),
+                hide_index=True, width="stretch",
+            )
+            st.caption(
+                "가점(14점)·감점(−10점)은 전부 **BIM에서 산출할 수 없는 사업 신청 정보**입니다 — "
+                "안전점검 결과, 계량기 보급사업 참여 의사, 지방비 추가 확보, 재난지역 지정, "
+                "과거 사업관리 이력. 실제 신청 시 담당자가 채워야 합니다. "
+                "근거: 2026 공공 GR 2.0 가이드라인 p.20."
+            )
 
-def _grade_label(grade: str) -> str:
-    """등급별 라벨."""
-    labels = {
-        "A+": "최우수 — 매우 효율적인 그린 빌딩",
-        "A":  "우수 — 양호한 그린 빌딩",
-        "B":  "양호 — 일부 보강 필요",
-        "C":  "보통 — 적극적 보강 권장",
-        "D":  "미흡 — 종합 그린리모델링 권장",
-    }
-    return labels.get(grade, "")
+    # ── 가점·감점 (원문 p.20) ───────────────────────────────────
+    b_sub = (score.get("breakdown", {}).get("가점", {}) or {}).get("소계", 0)
+    p_sub = (score.get("breakdown", {}).get("감점", {}) or {}).get("소계", 0)
+    f1, f2, f3 = st.columns(3)
+    f1.metric("기본 점수", f"{score['total_score']}/100", "GR요소 80 + 사업여건 20")
+    f2.metric("가점", f"+{b_sub}/14", "안전성·적극성·기후위기")
+    f3.metric("실제 선정 점수", f"{score.get('final_score', score['total_score'])}",
+              f"감점 {p_sub}/-10")
+
+
+# _grade_label() 제거 (2026-07) — 두 번 틀린 함수였다:
+#   ① A+~D 자체가 제도에 없는 등급이었고(정량평가표는 선정 랭킹 점수),
+#   ② 그 가짜 등급에 "최우수·우수"라는 **녹색건축 인증(G-SEED, §16)** 용어를 붙였다.
+# G-SEED는 이 정량평가표(§27 지원사업)와 무관한 별개 제도다.
 
 
 def _render_gr_card(item: dict) -> None:
@@ -591,7 +629,6 @@ def _render_roi_tab(result: dict) -> None:
     """탭2: 11개 항목 보강 ROI 표 + 누적 차트."""
     import streamlit as st
     import pandas as pd
-    from core.ui_theme import GRADE_COLORS, grade_badge_html
 
     plan = result.get("roi_plan")
     score = result["score"]

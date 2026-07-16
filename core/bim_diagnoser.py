@@ -418,10 +418,21 @@ def _classify(applied: float, total: float) -> str:
 
 def score_compliance(gr_mapping: dict, bim: dict) -> dict:
     """
-    01 가이드라인 표1 기반 자동 채점.
-    100점 만점 (기본 80 + 사업여건 20).
+    《표1. 종합형(일반사업) 정량평가 기준》 기반 자동 채점.
+    100점 만점 = 그린리모델링 요소 80점 + 사업여건 20점. (+가점 14 / -감점 10)
+
+    근거: 2026년 공공건축물 그린리모델링 2.0 지원사업 가이드라인(2026.4) p.18~20
+          → data/policy_docs/18_2026_공공GR2.0_가이드라인.pdf (RAG 색인됨)
+
+    ⚠️ 등급을 매기지 않는다 — 아래 반환부 주석 참고.
+
+    ⚠️ **'0점'과 '미평가'는 다르다.**
+       BIM에 데이터가 없어 채점하지 못한 항목을 0점으로 뭉뚱그리면, 선정 랭킹 점수에서
+       자기 점수를 스스로 깎는 셈이 된다. 그래서 채점 불가 항목은 `_미평가`에 모으고
+       `_채점가능최대`로 "우리가 최대 몇 점까지 매길 수 있는지"를 함께 알린다.
     """
     breakdown = {}
+    unscored = []      # 데이터가 없어 채점하지 못한 항목 (0점과 구분)
 
     # ---------------------------------------------------------------
     # 그린리모델링 요소 (80점)
@@ -453,13 +464,18 @@ def score_compliance(gr_mapping: dict, bim: dict) -> dict:
     win_score = _score_by_ratio(win_ratio, WINDOW_BREAKPOINTS)
     door_ratio = gr_mapping["2_고기밀성단열문"]["적용비율"]
     door_score = _score_by_ratio(door_ratio, DOOR_BREAKPOINTS)
-    # 일사조절은 별도 데이터 필요. 기본 0
-    shading_score = bim.get("shading_score", 0)
+    # 일사조절장치(3점) — BIM에 데이터가 없으면 '0점'이 아니라 '미평가'다.
+    shading_raw = bim.get("shading_score")
+    shading_score = int(shading_raw) if shading_raw is not None else 0
+    if shading_raw is None:
+        unscored.append({"항목": "창호·일사조절장치", "만점": 3,
+                         "사유": "BIM에 일사조절장치(차양·루버 등) 정보 없음"})
 
     breakdown["창호"] = {
         "창": {"비율": win_ratio, "점수": win_score, "만점": 10},
         "문": {"비율": door_ratio, "점수": door_score, "만점": 3},
-        "일사조절": {"점수": shading_score, "만점": 3},
+        "일사조절": {"점수": shading_score, "만점": 3,
+                   "_미평가": shading_raw is None},
         "소계": win_score + door_score + shading_score,
     }
 
@@ -510,14 +526,26 @@ def score_compliance(gr_mapping: dict, bim: dict) -> dict:
     breakdown["BEMS"] = {"적용": bems_applied, "점수": bems_score, "만점": 2}
 
     # 8) 에너지 절감률 (10점)
-    energy_saving = bim.get("energy_saving_ratio", 0)
+    energy_raw = bim.get("energy_saving_ratio")
+    energy_saving = float(energy_raw) if energy_raw is not None else 0.0
     energy_score = _score_by_ratio(energy_saving, ENERGY_SAVING_BREAKPOINTS)
+    if energy_raw is None:
+        unscored.append({"항목": "에너지 절감률", "만점": 10,
+                         "사유": "지정 프로그램(ECO2 등) 절감률 입력 필요"})
     breakdown["에너지절감률"] = {
         "비율": energy_saving, "점수": energy_score, "만점": 10,
+        "_미평가": energy_raw is None,
     }
 
-    # 9) 녹색건축물 전환 인정 (5점) — 기본 0, 추후 입력
-    breakdown["녹색건축물전환"] = {"점수": bim.get("green_cert_score", 0), "만점": 5}
+    # 9) 녹색건축물 전환 인정 (5점) — "녹색건축물 전환 인정 예정 시" 부여.
+    #    사업 신청자의 의사 표명이라 BIM에서 나올 수 없다 → 입력 없으면 미평가.
+    green_raw = bim.get("green_cert_score")
+    green_score = int(green_raw) if green_raw is not None else 0
+    if green_raw is None:
+        unscored.append({"항목": "녹색건축물 전환 인정", "만점": 5,
+                         "사유": "신청자의 전환 인정 예정 여부 입력 필요 (BIM에서 산출 불가)"})
+    breakdown["녹색건축물전환"] = {"점수": green_score, "만점": 5,
+                                "_미평가": green_raw is None}
 
     # 그린리모델링 요소 소계
     gr_total = sum(v["소계"] if "소계" in v else v["점수"] for v in [
@@ -543,35 +571,82 @@ def score_compliance(gr_mapping: dict, bim: dict) -> dict:
 
     ownership_score = 5 if bim.get("directly_owned", True) else 3
 
-    # 사업효율성: 절감량(kWh/년) / 사업비(백만원), 5점 만점
-    saving_kwh = bim.get("annual_saving_kwh", 0)
-    project_cost_mil = bim.get("project_cost_million_won", 1)
-    efficiency = saving_kwh / project_cost_mil if project_cost_mil > 0 else 0
-    if efficiency >= 120:
-        efficiency_score = 5
-    elif efficiency >= 90:
-        efficiency_score = 4
-    elif efficiency >= 60:
-        efficiency_score = 3
-    elif efficiency >= 30:
-        efficiency_score = 2
-    elif efficiency > 0:
-        efficiency_score = 1
-    else:
+    # 사업효율성 (5점): 절감량(kWh/년) ÷ 사업비(백만원)
+    # 원문 구간: 5=120이상 / 4=120미만~90이상 / 3=90미만~60이상 / 2=60미만~30이상
+    #            1=**30미만~0이상**  ← 0도 1점이다. 과거 우리는 0점을 줘서 원문과 어긋났다.
+    saving_kwh = bim.get("annual_saving_kwh")
+    project_cost_mil = bim.get("project_cost_million_won")
+    if saving_kwh is None or project_cost_mil is None:
+        # 데이터가 없으면 '0점'이 아니라 '미평가'. 임의로 1점을 주지도 않는다.
+        efficiency = None
         efficiency_score = 0
+        unscored.append({"항목": "사업여건·사업효율성", "만점": 5,
+                         "사유": "연간 절감량(kWh)·사업비 입력 필요"})
+    else:
+        efficiency = (saving_kwh / project_cost_mil) if project_cost_mil > 0 else 0.0
+        if efficiency >= 120:
+            efficiency_score = 5
+        elif efficiency >= 90:
+            efficiency_score = 4
+        elif efficiency >= 60:
+            efficiency_score = 3
+        elif efficiency >= 30:
+            efficiency_score = 2
+        else:
+            efficiency_score = 1      # 원문 "30미만~0이상" → 0도 1점
 
     breakdown["사업여건"] = {
         "노후도": {"건축년도": year, "점수": age_score, "만점": 10},
         "소유": {"직접소유": bim.get("directly_owned", True),
                  "점수": ownership_score, "만점": 5},
-        "사업효율성": {"효율": efficiency, "점수": efficiency_score, "만점": 5},
+        "사업효율성": {"효율": efficiency, "점수": efficiency_score, "만점": 5,
+                    "_미평가": efficiency is None},
         "소계": age_score + ownership_score + efficiency_score,
     }
 
     # ---------------------------------------------------------------
+    # 가점 (14점) / 감점 (-10점) — 원문 p.20
+    # ---------------------------------------------------------------
+    # 전부 BIM에서 산출 불가한 '사업 신청 정보'다(안전점검 결과·계량기 참여 의사·
+    # 지방비 추가 확보·재난지역 지정·과거 사업관리 이력). 입력이 없으면 미평가.
+    bonus, penalty, bonus_detail = 0, 0, {}
+    for key, label, cap, why in [
+        ("bonus_safety", "안전성", 5, "5년 내 안전점검 결과(보통·미흡) 해당 시"),
+        ("bonus_meter", "사업적극성·계량기", 2, "사업완료 후 계량기 보급사업 참여 예정 시"),
+        ("bonus_extra_fund", "사업적극성·추가사업비", 2, "지방비 매칭 비율 초과 확보 시"),
+        ("bonus_disaster", "기후위기 시급성", 5, "특별재난지역·재난사태 선포지역 (해당 기술요소 2개 적용 시)"),
+    ]:
+        raw = bim.get(key)
+        if raw is None:
+            unscored.append({"항목": f"가점·{label}", "만점": cap, "사유": f"{why} — 신청 정보 입력 필요"})
+            bonus_detail[label] = {"점수": 0, "만점": cap, "_미평가": True}
+        else:
+            v = min(int(raw), cap)
+            bonus += v
+            bonus_detail[label] = {"점수": v, "만점": cap, "_미평가": False}
+
+    penalty_raw = bim.get("penalty_mgmt")
+    if penalty_raw is None:
+        unscored.append({"항목": "감점·사업관리", "만점": -10,
+                         "사유": "과거('20~'25) 사업 단순취소·임의변경·중요재산 처분 이력 입력 필요"})
+    else:
+        penalty = -min(abs(int(penalty_raw)), 10)
+
+    breakdown["가점"] = {**bonus_detail, "소계": bonus, "만점": 14}
+    breakdown["감점"] = {"사업관리": penalty, "소계": penalty, "한도": -10,
+                       "_미평가": penalty_raw is None}
+
+    # ---------------------------------------------------------------
     # 총점
     # ---------------------------------------------------------------
-    total_score = gr_total + breakdown["사업여건"]["소계"]
+    base_score = gr_total + breakdown["사업여건"]["소계"]
+    total_score = base_score            # 기본 100점 만점 (가·감점 제외)
+    final_score = base_score + bonus + penalty   # 가·감점 반영 실제 선정 점수
+
+    # 우리가 채점할 수 있는 최대치 — '미평가'로 잃은 점수를 드러낸다
+    unscored_base = sum(u["만점"] for u in unscored if u["만점"] > 0
+                        and not u["항목"].startswith("가점"))
+    scorable_max = 100 - unscored_base
 
     # ⚠️ 등급을 매기지 않는다 — 제도에 없기 때문이다.
     #
@@ -586,13 +661,19 @@ def score_compliance(gr_mapping: dict, bim: dict) -> dict:
     # (혼동 주의: '최우수·우수·우량·일반(그린1~4등급)'은 **녹색건축 인증(G-SEED,
     #  녹색건축법 §16)** 의 등급으로 이 정량평가표와 무관한 별개 제도다.)
     return {
-        "total_score": total_score,
+        "total_score": total_score,          # 기본 100점 만점 (가·감점 제외)
         "max_score": 100,
+        "final_score": final_score,          # 가점·감점 반영 실제 선정 점수
+        "bonus": bonus,
+        "penalty": penalty,
         "gr_subtotal": gr_total,
         "site_subtotal": breakdown["사업여건"]["소계"],
         "breakdown": breakdown,
+        # '0점'과 '미평가'를 구분한다 — 데이터가 없어 못 매긴 점수를 숨기지 않는다
+        "_미평가": unscored,
+        "_채점가능최대": scorable_max,
         "_평가성격": "선정 랭킹 점수 (고득점 순 경쟁 선발) — 등급 아님",
-        "_근거": "2026 공공건축물 GR 2.0 지원사업 가이드라인 p.18 《표1 종합형(일반사업) 정량평가 기준》",
+        "_근거": "2026 공공건축물 GR 2.0 지원사업 가이드라인 p.18~20 《표1 종합형(일반사업) 정량평가 기준》",
     }
 
 
