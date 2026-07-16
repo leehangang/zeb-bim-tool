@@ -10,9 +10,12 @@ anthropic>=0.39.0          # Claude Haiku 4.5
 openai>=1.50.0             # 임베딩 전용 (text-embedding-3-small)
 
 # === RAG (모드 1, 정책 Q&A) ===
-# 검색은 ChromaDB에 저장된 청크 원문 기반 키워드(TF-IDF) 방식 → 임베더 불필요,
-# 무료 클라우드 티어(~1GB)에서도 안정 동작 (KeywordRetriever).
-# (선택) 벡터 검색을 쓰려면: pip install fastembed (다국어 ONNX 임베딩) — 로컬 권장.
+# 검색기 = core.rag_retriever.KeywordRetriever — ChromaDB에서 청크 '원문'만 꺼내
+# TF-IDF(한글 char-bigram)로 매칭한다. 저장된 임베딩 벡터를 조회하지 않는다.
+#   → 임베더는 런타임에 불필요하고, 인덱스 빌드 때도 필요 없다
+#     (build_index.py 기본값 --provider hash: 의존성·API키·네트워크 0).
+#   → 무료 클라우드 티어(~1GB)에서도 안정 동작.
+# (선택) 나중에 벡터 검색으로 전환할 때만: pip install fastembed   # 다국어 ONNX
 # llama-index 제거 — 코드에서 import 0건인 죽은 의존성.
 chromadb>=0.4.20
 protobuf==3.20.3

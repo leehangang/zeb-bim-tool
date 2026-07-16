@@ -1,0 +1,65 @@
+name: tests
+
+# 왜 필요한가: README의 "테스트 통과" 배지가 수작업 주장이라 이미 틀려 있었다
+# (4개 파일·76개라고 적혀 있었지만 실제로는 7개 스위트).
+# 사람이 관리하는 배지 대신 CI가 사실을 말하게 한다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 파라미터 YAML 검증
+        run: |
+          python - <<'PY'
+          import glob, sys, yaml
+          for f in sorted(glob.glob("data/params/*.yaml")):
+              with open(f, encoding="utf-8") as fh:
+                  yaml.safe_load(fh)
+              print(f"YAML OK  {f}")
+          PY
+
+      - name: 테스트 스위트
+        # 이모지를 출력하므로 UTF-8 고정 (한글 Windows의 cp949 이슈와 동일 원인)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          fail=0
+          for t in test_evidence test_bim test_roi test_rag test_sensitivity test_mode2 test_mode4; do
+            echo "::group::$t"
+            if python "scripts/$t.py"; then
+              echo "PASS $t"
+            else
+              echo "::error::FAIL $t"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: 앱 임포트 스모크
+        run: |
+          python - <<'PY'
+          import ast
+          ast.parse(open("streamlit_app.py", encoding="utf-8").read())
+          import modes.mode5_evidence  # 근거·출처 모드가 임포트되는지
+          print("app smoke OK")
+          PY

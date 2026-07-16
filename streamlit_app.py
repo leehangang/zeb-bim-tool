@@ -2,7 +2,7 @@ import os
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
 # ZEB-ROI 그린리모델링 의사결정 플랫폼 — 메인 앱
-# 4개 모드 통합 Streamlit 앱 + 랜딩 페이지.
+# 6개 모드 통합 Streamlit 앱 + 랜딩 페이지.
 # 실행: streamlit run streamlit_app.py
 # (주의: 위 설명을 트리플쿼트 문자열로 두면 import os 다음이라 docstring이
 #  아니라 bare expression이 되어 Streamlit magic으로 화면에 렌더됨 → 주석 유지)
@@ -163,7 +163,7 @@ with st.sidebar:
 # ====================================================================
 
 def render_home():
-    """랜딩 페이지 — 4개 모드 카드 + 핵심 지표"""
+    """랜딩 페이지 — 모드 카드 + 핵심 지표"""
 
     # 히어로 영역 — 제로에너지건축물(ZEB) 등급 평가 중심
     st.markdown("""

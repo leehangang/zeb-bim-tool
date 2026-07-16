@@ -2,20 +2,32 @@
 
 **BIM 한 번으로 공공건축물 그린리모델링 전 과정을 자동 분석하는 챗봇**
 
+### ▶︎ **[라이브 데모 — zeb-bim-tool.streamlit.app](https://zeb-bim-tool.streamlit.app)**
+
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B)](https://streamlit.io/)
 [![Claude Haiku 4.5](https://img.shields.io/badge/LLM-Claude%20Haiku%204.5-D97757)](https://www.anthropic.com/)
-[![Tests](https://img.shields.io/badge/Tests-76%20PASS-brightgreen)](#테스트)
+[![Tests](https://img.shields.io/badge/Tests-7%20suites-brightgreen)](#-테스트)
 
-> 2026년 졸업설계 작품. 케이스: KEPCO 김천 도담어린이집 (연면적 1,251㎡).
+> ⏰ 무료 티어라 접속이 없으면 잠듭니다. 첫 로딩이 느리면 깨어나는 중입니다 (~30초).
+
+![ZEB-ROI 플랫폼 — 라이브 화면](assets/screenshot_home.png)
+
+> 2026년 졸업설계 작품 (성균관대 · 삼성E&A 환경에너지탐구대회). 케이스: KEPCO 김천 도담어린이집 (연면적 1,251㎡).
 > **검증 결과 (외피 보강)**: NPV **+1.08억** · IRR **14.7%** · B-C **2.19** · 할인회수 **8.2년**
 > (자부담 기준, 20년·할인율 4.5%) · 수익환원 자산가치 **2.48억** (환원율 5%, NPV와 별도)
+
+> ⚠️ **위 수치는 가정치를 포함합니다 — 그대로 인용하지 마세요.**
+> 연간 에너지 절감액은 아직 `연면적 × 9,900원/㎡`라는 **근거 없는 단일 계수**이며 kWh 절감량과 연결돼 있지 않습니다.
+> ZEB 4등급 판정의 근거인 절감률 **67%는 요소별 가정치**이고 4등급 임계는 **55%** — 여유가 12%p뿐이라
+> ECO2/EnergyPlus 정식 해석에서 **5등급으로 내려갈 수 있습니다.**
+> 무엇이 확인됐고 무엇이 가정인지는 앱의 **[📐 근거·출처]** 모드에서 전부 공개합니다.
 
 ---
 
 ## 📌 한 줄 요약
 
-Revit BIM 모델을 업로드하면 11개 GR 기술요소 자동 평가 → 보강 우선순위 + Max Cost + 보조금 + 회수기간을 통합 산출하는 **4-모드 챗봇 플랫폼**.
+Revit BIM 모델을 업로드하면 11개 GR 기술요소 자동 평가 → 보강 우선순위 + Max Cost + 보조금 + 회수기간을 통합 산출하는 **6-모드 플랫폼**.
 
 ## 🧭 방향성 (확정)
 
@@ -51,28 +63,53 @@ Revit BIM 모델을 업로드하면 11개 GR 기술요소 자동 평가 → 보�
 | **행정** | 사업 신청서 빈칸 채우기 | 챗봇과 대화로 자동 생성 (Mode 4) |
 | **컨설팅** | 정책 조항 검색 | RAG 기반 출처 인용 답변 (Mode 1) |
 
-## ✨ 4가지 모드
+## ✨ 6가지 모드
 
 | 모드 | 입력 | 출력 | API 키 |
 |---|---|---|---|
+| 🏠 **홈** | — | 검증 결과 요약 · 두 트랙 구조 | 불필요 |
 | 🏢 **BIM 진단 + ROI** | Revit BIM JSON | 11개 매핑 + 등급 + 보강 우선순위 | 불필요 |
 | 💬 **정책 Q&A (RAG)** | 자연어 질문 | 근거 조항 인용 답변 | 필요 |
 | 💰 **ROI 시뮬레이션** | 자연어 ("연면적 1,200㎡, ZEB 5등급") | Max Cost / 보조금 / 회수기간 | 필요 |
 | 📋 **사업 신청 인테이크** | 챗봇 대화 | 신청서 마크다운 초안 | 필요 |
+| 📐 **근거·출처** | — | 파라미터 출처 · 확인필요 목록 · 등급 민감도 | 불필요 |
+
+### 📐 근거·출처 — 이 프로젝트의 차별점
+
+산출된 숫자가 **어느 조항의, 언제 시행된 값**인지를 `data/params/*.yaml`에서 **실시간으로 읽어** 보여주고,
+**아직 확인 못 한 값**(전기요금 단가 등)을 숨기지 않고 `확인 필요`로 공개합니다.
+등급이 뒤집히는 **임계 절감률(55%)** 은 손으로 적은 값이 아니라 **엔진을 호출해 이분탐색으로 재현**하며,
+`scripts/test_evidence.py`가 그 재현을 테스트로 고정합니다 — 기준표가 바뀌면 테스트가 깨집니다.
+
+> 설계 철학: *숫자는 결정론적 테이블에서 조회하고, RAG는 "그 근거가 뭐냐"에 답하는 데만 쓴다.*
+> 전기요금표처럼 매트릭스에서 셀을 고르는 일을 LLM에 시키면 **틀려도 그럴싸해서 조용히 틀린다(silent error).**
 
 ## 🗂 데이터 출처
 
-7개 정책 자료 + 2개 단가 DB:
+**RAG 색인 = 11개 법령·고시·공고 원문 (874청크)**
 
-- **01_GR_가이드라인** (LH·국토부) — 11개 GR 기술요소, 사업 유형, 정량평가표
-- **02_GR_기술요소** (LH) — 기술요소 상세 사양
-- **03_ZEB_인증기준_고시** (국토부) — ZEB 1~5등급 자립률
-- **04_녹색건축법** — §15 용적률 완화
-- **05_지방세특례제한법** — §47의2 취득세 감면율
-- **06_에너지절약설계기준** (국토부 고시) — 외피 열관류율
-- **07_조달청_단가DB** — 자재별 단가 + 시공계수
+| # | 문서 | 시행 |
+|---|---|---|
+| 04 | 녹색건축물 조성 지원법 (제20727호) | 2026-02-01 |
+| 10 | 같은 법 **시행령** (제36231호) | 2026-03-31 |
+| 11 | GR 지원사업 운영 고시 (국토부 제2023-385호) | 2023-07-01 |
+| 12 | ZEB 인증에 관한 규칙 (**기후에너지환경부령 제1호**) | 2025-10-01 |
+| 06 | 에너지절약설계기준 (제2025-738호) | 2025-12-31 |
+| 05 | 지방세특례제한법 | — |
+| 13 | 건축법 시행령 (제35717호) | — |
+| 14 | 공공기관의 운영에 관한 법률 | — |
+| 15 | 탄소중립기본법 시행령 (제36303호) | — |
+| 16·17 | 2026년 GR 공고 (민간 이자지원 / 공공 2.0) | 2026 |
+
+**산정 데이터 (RAG 아님 — 결정론적 조회)**
+- **07_조달청_단가DB** — 자재별 단가 + 시공계수 (442자재)
 - **08_조달청_간접공사비** — 공사기간별 간접비율
-- **09_영유아보육법_시행규칙** (보건복지부) — 어린이집 일조·채광 기준
+- **`data/params/*.yaml`** — 요율·한도 + `source`/`effective_from`/`status`
+
+> ⚠️ **색인에서 제외된 원문** — `01_GR_가이드라인` · `02_GR_기술요소` · `03_ZEB_인증기준_고시` ·
+> `09_영유아보육법`은 **이미지 스캔본**이라 텍스트 추출이 불가능해 색인에 들어가 있지 않습니다.
+> 특히 **03은 별표1·2(자립률 산식·등급표)의 근거**라 가장 아쉬운 공백입니다. 텍스트 PDF 원문을 찾고 있습니다.
+> (인덱서가 스캔본을 조용히 넣지 않고 `[SKIP]` 경고를 내도록 `core/rag_indexer.py`에 가드가 있습니다.)
 
 ## 🚀 빠른 시작
 
@@ -105,23 +142,37 @@ streamlit run streamlit_app.py
 
 ### 3. (선택) Mode 1 RAG 인덱싱
 
-7개 정책 PDF를 `data/policy_docs/` 폴더에 넣고:
+저장소에 이미 빌드된 인덱스(`data/chroma_db.zip`, 11개 원문 · 874청크)가 들어 있어
+**대개 다시 만들 필요가 없습니다.** 원문을 추가·교체했을 때만:
 
 ```bash
-python scripts/build_index.py --provider local   # 무료
-# python scripts/build_index.py                  # OpenAI (유료, 한국어 검색 품질 우수)
+python scripts/build_index.py     # 의존성·API키·네트워크 불필요
 ```
+
+> **왜 임베딩 모델을 안 받아도 되나** — 검색기(`KeywordRetriever`)는 ChromaDB에서
+> **청크 원문만 꺼내 TF-IDF**로 매칭하고, 저장된 임베딩 벡터는 조회하지 않습니다.
+> 그래서 기본 `--provider hash`(의존성 0)로 빌드해도 검색 결과가 동일합니다.
+> 나중에 벡터 검색으로 전환할 때만 `pip install fastembed` 후 `--provider fastembed`.
 
 ## 🧪 테스트
 
 ```bash
-python scripts/test_bim.py      # BIM 진단 + ROI 계산기 (28개)
-python scripts/test_rag.py      # RAG 인덱싱 + 검색 (15개)
-python scripts/test_mode2.py    # ROI Function Calling (15개)
-python scripts/test_mode4.py    # 인테이크 챗봇 (18개)
+# 한글 Windows는 콘솔 인코딩을 UTF-8로 (없으면 이모지 출력에서 cp949 오류)
+set PYTHONIOENCODING=utf-8         # Windows (PowerShell: $env:PYTHONIOENCODING="utf-8")
+# export PYTHONIOENCODING=utf-8    # macOS/Linux
+
+python scripts/test_bim.py        # BIM 진단 + ZEB 등급 판정
+python scripts/test_rag.py        # RAG 인덱싱 + 검색 (ZIP 스캔본 SKIP 가드 포함)
+python scripts/test_roi.py        # ROI·NPV/IRR 계산기
+python scripts/test_evidence.py   # 근거·출처 — 55% 임계 재현 · status 배지 누출 방지
+python scripts/test_sensitivity.py
+python scripts/test_mode2.py      # ROI Function Calling
+python scripts/test_mode4.py      # 인테이크 챗봇
 ```
 
-총 **76개 단위 테스트** 전부 외부 API 호출 없이 mock 백엔드로 검증.
+**7개 스위트** 전부 외부 API 호출 없이 mock 백엔드로 검증합니다.
+특히 `test_evidence.py`는 "4등급 임계 = 절감률 55%"를 **엔진 호출로 재현**해 고정하므로,
+등급 기준표를 건드리면 테스트가 깨집니다.
 
 ## 📊 검증 결과 — 도담어린이집
 
@@ -140,31 +191,44 @@ python scripts/test_mode4.py    # 인테이크 챗봇 (18개)
 ```
 streamlit_app.py             ← 메인 앱 + 랜딩 + 사이드바
 ├─ core/                     ← 엔진 (UI 의존 X, 테스트 가능)
-│   ├─ bim_diagnoser.py      ← 11개 GR 자동 매핑 + 정량평가표
-│   ├─ roi_calculator.py     ← 단가DB + 간접비 + 보조금/세금 인센티브
-│   ├─ rag_indexer.py        ← PDF → 청크 → ChromaDB 임베딩
-│   ├─ rag_retriever.py      ← 검색 + Claude 답변 생성
+│   ├─ zeb_evaluator.py      ★ ZEB 등급 판정 — 1차E 환산(전력×2.75) · 제1/2호 · 상위등급
+│   ├─ params.py             ★ 파라미터 YAML 결정론적 로더 (source·시행일·status)
+│   ├─ bim_diagnoser.py      ← 11개 GR 자동 매핑 + 정량평가표 (자립률은 zeb_evaluator에 위임)
+│   ├─ roi_calculator.py     ← 단가DB + 간접비 + 보조금/세금 인센티브 + NPV/IRR
+│   ├─ scenario_compare.py   ← 시나리오 비교
+│   ├─ sensitivity.py        ← 민감도 분석
+│   ├─ rag_indexer.py        ← PDF → 청크 → ChromaDB (ZIP 스캔본 SKIP 가드)
+│   ├─ rag_retriever.py      ← KeywordRetriever(TF-IDF) + Claude 답변 생성
 │   ├─ llm_client.py         ← Claude API 추상화 + Function Calling 루프
 │   ├─ roi_tools.py          ← Mode 2 도구 정의
 │   ├─ intake_schema.py      ← 신청서 21개 필드 스키마
 │   ├─ intake_tools.py       ← Mode 4 도구 + 세션 상태
+│   ├─ pdf_report.py         ← PDF 진단 리포트 생성
+│   ├─ prompts.py            ← 시스템 프롬프트
 │   ├─ error_messages.py     ← 친절한 한국어 에러 변환
 │   └─ ui_theme.py           ← 글로벌 CSS + 로고 + 카드
-├─ modes/                    ← 4개 모드 UI
-│   ├─ mode1_rag.py
-│   ├─ mode2_roi.py
-│   ├─ mode3_bim.py
-│   └─ mode4_intake.py
+├─ modes/                    ← 모드별 UI
+│   ├─ mode1_rag.py          ← 정책 Q&A
+│   ├─ mode2_roi.py          ← ROI 시뮬레이션
+│   ├─ mode3_bim.py          ← BIM 진단 + ROI
+│   ├─ mode4_intake.py       ← 사업 신청 인테이크
+│   └─ mode5_evidence.py     ★ 근거·출처 (파라미터 출처 · 확인필요 · 등급 민감도)
 ├─ scripts/                  ← 테스트 + 인덱싱
-│   ├─ test_bim.py
-│   ├─ test_rag.py
-│   ├─ test_mode2.py
-│   ├─ test_mode4.py
-│   └─ build_index.py
+│   ├─ test_bim.py  test_rag.py  test_roi.py  test_evidence.py
+│   ├─ test_sensitivity.py  test_mode2.py  test_mode4.py
+│   └─ build_index.py        ← RAG 인덱스 빌드 (기본 --provider hash, 의존성 0)
 └─ data/
+    ├─ params/               ★ 요율·한도 YAML (source·effective_from·status)
     ├─ sample_bim/           ← 가상 BIM JSON 샘플
-    ├─ policy_docs/          ← 정책 PDF + 단가 DB
-    └─ chroma_db/            ← RAG 인덱스 (build_index 후 생성)
+    ├─ policy_docs/          ← 법령 원문 PDF + 단가 DB 엑셀
+    └─ chroma_db/            ← RAG 인덱스 (chroma_db.zip에서 자동 해제)
+```
+
+★ = 이 프로젝트의 핵심 설계를 담은 모듈.
+`zeb_evaluator`가 등급을 판정하고, `params`가 모든 제도 수치의 단일 출처이며,
+`mode5_evidence`가 그 둘을 사용자에게 그대로 공개합니다.
+
+```
 ```
 
 ## 🛠 기술 스택

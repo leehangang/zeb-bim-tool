@@ -1,33 +1,42 @@
 """
 scripts/build_index.py — RAG 인덱스 빌드 (1회 실행)
 ====================================================
-data/policy_docs/ 의 PDF/텍스트를 ChromaDB 벡터 인덱스로 변환.
+data/policy_docs/ 의 PDF/텍스트를 ChromaDB 인덱스로 변환.
+
+⚠️ 임베더는 검색 품질에 영향을 주지 않는다 — 기본값이 'hash'인 이유:
+    런타임 검색기는 core.rag_retriever.KeywordRetriever이고, 이것은
+    collection.get(include=["documents"])로 **청크 원문만 꺼내 TF-IDF**를 돌린다.
+    즉 저장된 임베딩 벡터를 한 번도 조회하지 않는다.
+    (ChromaDB가 add() 시 벡터를 요구할 뿐이라 형식상 필요한 것)
+    → 118MB 모델을 받거나 OpenAI 임베딩 비용을 낼 이유가 없다.
+      'hash'는 의존성·API키·네트워크 없이 결정론적으로 같은 검색 결과를 낸다.
+    나중에 벡터 검색으로 갈아탈 때만 fastembed/openai가 의미를 갖는다.
 
 실행:
-    # 기본 (OpenAI 임베딩, .env 의 OPENAI_API_KEY 필요)
+    # 기본 — 의존성·API키 불필요, 오프라인 동작 (권장)
     python scripts/build_index.py
 
-    # 로컬 임베딩 (sentence-transformers, 무료)
-    EMBEDDING_PROVIDER=local python scripts/build_index.py
+    # 벡터 검색으로 전환할 때 (다국어 ONNX): pip install fastembed
+    python scripts/build_index.py --provider fastembed
 
-    # 테스트용 해시 임베딩 (의미는 없지만 파이프라인 검증)
-    EMBEDDING_PROVIDER=hash python scripts/build_index.py
+    # OpenAI 임베딩 (.env 의 OPENAI_API_KEY 필요, 유료)
+    python scripts/build_index.py --provider openai
 
-대상 파일:
-    data/policy_docs/01_GR_가이드라인.pdf
-    data/policy_docs/02_GR_기술요소.pdf
-    data/policy_docs/03_ZEB_인증기준_고시.pdf
-    data/policy_docs/04_녹색건축법.pdf
-    data/policy_docs/05_지방세특례제한법.pdf
-    data/policy_docs/06_에너지절약설계기준.pdf
-    data/policy_docs/09_영유아보육법_시행규칙.pdf
+    # sentence-transformers (118MB 모델): pip install sentence-transformers
+    python scripts/build_index.py --provider local
+
+대상: data/policy_docs/ 의 11개 법령·고시·공고 원문 → 874청크
+    04 녹색건축법 · 05 지방세특례제한법 · 06 에너지절약설계기준 ·
+    10 녹색건축법 시행령 · 11 GR 지원사업 고시 · 12 ZEB 인증규칙 ·
+    13 건축법 시행령 · 14 공공기관운영법 · 15 탄소중립기본법 시행령 ·
+    16·17 2026년 GR 공고(민간·공공)
+
+⚠️ 01·02·03·09는 .pdf 확장자지만 실제로는 **이미지 스캔본(ZIP)** 이라
+   텍스트 추출이 불가 → 인덱서가 [SKIP] 경고를 내고 제외한다.
+   (과거 이 가드가 없어 JPEG 바이너리를 텍스트로 색인하던 버그가 있었다)
 
 엑셀 2개(07_조달청_단가DB, 08_조달청_간접공사비)는 RAG에 넣지 않음 —
 코드 lookup 전용 (core.roi_calculator).
-
-비용 예상 (OpenAI text-embedding-3-small 기준):
-    7개 PDF (약 500페이지) → 약 30~50만 토큰
-    @ $0.02/1M tokens → 약 100~150원 (1회만)
 """
 
 import os
@@ -57,9 +66,13 @@ def parse_args():
     )
     parser.add_argument(
         "--provider",
-        default=os.getenv("EMBEDDING_PROVIDER", "openai"),
-        choices=["openai", "local", "hash"],
-        help="임베딩 백엔드 (기본: openai)",
+        default=os.getenv("EMBEDDING_PROVIDER", "hash"),
+        choices=["hash", "fastembed", "openai", "local"],
+        help=(
+            "임베딩 백엔드 (기본: hash). 런타임 검색기(KeywordRetriever)는 "
+            "임베딩을 조회하지 않으므로 hash로도 검색 결과가 동일하다 — "
+            "의존성·API키·네트워크 불필요. 벡터 검색 전환 시에만 fastembed/openai 사용."
+        ),
     )
     parser.add_argument(
         "--chunk-size", type=int, default=1000,
