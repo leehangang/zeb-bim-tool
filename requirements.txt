@@ -31,6 +31,15 @@ python-dotenv>=1.0.0
 # === 유틸 ===
 tenacity>=8.2.0            # API 재시도 로직
 reportlab>=4.0.0           # PDF 진단 리포트 생성
+requests>=2.31.0           # core/eplus_client.py — EnergyPlus 서비스 호출
+                           # streamlit이 끌고 오지만 transitive에 기대면 조용히 깨진다.
+
+# gbXML 파서(core/gbxml_parser.py)·IDF 생성기(core/idf_writer.py)는 표준 라이브러리만 쓴다.
+#   · openstudio(78.7MB)는 wheel이 cp313까지라 Python 3.14에 설치 불가.
+#     게다가 그 gbXML 임포트가 Construction을 조용히 누락시키는 알려진 결함이 있다.
+#   · eppy는 시뮬레이터가 아니라 IDF 편집기이고, 동봉 IDD 최신이 V9_2_0(2019)이라
+#     현행 E+ 26.1보다 낡았다. 우리는 IDF를 생성만 하므로 텍스트 출력이면 충분하다.
+# EnergyPlus 자체는 별도 Docker 서비스에서 돈다 → energyplus_service/README.md
 
 
 # 파라미터 테이블(data/params/*.yaml) 로더 — core/params.py
