@@ -164,6 +164,15 @@ def grade_sensitivity(base_primary_kwh_m2: Optional[float] = None,
     return {"base": base, "rows": rows, "cliffs": cliffs}
 
 
+def grade_at_ui(net_primary_kwh_m2: float, building_use: str) -> str:
+    """net 1차E 소요량 → 제2호 등급 라벨. (엔진의 주거/비주거 판정 집합을 그대로 사용)"""
+    from core.zeb_evaluator import RESIDENTIAL_USES, determine_grade_clause2
+    g = determine_grade_clause2(
+        net_primary_kwh_m2, is_residential=building_use in RESIDENTIAL_USES,
+    )
+    return g.get("label", "-")
+
+
 def build_id() -> dict:
     """
     빌드 식별자 — 산출물에 찍어 "어느 버전이 이 숫자를 만들었나"를 추적한다.
@@ -333,12 +342,59 @@ def render_evidence_panel() -> None:
         ])
         st.dataframe(df, width="stretch", hide_index=True)
 
+        st.divider()
+        st.markdown("#### 🔴 결합 방식을 바꾸면 등급이 뒤집힙니다")
+        st.markdown(
+            "현재 엔진은 11개 요소의 절감률을 **단순 덧셈**합니다. 이건 물리적으로 성립하지 않습니다 — "
+            "10% 절감 요소가 11개면 단순합은 110%가 되어 **에너지가 음수**가 됩니다. "
+            "각 요소가 *남은* 에너지를 줄인다고 보는 **1 − Π(1−rᵢ)** 가 방어 가능한 결합입니다."
+        )
+
+        try:
+            from core.zeb_evaluator import GR_ENERGY_REDUCTION, combine_reductions
+            rs = list(GR_ENERGY_REDUCTION.values())
+            r_sum = combine_reductions(rs, "sum")
+            r_mul = combine_reductions(rs, "multiplicative")
+            KEEI = 20.4 / 33.0     # KEEI 실측/예측 비 — 아래 캡션에 출처
+
+            rows = []
+            for label, r in [
+                ("① 단순합산 (현재 엔진)", r_sum),
+                ("② 상호작용 반영 1−Π(1−rᵢ)", r_mul),
+                ("③ ①에 KEEI 실측보정", r_sum * KEEI),
+                ("④ ②에 KEEI 실측보정", r_mul * KEEI),
+            ]:
+                net = base * (1 - r)
+                g = grade_at_ui(net, use)
+                rows.append({"산정 방식": label, "절감률": f"{r*100:.1f}%",
+                             "1차E 소요량": round(net, 1), "제2호 등급": g})
+            import pandas as pd
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        except Exception as e:
+            st.error(f"결합 방식 비교 실패: {type(e).__name__}: {e}")
+
+        st.error(
+            "**우리 헤드라인 '4등급'은 ①(단순합산 67%)에서만 성립합니다.** "
+            "물리적으로 옳은 ②로 계산하면 50.5% → 소요량 99.1 → **5등급**으로 내려갑니다. "
+            "즉 4등급 결론은 **산정 방식의 산물**이지 건물 성능의 결론이 아닙니다. "
+            "팀 합의 전이라 엔진 기본값은 아직 ①이며, 이 사실을 숨기지 않고 여기 공개합니다.",
+            icon="🔴",
+        )
+        st.caption(
+            "**KEEI 실측보정 근거** — 에너지경제연구원 기본연구보고서 2025-14 "
+            "「건물부문 그린리모델링 정책효과 분석 및 활성화 방안 연구: 공공건축물을 중심으로」 "
+            "(김종우·조진만, 보도자료 2026-06-22): GR 시행 공공건축물 **522동(어린이집 358동 = 68.6%)** 의 "
+            "월별 전기·도시가스 실사용량을 Stacked DID로 분석한 결과 **연간 20.4 kWh/㎡** 절감으로, "
+            "엔지니어링 사전 예측 **33 kWh/㎡의 약 60% 수준**이었습니다. "
+            "표본의 2/3이 어린이집이라 **도담 케이스에 전이 가능성이 높은 실증**입니다. "
+            "다만 20.4는 전기+가스 합산 단일 모형 결과이고 우리 요소 구성과 1:1 대응은 아니므로, "
+            "③·④는 **참고용 시나리오**이지 확정 산정이 아닙니다."
+        )
         st.warning(
-            "**우리 결론의 취약점** — 보강 후 절감률 **67%는 요소별 가정치**"
-            "(`GR_ENERGY_REDUCTION` 11개 항목의 합)이지 시뮬레이션 결과가 아닙니다. "
-            "4등급 임계가 55%라 **여유는 12%p뿐입니다.** "
-            "ZEB 공식 산정 도구는 **ECO2**, GR 성능개선비율은 **EnergyPlus** 등 지정 프로그램이므로, "
-            "정식 해석에서 절감률이 임계 아래로 내려가면 **등급 결론이 바뀝니다.**",
+            "**요소별 절감률 자체도 출처 미확인입니다** — 외벽단열 15% · 창호 8% · 고효율냉난방 12% · "
+            "폐열회수환기 8% 등 `GR_ENERGY_REDUCTION` 11개 값은 문헌 근거를 아직 찾지 못했습니다. "
+            "ZEB 공식 산정 도구는 **ECO2**, GR 성능개선비율은 **EnergyPlus** 등 지정 프로그램이므로 "
+            "정식 해석 결과로 교체해야 합니다.",
             icon="⚠️",
         )
         st.caption(

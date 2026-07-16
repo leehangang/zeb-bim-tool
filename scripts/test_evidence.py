@@ -33,6 +33,15 @@ def check(name: str, cond: bool, detail: str = "") -> None:
         fails.append(name)
 
 
+def _raises(fn) -> bool:
+    """fn이 예외를 내면 True. (조용한 실패를 잡기 위한 헬퍼)"""
+    try:
+        fn()
+        return False
+    except Exception:
+        return True
+
+
 print("① 파라미터 출처 — YAML 실시간 렌더")
 rows = collect_provenance()
 check("출처 행이 수집됨", len(rows) >= 15, f"{len(rows)}건")
@@ -70,7 +79,36 @@ check("분모를 166.7로 넣으면 임계가 46%로 어긋남 (착각 재현)",
       f"{wrong4['임계_절감률_pct']}%" if wrong4 else "—")
 check("기본 호출은 166.7이 아닌 200을 씀", s["base"] != 166.7)
 
-print("\n⑤ 주거/비주거 기준표 분기")
+print("\n⑤ 절감률 결합 방식 — 단순합산은 물리적으로 성립하지 않는다")
+from core.zeb_evaluator import GR_ENERGY_REDUCTION, combine_reductions  # noqa: E402
+
+# 단순합산의 파탄을 재현: 10% 요소 11개 → 110% (에너지 음수)
+absurd = [0.10] * 11
+check("단순합산은 100%를 넘길 수 있다 (파탄 재현)",
+      combine_reductions(absurd, "sum") > 1.0,
+      f"{combine_reductions(absurd, 'sum')*100:.0f}%")
+check("1−Π(1−rᵢ)는 100%를 넘지 않는다",
+      0 < combine_reductions(absurd, "multiplicative") < 1.0,
+      f"{combine_reductions(absurd, 'multiplicative')*100:.1f}%")
+check("결합은 순서에 무관하다",
+      abs(combine_reductions([0.1, 0.3, 0.2], "multiplicative")
+          - combine_reductions([0.3, 0.2, 0.1], "multiplicative")) < 1e-12)
+
+_rs = list(GR_ENERGY_REDUCTION.values())
+_sum, _mul = combine_reductions(_rs, "sum"), combine_reductions(_rs, "multiplicative")
+check("도담 단순합산 = 67.0%", abs(_sum * 100 - 67.0) < 0.1, f"{_sum*100:.1f}%")
+check("도담 상호작용 = 50.5%", abs(_mul * 100 - 50.5) < 0.2, f"{_mul*100:.1f}%")
+check("상호작용 값이 4등급 임계(55%) 아래 — 즉 등급이 뒤집힌다",
+      _mul * 100 < 55.0,
+      f"{_mul*100:.1f}% < 55% → 4등급 아님")
+check("엔진이 두 값을 모두 노출한다",
+      "total_reduction_ratio_multiplicative" in
+      __import__("core.zeb_evaluator", fromlist=["x"]).calculate_reduction_ratio(
+          {k: {"status": "적용"} for k in GR_ENERGY_REDUCTION}))
+check("알 수 없는 결합 방식은 조용히 넘어가지 않는다",
+      _raises(lambda: combine_reductions([0.1], "평균내기")))
+
+print("\n⑥ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",

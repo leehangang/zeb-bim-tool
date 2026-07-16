@@ -98,9 +98,47 @@ def detect_building_use(bim: dict) -> str:
     return "어린이집"
 
 
+def combine_reductions(ratios: list, mode: str = "multiplicative") -> float:
+    """
+    개별 요소 절감률들을 하나의 총 절감률로 결합한다.
+
+    mode="sum"            — 단순합산 Σrᵢ.  ⚠️ 물리적으로 성립하지 않는다:
+                            10% 요소 11개면 110%가 되어 에너지가 음수가 된다.
+                            (레거시 호환·비교 표시용으로만 남긴다)
+    mode="multiplicative" — 1 − Π(1−rᵢ).  각 요소가 '남은' 에너지를 줄인다고 본다.
+                            상한이 100%로 수렴하고 적용 순서에 무관하다.
+
+    ⚠️ 이것도 근사다. 실제 상호작용(외벽단열을 하면 고효율 보일러가 줄일 몫이 함께
+       줄어드는 등)은 ECO2/EnergyPlus 정식 해석으로만 정확히 잡힌다.
+       실증 근거: KEEI 기본연구보고서 2025-14 (보도자료 2026-06-22) — GR 시행 공공건축물
+       522동(어린이집 358동 = 68.6%) 실측 결과 연간 20.4 kWh/㎡ 절감으로,
+       엔지니어링 사전 예측 33 kWh/㎡의 약 60% 수준. 설계단계 예측에 약 1.6배
+       과대추정 편의가 실측으로 확인됐다.
+    """
+    if mode == "sum":
+        return float(sum(ratios))
+    if mode != "multiplicative":
+        raise ValueError(f"알 수 없는 결합 방식: {mode} (sum|multiplicative)")
+    remaining = 1.0
+    for r in ratios:
+        remaining *= (1.0 - float(r))
+    return 1.0 - remaining
+
+
 def calculate_reduction_ratio(gr_mapping: dict) -> dict:
+    """
+    11개 GR 요소의 적용 상태 → 총 에너지 절감률.
+
+    ⚠️ total_reduction_ratio는 **단순합산**이라 과대추정된다(combine_reductions 참고).
+       물리적으로 방어 가능한 값은 total_reduction_ratio_multiplicative다.
+       둘 다 반환해 모드 5(근거·출처)에서 격차를 그대로 공개한다.
+
+       기본값을 아직 뒤집지 않은 이유: 도담 기준 단순합산 67%(→4등급) vs
+       상호작용 반영 50.5%(→5등급)로 **등급 결론이 바뀌는** 변경이라 팀 합의가 필요하다.
+       docs/ARCHITECTURE.md 참고.
+    """
     breakdown = {}
-    total_reduction = 0.0
+    actuals = []
 
     for key, ratio_max in GR_ENERGY_REDUCTION.items():
         if key not in gr_mapping:
@@ -116,7 +154,7 @@ def calculate_reduction_ratio(gr_mapping: dict) -> dict:
             applied = 0.0
 
         actual = applied * ratio_max
-        total_reduction += actual
+        actuals.append(actual)
 
         breakdown[key] = {
             "이론최대_pct": round(ratio_max * 100, 1),
@@ -124,9 +162,16 @@ def calculate_reduction_ratio(gr_mapping: dict) -> dict:
             "실제절감_pct": round(actual * 100, 2),
         }
 
+    total_sum = combine_reductions(actuals, "sum")
+    total_mult = combine_reductions(actuals, "multiplicative")
+
     return {
-        "total_reduction_ratio": round(total_reduction, 4),
-        "total_reduction_pct": round(total_reduction * 100, 1),
+        "total_reduction_ratio": round(total_sum, 4),
+        "total_reduction_pct": round(total_sum * 100, 1),
+        # 물리적으로 방어 가능한 값 — 화면에서 단순합산과 나란히 공개한다
+        "total_reduction_ratio_multiplicative": round(total_mult, 4),
+        "total_reduction_pct_multiplicative": round(total_mult * 100, 1),
+        "_결합방식": "sum (⚠️ 과대추정 — multiplicative와 비교 표시 필수)",
         "breakdown": breakdown,
     }
 
