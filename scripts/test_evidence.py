@@ -168,7 +168,37 @@ _m3 = (_ROOT / "modes/mode3_bim.py").read_text(encoding="utf-8")
 check("mode3가 자립률 등급표를 재정의하지 않는다",
       '("3등급", 60)' not in _m3 and "ZEB_AUTONOMY_THRESHOLDS" in _m3)
 
-print("\n⑧ 주거/비주거 기준표 분기")
+print("\n⑧ Track B · GR 자격 판정 — ZEB와 분모가 다르다")
+from core.gr_evaluator import (  # noqa: E402
+    ALLOWED_METRICS, evaluate_gr, improvement_ratio, judge_improvement,
+)
+
+# 분모 = 개선 전 (공고 p.3 "개선공사 이전 대비") — base가 아니다
+check("성능개선비율 = (전−후)÷전", abs(improvement_ratio(168.52, 99.08) - 0.412) < 0.002,
+      f"{improvement_ratio(168.52, 99.08)*100:.1f}%")
+check("분모가 0이면 조용히 넘어가지 않는다", _raises(lambda: improvement_ratio(0, 10)))
+check("허용되지 않는 지표는 거부한다",
+      _raises(lambda: judge_improvement(100, 50, metric="아무거나")))
+check("공고 별지6의 3개 지표를 허용",
+      set(ALLOWED_METRICS) == {"에너지요구량", "에너지소요량", "1차에너지소요량"})
+
+_grres = evaluate_gr(_bim, _gr)
+_imp = _grres["성능개선"]
+check("도담 성능개선비율 = 41.2%", abs(_imp["성능개선비율_pct"] - 41.2) < 0.2,
+      f"{_imp['성능개선비율_pct']}%")
+check("기준 20% 충족", _imp["충족"] is True, f"{_imp['성능개선비율_pct']}% ≥ {_imp['기준_pct']}%")
+check("대상공사 7종 중 1건 이상 충족", _grres["대상공사"]["충족"] is True,
+      f"{len(_grres['대상공사']['해당공사'])}개 분야")
+check("GR 자격 = 충족", _grres["자격충족"] is True)
+check("지정 프로그램이 아님을 명시", "지정 프로그램" in _grres["_주의"])
+
+# 🔴 두 트랙의 분모를 섞으면 안 된다 — 값이 실제로 다름을 고정
+_zeb_ratio = _full["reduction"]["total_reduction_pct"]          # base 분모 → 50.5%
+check("ZEB 절감률(base 분모) ≠ GR 성능개선비율(개선전 분모)",
+      abs(_zeb_ratio - _imp["성능개선비율_pct"]) > 5.0,
+      f"ZEB {_zeb_ratio}% vs GR {_imp['성능개선비율_pct']}% — {abs(_zeb_ratio-_imp['성능개선비율_pct']):.1f}%p 차이")
+
+print("\n⑨ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",

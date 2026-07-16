@@ -197,6 +197,26 @@ def _doam_zeb() -> dict:
         return {}
 
 
+@st.cache_data(show_spinner=False)
+def _doam_gr() -> dict:
+    """
+    Track B · 도담 GR 사업 자격 — 엔진(core.gr_evaluator)에서 직접 산출.
+    ZEB와 분모가 다르므로(개선 전 대비 vs base 대비) 별도 모듈이 판정한다. P4 참고.
+    """
+    import json
+    from pathlib import Path
+
+    try:
+        bim = json.loads(
+            Path("data/sample_bim/doam_archi_sample.json").read_text(encoding="utf-8")
+        )
+        from core.bim_diagnoser import map_to_gr_elements
+        from core.gr_evaluator import evaluate_gr
+        return evaluate_gr(bim, map_to_gr_elements(bim))
+    except Exception:
+        return {}
+
+
 def render_home():
     """랜딩 페이지 — 모드 카드 + 핵심 지표"""
 
@@ -262,13 +282,42 @@ def render_home():
     else:
         st.warning("ZEB 엔진 계산에 실패했습니다 — [📐 근거·출처] 모드에서 상세를 확인하세요.")
 
-    st.markdown("**② BIM 정밀 진단** — 11개 그린리모델링 기술요소 채점")
+    # ── Track B · GR 사업 자격 (ZEB와 별개 제도 — 분모가 다르다) ──────
+    gr = _doam_gr()
+    if gr:
+        imp = gr["성능개선"]
+        st.markdown("**② 그린리모델링 사업 자격** — Track B (ZEB와 별개 제도)")
+        g1, g2, g3 = st.columns(3)
+        g1.metric("성능개선비율", f"{imp['성능개선비율_pct']}%",
+                  f"기준 {imp['기준_pct']}% 이상")
+        g2.metric("대상공사 7종", "충족 ✅" if gr["대상공사"]["충족"] else "미달 ❌",
+                  f"{len(gr['대상공사']['해당공사'])}개 분야 해당")
+        g3.metric("GR 자격", "충족 ✅" if gr["자격충족"] else "미달 ❌", gr["사업유형"])
+        st.caption(
+            f"성능개선비율 = **(개선 전 − 개선 후) ÷ 개선 전** = "
+            f"({imp['개선전']} − {imp['개선후']}) ÷ {imp['개선전']} = **{imp['성능개선비율_pct']}%**. "
+            "근거: 2026년 민간 GR 이자지원 공고 p.3 — *\"센터가 지정한 프로그램으로 산출한 "
+            "**그린리모델링 공사 이전 대비** 에너지 성능개선 비율 20% 이상\"*, "
+            "별지6 — *\"에너지요구량 또는 소요량(또는 1차에너지소요량) <개선전·후>\"*. "
+            "**ZEB 절감률과 분모가 다릅니다** — ZEB는 용도별 기준요구량(base 200) 대비라 "
+            f"{zeb['절감률'] if zeb else 50.5}%이고, GR은 현재 상태 대비라 {imp['성능개선비율_pct']}%입니다. "
+            "9%p 차이라 섞으면 조용히 틀립니다."
+        )
+        st.warning(
+            "⚠️ **이 판정은 참고용입니다** — 성능개선비율은 **센터 지정 프로그램**"
+            "(ECO2 · ECO2-OD · GR-E · EnergyStudio · EnergyPlus · IES-VE) 결과로만 인정됩니다. "
+            "우리 엔진의 간이 추정은 지정 프로그램이 아닙니다. 게다가 **비주거는 간이평가표 경로가 "
+            "없어**(간이평가표는 단독주택 전용) 시뮬레이션이 필수입니다.",
+            icon="⚠️",
+        )
+
+    st.markdown("**③ BIM 정밀 진단** — 11개 그린리모델링 기술요소 채점")
     d1, d2, d3 = st.columns(3)
     d1.metric("현재 등급", "D", "25 / 100점")
     d2.metric("보강 후 등급", "A", "+50점")
     d3.metric("전체 보강비 (Max Cost)", "5.31억", "11개 항목 전체")
 
-    st.markdown("**③ 재무성 — 에너지 절감 회수**")
+    st.markdown("**④ 재무성 — 에너지 절감 회수**")
 
     # 단가·절감액도 params 단일 소스에서 — 하드코딩 금지 (엔진과 어긋날 수 없게)
     from core import params as _P
@@ -295,14 +344,14 @@ def render_home():
             "자세한 조사 결과는 **[📐 근거·출처] → ② 확인 필요**에 있습니다."
         )
 
-    st.markdown("**④ 경제성 — 현금흐름 기반 (20년 · 할인율 4.5%)**")
+    st.markdown("**⑤ 경제성 — 현금흐름 기반 (20년 · 할인율 4.5%)**")
     g1, g2, g3 = st.columns(3)
     g1.metric("NPV (순현재가치)", "+1.08억", "자부담 대비 순이득")
     g2.metric("IRR (내부수익률)", "14.7%", "할인율의 3.3배")
     g3.metric("B-C 비율", "2.19배", "투입 1원당 편익 2.19원")
 
     st.caption(
-        "④ 경제성은 자부담(0.91억)을 투자로 본 현금흐름 지표입니다. "
+        "⑤ 경제성은 자부담(0.91억)을 투자로 본 현금흐름 지표입니다. "
         "에너지 절감을 자산가치로 환산한 수익환원 가치(≈2.48억, 환원율 5%)는 "
         "같은 절감의 다른 표현이라 NPV와 합산하지 않고 별도 관점으로 봅니다."
     )
