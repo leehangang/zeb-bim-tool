@@ -307,6 +307,86 @@ def render_home():
     </div>
     """, unsafe_allow_html=True)
 
+    # ── 두 트랙 구조 (ZEB 인증 ≠ 그린리모델링 사업) ──────────────────
+    st.markdown("### 두 개의 제도, 하나의 BIM 입력")
+    st.markdown(
+        "ZEB 인증과 그린리모델링 사업은 **근거 법령과 판정 방식이 다른 별개의 제도**입니다. "
+        "본 플랫폼은 두 트랙을 나눠 판정하되, **BIM 파싱·에너지 해석·단가DB·법령 RAG는 하나의 공유 코어**로 처리합니다."
+    )
+
+    t1, t2 = st.columns(2)
+    with t1:
+        st.markdown(
+            "<div style='border-left:3px solid #C18A2D; padding:0.1rem 0 0.1rem 0.8rem; margin-bottom:0.6rem;'>"
+            "<b>TRACK A · ZEB 인증</b><br>"
+            "<span style='color:#5C665F; font-size:0.88rem;'>목표: 인증 등급 취득 · "
+            "근거: ZEB 인증기준 고시(제1·2·3호)</span></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(card_html(
+            "🏢",
+            "ZEB 등급 평가",
+            "에너지 자립률 <b>또는</b> 1차에너지소요량, <b>그리고</b> BEMS로 인증 등급(+등급~5등급)을 "
+            "판정합니다. 전력은 1차에너지 환산계수 ×2.75를 적용합니다.",
+            badge="핵심 엔진"
+        ), unsafe_allow_html=True)
+
+    with t2:
+        st.markdown(
+            "<div style='border-left:3px solid #1B5E20; padding:0.1rem 0 0.1rem 0.8rem; margin-bottom:0.6rem;'>"
+            "<b>TRACK B · 그린리모델링 사업</b><br>"
+            "<span style='color:#5C665F; font-size:0.88rem;'>목표: 사업 선정 + 경제성 · "
+            "근거: GR 가이드라인 정량평가표</span></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(card_html(
+            "🏗️",
+            "BIM 정밀 진단 + 보강 계획",
+            "11개 기술요소를 100점(기술요소 80 + 사업여건 20)으로 채점합니다 — <b>등급이 아니라 고득점 순 선정용 랭킹 점수</b>입니다. "
+            "비용 효율순 보강 우선순위·Max Cost를 산출합니다.",
+        ), unsafe_allow_html=True)
+
+    b1, b2 = st.columns(2)
+    with b1:
+        st.markdown(card_html(
+            "💰",
+            "ROI 시뮬레이션",
+            "자연어로 건물 조건을 입력하면 단가DB·간접비·보조금·용적률·취득세를 묶어 "
+            "Max Cost·자부담·NPV/IRR·회수기간을 산출합니다.",
+        ), unsafe_allow_html=True)
+    with b2:
+        st.markdown(card_html(
+            "📋",
+            "사업 신청 인테이크",
+            "신청에 필요한 항목을 대화로 수집하고 신청서 초안을 자동 생성합니다.",
+        ), unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='border-left:3px solid #9BA39C; padding:0.1rem 0 0.1rem 0.8rem; margin:0.8rem 0 0.6rem;'>"
+        "<b>공통 · 근거 레이어</b><br>"
+        "<span style='color:#5C665F; font-size:0.88rem;'>두 트랙이 함께 쓰는 법령·고시 근거</span></div>",
+        unsafe_allow_html=True,
+    )
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(card_html(
+            "💬",
+            "정책 Q&A (RAG)",
+            f"<b>{_index_summary()['n_files']}건의 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 "
+            "관련 대목을 찾아 <b>원문 그대로 인용</b>해 답변합니다. "
+            "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
+        ), unsafe_allow_html=True)
+    with c2:
+        st.markdown(card_html(
+            "📐",
+            "근거·출처",
+            "위 숫자가 <b>어느 조항의, 언제 시행된 값</b>인지 파라미터 YAML에서 실시간으로 펼쳐 보여주고, "
+            "<b>아직 확인 못 한 값</b>과 등급이 뒤집히는 <b>임계 절감률</b>까지 숨기지 않고 공개합니다.",
+            badge="투명성",
+        ), unsafe_allow_html=True)
+
+    st.markdown("---")
+
     # 핵심 수치 (KEPCO 도담 검증 기준) — ZEB 등급 평가가 우리 플랫폼의 출발점
     st.markdown("### 검증 결과 — KEPCO 도담어린이집")
 
@@ -441,86 +521,6 @@ def render_home():
         "에너지 절감을 자산가치로 환산한 수익환원 가치(≈2.48억, 환원율 5%)는 "
         "같은 절감의 다른 표현이라 NPV와 합산하지 않고 별도 관점으로 봅니다."
     )
-
-    st.markdown("---")
-
-    # ── 두 트랙 구조 (ZEB 인증 ≠ 그린리모델링 사업) ──────────────────
-    st.markdown("### 두 개의 제도, 하나의 BIM 입력")
-    st.markdown(
-        "ZEB 인증과 그린리모델링 사업은 **근거 법령과 판정 방식이 다른 별개의 제도**입니다. "
-        "본 플랫폼은 두 트랙을 나눠 판정하되, **BIM 파싱·에너지 해석·단가DB·법령 RAG는 하나의 공유 코어**로 처리합니다."
-    )
-
-    t1, t2 = st.columns(2)
-    with t1:
-        st.markdown(
-            "<div style='border-left:3px solid #C18A2D; padding:0.1rem 0 0.1rem 0.8rem; margin-bottom:0.6rem;'>"
-            "<b>TRACK A · ZEB 인증</b><br>"
-            "<span style='color:#5C665F; font-size:0.88rem;'>목표: 인증 등급 취득 · "
-            "근거: ZEB 인증기준 고시(제1·2·3호)</span></div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(card_html(
-            "🏢",
-            "ZEB 등급 평가",
-            "에너지 자립률 <b>또는</b> 1차에너지소요량, <b>그리고</b> BEMS로 인증 등급(+등급~5등급)을 "
-            "판정합니다. 전력은 1차에너지 환산계수 ×2.75를 적용합니다.",
-            badge="핵심 엔진"
-        ), unsafe_allow_html=True)
-
-    with t2:
-        st.markdown(
-            "<div style='border-left:3px solid #1B5E20; padding:0.1rem 0 0.1rem 0.8rem; margin-bottom:0.6rem;'>"
-            "<b>TRACK B · 그린리모델링 사업</b><br>"
-            "<span style='color:#5C665F; font-size:0.88rem;'>목표: 사업 선정 + 경제성 · "
-            "근거: GR 가이드라인 정량평가표</span></div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(card_html(
-            "🏗️",
-            "BIM 정밀 진단 + 보강 계획",
-            "11개 기술요소를 100점(기술요소 80 + 사업여건 20)으로 채점합니다 — <b>등급이 아니라 고득점 순 선정용 랭킹 점수</b>입니다. "
-            "비용 효율순 보강 우선순위·Max Cost를 산출합니다.",
-        ), unsafe_allow_html=True)
-
-    b1, b2 = st.columns(2)
-    with b1:
-        st.markdown(card_html(
-            "💰",
-            "ROI 시뮬레이션",
-            "자연어로 건물 조건을 입력하면 단가DB·간접비·보조금·용적률·취득세를 묶어 "
-            "Max Cost·자부담·NPV/IRR·회수기간을 산출합니다.",
-        ), unsafe_allow_html=True)
-    with b2:
-        st.markdown(card_html(
-            "📋",
-            "사업 신청 인테이크",
-            "신청에 필요한 항목을 대화로 수집하고 신청서 초안을 자동 생성합니다.",
-        ), unsafe_allow_html=True)
-
-    st.markdown(
-        "<div style='border-left:3px solid #9BA39C; padding:0.1rem 0 0.1rem 0.8rem; margin:0.8rem 0 0.6rem;'>"
-        "<b>공통 · 근거 레이어</b><br>"
-        "<span style='color:#5C665F; font-size:0.88rem;'>두 트랙이 함께 쓰는 법령·고시 근거</span></div>",
-        unsafe_allow_html=True,
-    )
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(card_html(
-            "💬",
-            "정책 Q&A (RAG)",
-            f"<b>{_index_summary()['n_files']}건의 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 "
-            "근거 조항을 찾아 <b>인용</b>해 답변합니다. "
-            "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
-        ), unsafe_allow_html=True)
-    with c2:
-        st.markdown(card_html(
-            "📐",
-            "근거·출처",
-            "위 숫자가 <b>어느 조항의, 언제 시행된 값</b>인지 파라미터 YAML에서 실시간으로 펼쳐 보여주고, "
-            "<b>아직 확인 못 한 값</b>과 등급이 뒤집히는 <b>임계 절감률</b>까지 숨기지 않고 공개합니다.",
-            badge="투명성",
-        ), unsafe_allow_html=True)
 
 
 # 상단 브랜드 바 (모든 페이지 공통 프레임)
