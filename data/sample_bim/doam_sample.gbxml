@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  시험용 gbXML — Revit "File > Export > gbXML" 산출물 구조를 본뜬 것.
+  ⚠️ 실제 도담 Revit 모델에서 뽑은 파일이 아니다. 파서 검증용 픽스처다.
+     실물 gbXML을 확보하면 교체할 것.
+  네임스페이스·요소 구성은 gbXML 6.01 스펙과 Revit export 관행을 따랐다.
+-->
+<gbXML xmlns="http://www.gbxml.org/schema" temperatureUnit="C" lengthUnit="Meters"
+       areaUnit="SquareMeters" volumeUnit="CubicMeters" useSIUnitsForResults="true"
+       version="6.01">
+  <Campus id="cmps-1">
+    <Location>
+      <ZipcodeOrPostalCode>39660</ZipcodeOrPostalCode>
+      <Name>Gimcheon, Gyeongbuk</Name>
+    </Location>
+
+    <Building id="bldg-1" buildingType="DayCare">
+      <Area>1251.0</Area>
+      <Space id="sp-1" spaceType="DayCare">
+        <Area>1251.0</Area>
+        <Volume>3753.0</Volume>
+      </Space>
+    </Building>
+
+    <!-- 외벽 1: RectangularGeometry 경로 (창 포함 총면적 → 파서가 창을 빼야 함) -->
+    <Surface id="su-wall-1" surfaceType="ExteriorWall" constructionIdRef="con-wall">
+      <AdjacentSpaceId spaceIdRef="sp-1"/>
+      <RectangularGeometry>
+        <Width>40.0</Width>
+        <Height>10.0</Height>
+      </RectangularGeometry>
+      <Opening id="op-win-1" openingType="FixedWindow" windowTypeIdRef="wt-1">
+        <RectangularGeometry>
+          <Width>20.0</Width>
+          <Height>2.5</Height>
+        </RectangularGeometry>
+      </Opening>
+      <Opening id="op-door-1" openingType="NonSlidingDoor" windowTypeIdRef="wt-door">
+        <RectangularGeometry>
+          <Width>2.0</Width>
+          <Height>2.5</Height>
+        </RectangularGeometry>
+      </Opening>
+    </Surface>
+
+    <!-- 외벽 2: PlanarGeometry/PolyLoop 경로 (10 x 10 = 100㎡, z평면) -->
+    <Surface id="su-wall-2" surfaceType="ExteriorWall" constructionIdRef="con-wall">
+      <AdjacentSpaceId spaceIdRef="sp-1"/>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>10.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>10.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>10.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>10.0</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+    </Surface>
+
+    <!-- 지붕 -->
+    <Surface id="su-roof-1" surfaceType="Roof" constructionIdRef="con-roof">
+      <AdjacentSpaceId spaceIdRef="sp-1"/>
+      <RectangularGeometry><Width>30.0</Width><Height>20.0</Height></RectangularGeometry>
+    </Surface>
+
+    <!-- 바닥 (지면접지) -->
+    <Surface id="su-floor-1" surfaceType="SlabOnGrade" constructionIdRef="con-floor">
+      <AdjacentSpaceId spaceIdRef="sp-1"/>
+      <RectangularGeometry><Width>30.0</Width><Height>20.0</Height></RectangularGeometry>
+    </Surface>
+
+    <!-- 내벽 — 외피가 아니므로 파서가 건너뛰어야 함 (여기 붙은 창도 무시) -->
+    <Surface id="su-int-1" surfaceType="InteriorWall" constructionIdRef="con-int">
+      <RectangularGeometry><Width>10.0</Width><Height>3.0</Height></RectangularGeometry>
+      <Opening id="op-int-win" openingType="FixedWindow" windowTypeIdRef="wt-1">
+        <RectangularGeometry><Width>1.0</Width><Height>1.0</Height></RectangularGeometry>
+      </Opening>
+    </Surface>
+
+    <!-- 차양 — 건너뛰어야 함 -->
+    <Surface id="su-shade-1" surfaceType="Shade">
+      <RectangularGeometry><Width>5.0</Width><Height>1.0</Height></RectangularGeometry>
+    </Surface>
+  </Campus>
+
+  <!-- U-value를 담은 Construction (Revit이 이렇게 내보낼 때도 있다) -->
+  <Construction id="con-wall">
+    <U-value unit="WPerSquareMeterK">0.240</U-value>
+    <Name>Exterior Wall</Name>
+  </Construction>
+  <Construction id="con-roof">
+    <U-value unit="WPerSquareMeterK">0.150</U-value>
+    <Name>Roof</Name>
+  </Construction>
+
+  <!-- ⚠️ con-floor는 U-value가 없다 (Layer만 있는 흔한 케이스) → u_value=None이어야 함 -->
+  <Construction id="con-floor">
+    <Name>Slab On Grade</Name>
+    <LayerId layerIdRef="lay-1"/>
+  </Construction>
+  <Layer id="lay-1">
+    <MaterialId materialIdRef="mat-1"/>
+  </Layer>
+
+  <WindowType id="wt-1">
+    <U-value unit="WPerSquareMeterK">1.500</U-value>
+    <Name>Double Glazing</Name>
+  </WindowType>
+  <WindowType id="wt-door">
+    <U-value unit="WPerSquareMeterK">2.400</U-value>
+    <Name>Entrance Door</Name>
+  </WindowType>
+</gbXML>

@@ -53,13 +53,39 @@ def run_bim_diagnosis(
     )
 
 
+GBXML_SUFFIXES = (".gbxml", ".xml")
+
+
 def save_uploaded_to_temp(uploaded_file) -> str:
-    """Streamlit UploadedFile -> 임시 JSON 파일 경로."""
-    suffix = Path(uploaded_file.name).suffix or ".json"
+    """
+    Streamlit UploadedFile → 엔진이 읽는 임시 **JSON** 파일 경로.
+
+    gbXML(.gbxml/.xml)이면 여기서 우리 스키마로 변환해 JSON으로 떨군다.
+    엔진(diagnose_from_json)은 JSON만 알면 되게 두고, 포맷 차이는 이 경계에서 흡수한다.
+
+    왜 gbXML인가 — Revit이 실제로 내보내는 유일한 에너지 해석 포맷이다.
+    (Revit 2026 Export 목록에 IDF 없음. Insight/GBS 경로는 2025-07-01 폐지.)
+    자세한 경위는 core/gbxml_parser.py 참고.
+    """
+    raw = uploaded_file.getvalue()
+    suffix = Path(uploaded_file.name).suffix.lower() or ".json"
+
+    if suffix in GBXML_SUFFIXES:
+        import json
+
+        from core.gbxml_parser import parse_gbxml
+
+        bim = parse_gbxml(raw)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as tmp:
+            json.dump(bim, tmp, ensure_ascii=False, indent=2)
+            return tmp.name
+
     with tempfile.NamedTemporaryFile(
         mode="wb", suffix=suffix, delete=False
     ) as tmp:
-        tmp.write(uploaded_file.getvalue())
+        tmp.write(raw)
         return tmp.name
 
 
@@ -133,9 +159,14 @@ def render_bim_panel() -> None:
         col_upload, col_opts = st.columns([2, 1])
         with col_upload:
             uploaded = st.file_uploader(
-                "또는 BIM JSON 파일 직접 업로드",
-                type=["json"],
-                help="BIM에서 추출한 건물 객체 정보(벽·창·문·지붕·바닥·설비 등) JSON",
+                "또는 **Revit gbXML** · BIM JSON 업로드",
+                type=["gbxml", "xml", "json"],
+                help=(
+                    "Revit → File > Export > gbXML 로 내보낸 파일을 그대로 올리세요. "
+                    "외피(벽·창·문·지붕·바닥)와 열관류율을 읽어 진단합니다. "
+                    "Revit은 IDF를 직접 내보내지 않으며(2026 기준), gbXML이 "
+                    "Autodesk가 지원하는 유일한 에너지 해석 export 형식입니다."
+                ),
             )
         with col_opts:
             duration = st.slider(
@@ -155,6 +186,36 @@ def render_bim_panel() -> None:
     if uploaded is not None:
         input_key = ("upload", uploaded.name, uploaded.size, duration)
         source_for_diagnosis = "upload"
+        # gbXML은 지오메트리 export라 우리가 필요한 걸 다 담지 못한다.
+        # 무엇이 비었는지 **업로드 즉시** 알린다 — 안 그러면 조용히 0으로 진단된다.
+        if Path(uploaded.name).suffix.lower() in GBXML_SUFFIXES:
+            try:
+                from core.gbxml_parser import parse_gbxml
+
+                _peek = parse_gbxml(uploaded.getvalue())
+                _g = _peek["_meta"]["gbxml"]
+                _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
+                st.success(f"✅ gbXML 파싱 — {_cnt}", icon="📐")
+                _no_u = [
+                    x["id"]
+                    for k in ("walls", "roofs", "floors")
+                    for x in _peek[k]
+                    if x["u_value"] is None
+                ]
+                if _no_u or _g["missing"]:
+                    st.warning(
+                        "이 gbXML에 **없어서 채우지 못한 값**이 있습니다 — "
+                        "지어내지 않고 비워 둡니다.\n\n"
+                        + (
+                            f"· 열관류율 미상 {len(_no_u)}건: {', '.join(_no_u[:5])}"
+                            f"{' 외' if len(_no_u) > 5 else ''}\n"
+                            if _no_u else ""
+                        )
+                        + "\n".join(f"· {m}" for m in _g["missing"]),
+                        icon="⚠️",
+                    )
+            except Exception as e:
+                st.error(f"gbXML을 읽지 못했습니다 — {type(e).__name__}: {e}")
     elif sample_path is not None:
         input_key = ("sample", sample_name, duration)
         source_for_diagnosis = "sample"

@@ -1,0 +1,254 @@
+# -*- coding: utf-8 -*-
+"""
+gbXML → 우리 BIM 스키마 파서.
+
+왜 gbXML인가 (2026-07-16 조사 결과)
+-----------------------------------
+사용자가 "Revit에서 .rvt를 IDF로 빼서 올리자"고 제안했는데, 확인해보니 전제가 틀렸다:
+
+  · **Revit은 IDF를 export하지 않는다.** Revit 2026 Export 목록에 IDF가 없다.
+    2014~2016엔 있었고, Insight/Green Building Studio 경로가 있었으나
+    **2025-07-01부로 폐지**됐다(Autodesk 공식 공지). 웹에 튜토리얼만 남아 오도된다.
+  · Autodesk가 지원하는 유일한 에너지 해석 export는 **gbXML**이다.
+    Revit 2026 공식: "To perform energy analysis using other software,
+    export the model to gbXML."
+  · Revit 2020+ Systems Analysis가 내부적으로 EnergyPlus를 돌려 temp 폴더에 .idf를
+    남기지만, Autodesk 공식 문서가 보장하는 건 eplusout.err까지다(비문서화 부산물).
+
+→ 그래서 입력은 **gbXML**로 받는다. 이 파서는 표준 라이브러리(xml.etree)만 쓴다.
+   openstudio 패키지(78.7MB)도 검토했으나 wheel이 cp313까지라 우리(3.14)에 설치 불가고,
+   OpenStudio의 gbXML 임포트 자체가 Construction을 조용히 누락시키는 알려진 결함이 있다.
+
+한계 (숨기지 않는다)
+--------------------
+  · gbXML이 U-value를 안 담고 Layer/Material만 담는 경우가 흔하다 → 그때는 u_value=None.
+    화면에서 '확인 필요'로 뜨고 사용자가 채워야 한다. 지어내지 않는다.
+  · HVAC·신재생은 gbXML 지오메트리 export에 대개 없다 → 사용자 입력으로 보완.
+  · 면적은 RectangularGeometry(Width×Height)를 우선 쓰고, 없으면 PolyLoop 3D 폴리곤
+    넓이를 뉴웰(Newell) 법으로 계산한다.
+"""
+
+import xml.etree.ElementTree as ET
+from typing import Optional
+
+# gbXML 표준 네임스페이스. Revit export는 이걸 붙여 나온다.
+_NS = {"g": "http://www.gbxml.org/schema"}
+
+# gbXML surfaceType → 우리 스키마 버킷
+# (gbXML 스펙 surfaceTypeEnum 기준)
+_SURFACE_MAP = {
+    "ExteriorWall": ("walls", "exterior_direct"),
+    "UndergroundWall": ("walls", "exterior_indirect"),
+    "Roof": ("roofs", "exterior_direct"),
+    "Ceiling": ("roofs", "exterior_indirect"),
+    "UndergroundCeiling": ("roofs", "exterior_indirect"),
+    "SlabOnGrade": ("floors", "exterior_indirect"),
+    "UndergroundSlab": ("floors", "exterior_indirect"),
+    "RaisedFloor": ("floors", "exterior_direct"),
+    "ExposedFloor": ("floors", "exterior_direct"),
+    # 아래는 외피가 아니라 제외 — 열관류율 판정 대상이 아니다
+    "InteriorWall": (None, None),
+    "InteriorFloor": (None, None),
+    "Shade": (None, None),
+    "Air": (None, None),
+    "FreestandingColumn": (None, None),
+    "EmbeddedColumn": (None, None),
+}
+
+# openingType → 창 / 문
+_OPENING_WINDOW = {
+    "FixedWindow", "OperableWindow", "FixedSkylight", "OperableSkylight",
+    "SlidingDoor",          # 유리 슬라이딩 도어는 창호로 본다 (열관류율 기준이 창)
+}
+_OPENING_DOOR = {"NonSlidingDoor", "Door"}
+
+
+def _text(el, path: str) -> Optional[str]:
+    found = el.find(path, _NS)
+    return found.text.strip() if found is not None and found.text else None
+
+
+def _polygon_area_3d(points: list) -> float:
+    """
+    3D 폴리곤 넓이 — 뉴웰(Newell) 법.
+
+    gbXML PolyLoop는 임의 평면 위의 점열이라 2D 공식을 못 쓴다.
+    법선 벡터를 누적해 그 크기의 절반이 넓이다. 비평면이어도 근사값을 준다
+    (OpenStudio는 비평면을 만나면 아예 실패한다 — 우리는 근사하고 넘어간다).
+    """
+    if len(points) < 3:
+        return 0.0
+    nx = ny = nz = 0.0
+    n = len(points)
+    for i in range(n):
+        x1, y1, z1 = points[i]
+        x2, y2, z2 = points[(i + 1) % n]
+        nx += (y1 - y2) * (z1 + z2)
+        ny += (z1 - z2) * (x1 + x2)
+        nz += (x1 - x2) * (y1 + y2)
+    return (nx * nx + ny * ny + nz * nz) ** 0.5 / 2.0
+
+
+def _geometry_area(el) -> float:
+    """Surface/Opening의 면적. RectangularGeometry 우선, 없으면 PolyLoop."""
+    rect = el.find("g:RectangularGeometry", _NS)
+    if rect is not None:
+        w, h = _text(rect, "g:Width"), _text(rect, "g:Height")
+        if w and h:
+            try:
+                return float(w) * float(h)
+            except ValueError:
+                pass
+    # PolyLoop (PlanarGeometry 안 또는 RectangularGeometry 안)
+    for loop in el.iter():
+        if loop.tag.endswith("PolyLoop"):
+            pts = []
+            for cp in loop.findall("g:CartesianPoint", _NS):
+                coords = [c.text for c in cp.findall("g:Coordinate", _NS)]
+                if len(coords) >= 3:
+                    try:
+                        pts.append(tuple(float(c) for c in coords[:3]))
+                    except (ValueError, TypeError):
+                        pass
+            if len(pts) >= 3:
+                return _polygon_area_3d(pts)
+    return 0.0
+
+
+def _collect_u_values(root) -> dict:
+    """
+    Construction / WindowType id → U-value(W/㎡·K).
+
+    ⚠️ gbXML이 U-value를 안 담고 Layer/Material만 담는 경우가 흔하다.
+       그러면 여기 안 잡히고 u_value=None이 된다 — **추정해서 채우지 않는다.**
+       (OpenStudio의 gbXML 임포트가 Construction을 조용히 누락시켜 E+ fatal error를
+        내는 알려진 결함과 같은 뿌리다. 우리는 '없음'을 '없음'이라 말한다.)
+    """
+    out = {}
+    for tag in ("Construction", "WindowType", "Layer"):
+        for el in root.iter():
+            if not el.tag.endswith(tag):
+                continue
+            cid = el.get("id")
+            if not cid:
+                continue
+            u = _text(el, "g:U-value")
+            if u:
+                try:
+                    out[cid] = float(u)
+                except ValueError:
+                    pass
+    return out
+
+
+def parse_gbxml(source) -> dict:
+    """
+    gbXML(파일 경로·파일객체·bytes·str) → 우리 BIM 스키마 dict.
+
+    Returns:
+        core.bim_diagnoser / zeb_evaluator가 그대로 먹는 dict.
+        `_meta.gbxml`에 파싱 경위와 **비어 있는 항목**을 남긴다.
+    """
+    if isinstance(source, bytes):
+        root = ET.fromstring(source)
+    elif isinstance(source, str) and source.lstrip().startswith("<"):
+        root = ET.fromstring(source)
+    else:
+        root = ET.parse(source).getroot()
+
+    u_by_id = _collect_u_values(root)
+
+    bim = {
+        "_meta": {"source": "gbXML", "gbxml": {}},
+        "walls": [], "windows": [], "doors": [], "roofs": [], "floors": [],
+        "pv_panels": [],
+    }
+    skipped = {}
+
+    for surf in root.iter():
+        if not surf.tag.endswith("Surface"):
+            continue
+        stype = surf.get("surfaceType") or ""
+        bucket, facing = _SURFACE_MAP.get(stype, (None, None))
+
+        # 개구부는 surfaceType과 무관하게 먼저 훑는다 (내벽에 붙은 창은 제외)
+        if bucket is not None:
+            for op in surf.findall("g:Opening", _NS):
+                otype = op.get("openingType") or ""
+                area = _geometry_area(op)
+                if area <= 0:
+                    continue
+                uid = op.get("windowTypeIdRef") or op.get("constructionIdRef")
+                item = {
+                    "id": op.get("id") or f"OP{len(bim['windows'])+1}",
+                    "area": round(area, 2),
+                    "facing": facing,
+                    "u_value": u_by_id.get(uid),
+                    "type": otype or None,
+                }
+                if otype in _OPENING_DOOR:
+                    bim["doors"].append(item)
+                else:
+                    bim["windows"].append(item)
+
+        if bucket is None:
+            if stype:
+                skipped[stype] = skipped.get(stype, 0) + 1
+            continue
+
+        area = _geometry_area(surf)
+        # 개구부 면적은 벽 면적에서 뺀다 (gbXML Surface는 창을 포함한 총면적)
+        op_area = sum(_geometry_area(o) for o in surf.findall("g:Opening", _NS))
+        net = max(area - op_area, 0.0)
+        if net <= 0:
+            continue
+
+        entry = {
+            "id": surf.get("id") or f"S{len(bim[bucket])+1}",
+            "area": round(net, 2),
+            "u_value": u_by_id.get(surf.get("constructionIdRef")),
+        }
+        if bucket == "walls":
+            entry["facing"] = facing
+            entry["insulated"] = None      # gbXML은 '단열 여부'를 안 담는다 → 사용자 확인
+        elif bucket == "roofs":
+            entry["insulated"] = None
+        elif bucket == "floors":
+            entry["insulated"] = None
+        bim[bucket].append(entry)
+
+    # 건물 정보
+    for b in root.iter():
+        if b.tag.endswith("Building"):
+            a = _text(b, "g:Area")
+            if a:
+                try:
+                    bim["total_area_m2"] = float(a)
+                except ValueError:
+                    pass
+            if b.get("buildingType"):
+                bim["_meta"]["gbxml"]["buildingType"] = b.get("buildingType")
+            break
+
+    # 무엇이 안 채워졌는지 드러낸다 — 조용히 0으로 두면 진단이 조용히 틀린다
+    missing = []
+    if not bim.get("total_area_m2"):
+        missing.append("total_area_m2 (Building/Area 없음)")
+    if not any(x["u_value"] is not None for x in bim["walls"] + bim["roofs"] + bim["floors"]):
+        missing.append("열관류율 (Construction에 U-value 없음 — Layer/Material만 담긴 gbXML)")
+    if not bim["windows"]:
+        missing.append("창호 (Opening 없음)")
+    for key in ("region", "building_year", "directly_owned"):
+        missing.append(f"{key} (gbXML에 없는 정보 — 사용자 입력 필요)")
+    missing.append("hvac·pv_panels (지오메트리 export엔 대개 없음 — 사용자 입력 필요)")
+
+    bim["_meta"]["gbxml"].update({
+        "surfaces": {k: len(bim[k]) for k in ("walls", "windows", "doors", "roofs", "floors")},
+        "skipped_surface_types": skipped,
+        "missing": missing,
+        "note": (
+            "Revit → File > Export > gbXML 로 내보낸 파일입니다. "
+            "Revit은 IDF를 직접 export하지 않으며(2026 기준), Insight/GBS 경로는 2025-07-01 폐지."
+        ),
+    })
+    return bim
