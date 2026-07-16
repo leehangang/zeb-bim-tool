@@ -18,36 +18,53 @@ Streamlit Community Cloud 무료 티어의 실제 제약 (2026-07 조사):
 **그런데 이 장벽들은 Docker 경로에선 전부 무효입니다.**
 NREL 공식 이미지 `nrel/energyplus:25.1.0`은 **압축 106.5MB**이고 `FROM` 한 줄이면 끝입니다.
 
-## 배포 (Hugging Face Spaces)
+## ❌ Hugging Face Spaces — 막혔습니다 (2026-07-16 계정에서 확인)
 
-1. https://huggingface.co/new-space 에서 Space 생성
-   - **SDK: Docker** (Blank template)
-   - **Hardware: CPU basic (2 vCPU · 16GB · 무료)**
-   - Visibility: Public 또는 Private
-2. 이 디렉토리(`energyplus_service/`) 내용을 Space 리포에 push
-   ```bash
-   git clone https://huggingface.co/spaces/<사용자>/<스페이스명>
-   cp -r energyplus_service/* <스페이스명>/
-   cd <스페이스명> && git add -A && git commit -m "EnergyPlus service" && git push
-   ```
-3. 빌드 완료 후 확인:
-   ```
-   https://<사용자>-<스페이스명>.hf.space/health
-   ```
-   → `{"ok": true, "energyplus": "EnergyPlus, Version 25.1.0...", "weather_files": [...]}`
-4. Streamlit 앱에 URL 등록 — `.streamlit/secrets.toml` 또는 Streamlit Cloud Secrets:
-   ```toml
-   EPLUS_SERVICE_URL = "https://<사용자>-<스페이스명>.hf.space"
-   ```
+1순위였으나 https://huggingface.co/new-space 화면에서 **Docker·Gradio 둘 다 `🔒 Paid` 배지**가
+붙어 있고 **Static만 무료로 선택**됩니다:
 
-### ⚠️ 확인 필요 — 무료 Docker Space가 막혀 있을 수 있음
+> Gradio and Docker Spaces require a paid plan.
+> Static Spaces stay free for everyone. To create a Space that runs on compute, subscribe to PRO.
 
-2026-07-09 HF 포럼 보고: **신규 무료 계정에서 CPU Basic 선택 불가, Docker가 "Paid"로 표시**
-([포럼](https://discuss.huggingface.co/t/new-free-accounts-cannot-create-cpu-basic-gradio-spaces-only-zerogpu-available/177629), 미해결).
-공식 문서는 여전히 CPU Basic FREE라 적혀 있어 **문서와 실제가 어긋난 상태**입니다.
+2026-07-09 포럼 보고([링크](https://discuss.huggingface.co/t/new-free-accounts-cannot-create-cpu-basic-gradio-spaces-only-zerogpu-available/177629),
+미해결)가 **실제로 재현된 것**입니다. HF 공식 문서는 여전히 "CPU Basic FREE"라 적고 있어
+문서와 실제가 어긋나 있습니다. Static Space는 정적 파일만 서빙하므로 E+를 못 돌립니다.
 
-막혀 있으면 **같은 Dockerfile을 그대로** 쓸 수 있습니다:
-- **Modal** — $30/월 컴퓨트 크레딧 무료, 유휴 시 과금 0, 슬립 없음
+→ **`Dockerfile`은 남겨둡니다.** HF Docker가 무료로 풀리면 그대로 쓸 수 있습니다.
+
+## 배포 (Modal) — 현재 경로
+
+`modal_app.py`가 **같은 NREL 이미지 · 같은 `app.py`** 를 Modal에 올립니다.
+Modal은 $30/월 컴퓨트 크레딧 무료, **유휴 시 과금 0**, 슬립 없음, 신용카드 불필요.
+
+```bash
+pip install modal
+modal setup                                   # 브라우저 인증 (1회)
+modal deploy energyplus_service/modal_app.py  # 첫 빌드 3~5분
+```
+
+배포되면 URL이 출력됩니다:
+```
+https://<사용자>--zeb-energyplus-web.modal.run
+```
+
+확인:
+```bash
+curl https://<사용자>--zeb-energyplus-web.modal.run/health
+# → {"ok": true, "energyplus": "EnergyPlus, Version 25.1.0...", "weather_files": [...]}
+```
+
+Streamlit 앱에 URL 등록 — `.streamlit/secrets.toml`(로컬) 또는 Streamlit Cloud Secrets:
+```toml
+EPLUS_SERVICE_URL = "https://<사용자>--zeb-energyplus-web.modal.run"
+```
+등록되는 즉시 BIM 진단 화면의 "🔬 아직 못 돌립니다" 안내가 **실행 버튼으로 바뀝니다**
+(`core/eplus_client.py` → `modes/mode3_bim.py`).
+
+⚠️ `modal_app.py`는 **아직 배포된 적이 없습니다.** 첫 `modal deploy`에서 깨질 수 있고,
+그때는 출력이 원인을 알려줍니다.
+
+### 그 밖의 대안 (같은 Dockerfile)
 - **Google Cloud Run** — 월 180,000 vCPU-초 무료 (결제계정 등록 필요)
 - **Render** — 750 인스턴스-시간/월 무료 (콜드스타트 30~60초)
 

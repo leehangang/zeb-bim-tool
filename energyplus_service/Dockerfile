@@ -9,12 +9,12 @@
 #   · 12시간 무트래픽 슬립 → 깨어날 때마다 재설치
 # 그런데 이 장벽들은 **Docker 경로에선 전부 무효**다. NREL 공식 이미지가 있고
 # (nrel/energyplus, 압축 106.5MB) `FROM` 한 줄이면 끝이다.
-# HF Spaces는 Docker + 2 vCPU / 16GB RAM 무료라 0.078코어와 비교가 안 된다.
 #
-# ⚠️ 확인 필요 — 2026-07-09 HF 포럼에 "신규 무료 계정은 CPU Basic 선택 불가,
-#    Docker가 Paid로 표시"된다는 보고가 있다(미해결). 공식 문서는 여전히 CPU Basic FREE라
-#    적혀 있어 문서와 실제가 어긋난 상태다. 계정에서 직접 확인할 것.
-#    막혀 있으면 이 Dockerfile 그대로 Modal($30/월 무료)·Cloud Run에 올리면 된다.
+# ❌ HF는 막혔다 (2026-07-16 계정에서 확인) — new-space 화면에서 Docker에 "Paid" 배지가
+#    붙고 Static만 무료로 선택된다. 2026-07-09 포럼 이슈가 실제로 재현됐다.
+#    공식 문서는 여전히 CPU Basic FREE라 적고 있어 문서와 실제가 어긋나 있다.
+#    → 현재 배포 경로는 Modal이다: `modal_app.py` (같은 베이스 이미지·같은 app.py).
+#    이 파일은 지운 게 아니라 남겨둔 것이다 — HF Docker가 무료로 풀리면 그대로 쓴다.
 #
 # 태그를 latest로 두지 않는 이유: E+는 버전마다 IDF 스키마가 바뀐다.
 # 우리 idf_writer가 쓰는 Version과 여기 태그가 어긋나면 조용히 실패한다.

@@ -93,6 +93,21 @@ _df = (svc / "Dockerfile").read_text(encoding="utf-8")
 check("E+ 이미지 태그가 고정돼 있다 (latest 금지)",
       "FROM nrel/energyplus:" in _df and "FROM nrel/energyplus:latest" not in _df)
 check("HF Spaces 포트 7860", "7860" in _df)
+
+# Modal이 실제 배포 경로다 (HF Docker는 2026-07-16 확인 결과 Paid로 잠김).
+# Dockerfile만 검사하면 정작 쓰는 쪽이 안 지켜진다.
+_mod = (svc / "modal_app.py").read_text(encoding="utf-8")
+ast.parse(_mod)
+check("modal_app.py도 E+ 태그 고정 (latest 금지)",
+      'from_registry("nrel/energyplus:' in _mod
+      and "nrel/energyplus:latest" not in _mod)
+# 두 경로가 같은 이미지를 써야 한다 — 어긋나면 로컬에서 되던 게 배포에서 깨진다
+_tag_df = _df.split("FROM nrel/energyplus:", 1)[1].split()[0].strip()
+_tag_md = _mod.split('from_registry("nrel/energyplus:', 1)[1].split('"', 1)[0].strip()
+check(f"Dockerfile·modal_app 이미지 태그 일치 ({_tag_df})", _tag_df == _tag_md)
+check("modal_app이 app.py를 공용한다 (로직 복제 금지)",
+      "from app import app" in _mod)
+
 _app = (svc / "app.py").read_text(encoding="utf-8")
 ast.parse(_app)
 check("app.py 문법 정상 + /health·/run 존재",
