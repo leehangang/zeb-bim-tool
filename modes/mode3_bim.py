@@ -210,22 +210,53 @@ def render_bim_panel() -> None:
         st.info("진단 결과가 없습니다. 파일을 업로드하고 진단 실행 버튼을 눌러주세요.")
         return
 
-    # 결과 요약 헤더
+    # ── 결과 요약 헤더 — 두 제도의 판정을 나란히 ────────────────────
+    # 과거엔 "진단 완료 — 총점 23/100점(D등급)"만 띄웠다. 그런데 그건 **GR 정량평가
+    # 점수일 뿐**인데 종합 결론처럼 읽혔고, 정작 ZEB 등급은 5번째 탭에 숨어 있었다.
+    # ZEB와 GR은 근거 법령이 다른 별개 제도다(P4) → 판정을 나란히 먼저 보여준다.
     score = result["score"]
-    st.success(
-        f"✅ 진단 완료 — 총점 **{score['total_score']}/100점** "
-        f"({score['grade']}등급)"
+    _verdict = _track_verdicts(result)
+
+    st.success("✅ 진단 완료 — 두 제도의 판정을 나란히 보여줍니다")
+    v1, v2 = st.columns(2)
+    with v1:
+        st.markdown(
+            f"<div style='border-left:3px solid #C18A2D; padding:0.35rem 0 0.35rem 0.8rem;'>"
+            f"<div style='font-size:0.78rem; color:#8A7A55; font-weight:600; letter-spacing:0.05em;'>"
+            f"TRACK A · ZEB 인증 <span style='font-weight:400;'>(녹색건축법 §17 · 절대성능)</span></div>"
+            f"<div style='font-size:1.35rem; font-weight:700; margin-top:0.15rem;'>"
+            f"{_verdict['zeb_label']}</div>"
+            f"<div style='font-size:0.82rem; color:#5C665F;'>{_verdict['zeb_sub']}</div></div>",
+            unsafe_allow_html=True,
+        )
+    with v2:
+        st.markdown(
+            f"<div style='border-left:3px solid #1B5E20; padding:0.35rem 0 0.35rem 0.8rem;'>"
+            f"<div style='font-size:0.78rem; color:#3D6B45; font-weight:600; letter-spacing:0.05em;'>"
+            f"TRACK B · 그린리모델링 <span style='font-weight:400;'>(§27 · 상대 개선율)</span></div>"
+            f"<div style='font-size:1.35rem; font-weight:700; margin-top:0.15rem;'>"
+            f"{score['total_score']}/100점 · {score['grade']}등급</div>"
+            f"<div style='font-size:0.82rem; color:#5C665F;'>{_verdict['gr_sub']}</div></div>",
+            unsafe_allow_html=True,
+        )
+    st.caption(
+        "⚠️ **두 판정은 서로 다른 제도라 등급 체계가 다릅니다** — ZEB는 +등급~5등급(절대성능), "
+        "GR 정량평가는 A+~D(100점 채점)입니다. 같은 건물이 ZEB 5등급이면서 GR D등급일 수 있습니다."
     )
 
-    # 탭 구성
-    tab1, tab2, tab3, tab_sens, tab_zeb, tab4 = st.tabs([
-        "📊 진단 결과",
-        "💰 ROI 보강 계획",
-        "🎯 최적화",
-        "📈 민감도·시나리오",
-        "🏆 ZEB 평가",
-        "📄 전체 리포트",
+    # ── 탭 구성 — 판정(2) → 경제성(3) → 산출물(1) ──────────────────
+    # 변수명은 탭 내용과 일치시킨다 — 순서를 또 바꿀 때 잘못 매핑되지 않도록.
+    tab_zeb, tab_gr, tab_cost, tab_opt, tab_sens, tab_report = st.tabs([
+        "🏆 ZEB 등급",      # Track A 판정
+        "🏗 GR 진단",       # Track B 판정  (구 "진단 결과" — GR임을 이름에 드러냄)
+        "💰 보강·비용",      # ─┐
+        "🎯 최적화",         #  ├ 두 트랙이 공유하는 경제성
+        "📈 민감도",         # ─┘
+        "📄 리포트",
     ])
+    st.caption(
+        "앞의 **두 탭은 서로 다른 제도의 판정**이고, 뒤의 **세 탭은 두 트랙이 공유하는 경제성**입니다."
+    )
 
     # 파일명: 현재 업로드 또는 샘플 또는 캐시 키에서 추출
     if uploaded is not None:
@@ -238,23 +269,60 @@ def render_bim_panel() -> None:
     else:
         source_name = "bim.json"
 
-    with tab1:
+    with tab_zeb:                       # Track A · 판정
+        _render_zeb_tab(result)
+    with tab_gr:                        # Track B · 판정
         _render_diagnosis_tab(result)
-    with tab2:
+    with tab_cost:                      # 공통 · 경제성
         _render_roi_tab(result)
-    with tab3:
+    with tab_opt:
         _render_optimization_tab(result)
     with tab_sens:
         _render_sensitivity_tab(result)
-    with tab_zeb:
-        _render_zeb_tab(result)
-    with tab4:
+    with tab_report:                    # 산출물
         _render_full_report_tab(result, source_name)
 
 
 # ====================================================================
 # 탭별 렌더링 (내부)
 # ====================================================================
+
+def _track_verdicts(result: dict) -> dict:
+    """
+    헤더용 두 트랙 판정 요약 — 엔진에서 직접 산출한다(하드코딩 금지).
+
+    ⚠️ 실패해도 진단 화면 전체가 죽으면 안 되므로 방어한다.
+       값을 못 구하면 '—'를 돌려주고, 아래 각 탭이 상세를 보여준다.
+    """
+    out = {"zeb_label": "—", "zeb_sub": "ZEB 탭에서 확인", "gr_sub": "GR 정량평가표 채점"}
+    bim = result.get("bim_data") or result.get("bim") or {}
+    gr_mapping = result.get("gr_mapping", {})
+    if not bim or not gr_mapping:
+        return out
+
+    try:
+        from core.zeb_evaluator import evaluate_zeb
+        now = evaluate_zeb(bim, gr_mapping)
+        out["zeb_label"] = now["grade"]["label"]
+        out["zeb_sub"] = (
+            f"1차E 소요량 {now['post_energy_kwh_m2']:.1f} kWh/㎡·년 · "
+            f"자립률 {now['autonomy_pct']}%"
+        )
+    except Exception:
+        pass
+
+    try:
+        from core.gr_evaluator import evaluate_gr
+        gr = evaluate_gr(bim, gr_mapping)
+        imp = gr["성능개선"]
+        out["gr_sub"] = (
+            f"전체 보강 시 성능개선비율 {imp['성능개선비율_pct']}% "
+            f"({'지원 자격 충족 ✅' if gr['자격충족'] else '기준 미달 ❌'} · 기준 {imp['기준_pct']}%)"
+        )
+    except Exception:
+        pass
+    return out
+
 
 def _render_diagnosis_tab(result: dict) -> None:
     """탭1: 11개 매핑 표 + 점수 분해 (시각화 강화)."""
