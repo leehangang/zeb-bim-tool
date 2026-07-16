@@ -231,15 +231,19 @@ def render_bim_panel() -> None:
                     if x["u_value"] is None
                 ]
                 if _no_u or _g["missing"]:
+                    # 마크다운에서 줄바꿈은 '\n' 하나로는 안 먹는다 — 항목이 한 줄로 뭉친다.
+                    # '- ' 목록 + 앞뒤 빈 줄이 있어야 리스트로 렌더된다.
+                    _items = []
+                    if _no_u:
+                        _items.append(
+                            f"**열관류율 미상 {len(_no_u)}건** — {', '.join(_no_u[:5])}"
+                            + (" 외" if len(_no_u) > 5 else "")
+                        )
+                    _items += list(_g["missing"])
                     st.warning(
                         "이 gbXML에 **없어서 채우지 못한 값**이 있습니다 — "
                         "지어내지 않고 비워 둡니다.\n\n"
-                        + (
-                            f"· 열관류율 미상 {len(_no_u)}건: {', '.join(_no_u[:5])}"
-                            f"{' 외' if len(_no_u) > 5 else ''}\n"
-                            if _no_u else ""
-                        )
-                        + "\n".join(f"· {m}" for m in _g["missing"]),
+                        + "\n".join(f"- {m}" for m in _items),
                         icon="⚠️",
                     )
             except Exception as e:
