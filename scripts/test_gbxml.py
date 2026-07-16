@@ -191,7 +191,7 @@ check("RectangularGeometry가 있어도 면적은 Rect, 좌표는 PolyLoop에서
       and len(walls["su-wall-1"]["vertices"]) == 4)
 
 print("\n⑨ IDF 생성 (EnergyPlus = GR 센터 지정 프로그램)")
-from core.idf_writer import _material_r, write_idf  # noqa: E402
+from core.idf_writer import EP_VERSION, _material_r, write_idf  # noqa: E402
 
 # U → 재료 R 역산이 왕복해야 한다. 표면열저항을 안 빼면 단열이 실제보다 좋게 나온다.
 for u, kind, rsurf in ((0.24, "wall", 0.17), (0.15, "roof", 0.14)):
@@ -205,8 +205,10 @@ idf = res["idf"]
 check("IDF 텍스트 생성", len(idf) > 1000 and idf.lstrip().startswith("!-"))
 # 존 이름은 이제 gbXML space id다 (예전엔 ZONE_1 하드코딩) — 그래야 ECO2 용도프로필과
 # 대응이 붙는다. ZONE_1 fallback은 AdjacentSpaceId가 없는 gbXML에만 쓴다.
+# 버전은 EP_VERSION에서 끌어온다 — "26.1;"로 박아뒀다가 서비스(25.1)와 어긋난 걸
+# 놓쳤다. 이미지 태그와의 일치는 test_eplus가 지킨다.
 check("Version·Zone·GlobalGeometryRules 포함",
-      "Version, 26.1;" in idf and "Zone,\n    sp-1" in idf
+      f"Version, {EP_VERSION};" in idf and "Zone,\n    sp-1" in idf
       and "GlobalGeometryRules" in idf)
 check("외피가 BuildingSurface:Detailed로 나감",
       idf.count("BuildingSurface:Detailed") == 3, f'{idf.count("BuildingSurface:Detailed")}개')

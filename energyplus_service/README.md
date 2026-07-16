@@ -58,11 +58,37 @@ https://leehangang--zeb-energyplus-web.modal.run
 ```
 → **EnergyPlus 바이너리가 실제로 실행된다** (존재 확인이 아니라 `--version` 실행 결과).
 
-### ⛔ 남은 관문 — 기상파일이 없다
+기상파일은 `weather/`에 추풍령(471350) TMYx 2011-2025를 넣어 함께 배포한다.
+NREL 이미지에는 .epw가 0개다(`/usr/local`·`/opt`·`/root` 전수 조사 0건).
 
-`weather_files: []`. **NREL 이미지에는 .epw가 0개**다 (`/usr/local`·`/opt`·`/root`
-전수 조사 결과 0건). E+는 기상파일 없이 못 돌아가므로, `weather/`에 .epw를 넣거나
-요청마다 업로드해야 한다. 그 전까지 **우리 IDF는 E+에 한 번도 안 들어간 상태**다.
+### ✅ 우리 IDF의 첫 EnergyPlus 실행 — 완주 (2026-07-17)
+
+`data/sample_bim/doam_sample.gbxml` → 파서 → `write_idf` → Modal → E+ 8,760시간 연간 해석.
+
+**1차 시도는 실패했다.** 그 전까지 "파싱은 통과"만 확인한 상태였고, 실제로 넣자마자
+IDF 생성기의 진짜 버그 3개 + 에러 파서 버그 1개가 나왔다:
+
+| 증상 | 원인 |
+|---|---|
+| Severe: `zone_inside_convection_algorithm - "autocalculate"` | Zone 11번(enum)에 autocalculate. 수치 필드에만 쓰는 값이다 |
+| Severe: `mean_radiant_temperature_calculation_type - "autocalculate"` | People 13번(enum)에 같은 실수 |
+| People의 Activity Level Schedule 빈칸 | 필수 필드다 → `SCH_ACT`(120W/인) 추가 |
+| `Version: in IDF="26.1" not the same as expected="25.1"` | 생성기 기본값과 서비스 이미지가 어긋남 → `EP_VERSION` 상수로 묶음 |
+| **fatal 0건으로 보고됐는데 실제론 fatal로 죽음** | `_parse_err` 정규식이 `**  Fatal  **`(공백 2)를 못 잡음 |
+
+마지막 것이 제일 나빴다 — **프로그램이 죽었는데 화면엔 fatal 0건**으로 보인다.
+
+### ⚠️ "성공"이 곧 "맞는 값"은 아니다
+
+2차 시도는 `ok: True`로 완주했지만 `Electricity:Facility = 0.0 kWh`였다.
+샘플의 바닥면이 U-value 미상이라 IDF에서 빠졌고 → **존 면적 0 → 면적기반 부하
+(조명·기기·재실)가 전부 0**. 냉난방만 외피 관류로 나와 겉보기엔 멀쩡했다.
+→ `write_idf`가 바닥 없는 존을 경고로 올린다. 해석 성공이 검증을 대신하지 않는다.
+
+### 남은 것
+- **실제 도담 Revit → gbXML은 아직 없다.** 위 실행은 우리가 만든 픽스처 기준이다.
+- 라이브 사이트(share.streamlit.io)는 로컬 `.streamlit/secrets.toml`을 못 본다 →
+  **Settings > Secrets에 `EPLUS_SERVICE_URL`을 직접 넣어야** 실행 버튼이 뜬다.
 
 ```bash
 pip install modal

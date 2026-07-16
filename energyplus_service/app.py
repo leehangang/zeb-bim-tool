@@ -74,10 +74,16 @@ def _parse_err(run_dir: pathlib.Path) -> dict:
     if not err.exists():
         return {"fatal": [], "severe": [], "warning_count": 0, "raw_tail": ""}
     text = err.read_text(encoding="utf-8", errors="replace")
+    # E+의 실제 출력은 '**  Fatal  **'로 Fatal 앞에 공백이 둘이다 (Severe·Warning은 하나).
+    # 처음엔 '\*\* Fatal  \*\*'로 썼다가 2026-07-17 첫 실행에서 fatal을 통째로 놓쳤다 —
+    # "Program terminated"인데 화면엔 fatal 0건으로 보였다. 공백 수에 기대지 않는다.
+    def _lines(kind: str, limit: int) -> list:
+        return re.findall(r"\*\*\s*" + kind + r"\s*\*\*\s*(.+)", text)[:limit]
+
     return {
-        "fatal": re.findall(r"\*\* Fatal  \*\* (.+)", text)[:10],
-        "severe": re.findall(r"\*\* Severe  \*\* (.+)", text)[:20],
-        "warning_count": len(re.findall(r"\*\* Warning \*\*", text)),
+        "fatal": _lines("Fatal", 10),
+        "severe": _lines("Severe", 20),
+        "warning_count": len(re.findall(r"\*\*\s*Warning\s*\*\*", text)),
         "raw_tail": text[-3000:],
     }
 

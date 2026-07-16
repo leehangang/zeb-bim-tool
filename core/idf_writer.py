@@ -26,16 +26,30 @@
   IDF에 못 넣는다 — BuildingSurface:Detailed는 꼭짓점을 요구한다. 빠진 면은 반환값의
   `skipped`에 남긴다. (그래서 IDF export는 gbXML 입력에서만 가능하다. 우리 JSON 스키마는
   면적만 있어 지오메트리를 지어내야 하는데, 그건 하지 않는다.)
-· **단일 존(Zone)**으로 만든다. gbXML의 Space 분할을 반영하지 않는다.
 · **HVAC은 IdealLoads**다. 실제 설비(EHP 등)를 모델링하지 않고 부하만 뽑는다.
   성능개선비율은 개선 전/후의 상대비라 IdealLoads로도 방향은 유효하나,
   실제 신청 시엔 설비 모델링이 필요하다.
 · 일정(재실·조명·기기)은 **어린이집 표준 가정**이며 원문 근거가 없다.
-· 날씨 파일(.epw)은 사용자가 넣어야 한다 — 우리가 배포하지 않는다.
+  재실 0.1인/㎡(=10㎡/인), 조명 10W/㎡, 기기 5W/㎡, 대사량 120W/인.
+· 기상파일은 추풍령(471350) TMYx 하나뿐이다 — 김천 최근접이지 김천이 아니다.
+
+2026-07-17 첫 실제 EnergyPlus 실행에서 잡은 것 (그 전엔 파싱만 통과한 상태였다)
+------------------------------------------------------------------------------
+· Zone 11번 필드(Zone Inside Convection Algorithm)에 autocalculate → Severe.
+  autocalculate는 면적·체적 같은 수치 필드에만 쓴다. enum 자리엔 못 쓴다.
+· People 13번 필드(Mean Radiant Temperature Calculation Type)에 autocalculate → Severe.
+· People의 Activity Level Schedule Name이 빈칸이었다 — 필수 필드다.
+· Version이 26.1인데 서비스는 25.1을 돈다 → EP_VERSION 상수로 묶고 테스트가 지킨다.
 """
 
 import re
 from typing import Optional
+
+# EnergyPlus 버전. energyplus_service의 이미지 태그(nrel/energyplus:25.1.0)와
+# **반드시 일치해야 한다** — 어긋나면 E+가 "Version: in IDF not the same as expected"
+# 경고를 내고, 스키마가 바뀐 버전이면 조용히 틀린 결과가 나온다.
+# scripts/test_eplus.py가 이 상수와 Dockerfile·modal_app 태그의 일치를 검사한다.
+EP_VERSION = "25.1"
 
 # ISO 6946 표면열저항 (㎡·K/W) — U에서 재료 R을 역산할 때 뺀다.
 # 이걸 안 빼면 재료 R을 과대평가해 실제보다 단열이 좋게 나온다.
@@ -84,7 +98,7 @@ def _safe(name: str) -> str:
 def write_idf(
     bim: dict,
     zone_name: str = "ZONE_1",
-    ep_version: str = "26.1",
+    ep_version: str = EP_VERSION,
     weather_hint: str = "김천(경북) — 추풍령 471350 최근접 (.epw 필요)",
 ) -> dict:
     """
@@ -162,15 +176,34 @@ RunPeriod,
     if not zones:
         zones = [zone_name]
 
+    # 바닥이 빠진 존은 E+가 Floor Area를 0으로 잡고, 그러면 면적기반 부하
+    # (조명 W/㎡·기기 W/㎡·재실 인/㎡)가 **전부 조용히 0**이 된다. 해석은 "성공"하고
+    # 냉난방만 외피 관류로 나오므로 겉보기엔 멀쩡하다 — 2026-07-17 첫 성공 실행이
+    # 정확히 이 상태였다(Electricity:Facility = 0.0 kWh). 반드시 표면에 올린다.
+    # ⚠️ surfaces에는 나중에 제외될 면도 들어 있다. 제외 조건(좌표 없음·U 미상)과
+    #    똑같은 기준으로 세지 않으면 "바닥 있음"으로 잘못 판정해 경고를 놓친다.
+    _floor_zones = {
+        _zone_of(i, zone_name)
+        for i, kind, _ in surfaces
+        if kind == "floor" and (i.get("vertices") or []) and i.get("u_value") is not None
+    }
     out.append("!-  ===== 존 (gbXML Space = 존) =====\n")
     _stype = {_safe(s["id"]): s.get("spaceType") for s in (bim.get("spaces") or [])}
     for z in zones:
         st = _stype.get(z)
         out.append(
-            f"Zone,\n    {z}, 0, 0, 0, 0, , 1, , , autocalculate, autocalculate;"
+            # 필드 10=Floor Area까지만 쓴다. 11번은 Zone Inside Convection Algorithm
+            # (enum)이라 autocalculate를 넣으면 E+가 Severe로 거절한다 — 실제로 그랬다.
+            f"Zone,\n    {z}, 0, 0, 0, 0, , 1, , , autocalculate;"
             + (f"   !- gbXML spaceType: {st}" if st else "")
             + "\n\n"
         )
+        if z not in _floor_zones:
+            warnings.append(
+                f"{z}: 바닥면이 IDF에 없어 존 면적이 0으로 잡힙니다 → "
+                f"조명·기기·재실 부하가 전부 0이 됩니다. 해석은 '성공'해도 "
+                f"내부발열이 빠진 값이니 그대로 쓰지 마세요."
+            )
 
     # ── 재료·구성 (U-value → Material:NoMass) ───────────────────────
     out.append("!-  ===== 구성 (U-value에서 역산) =====\n")
@@ -295,6 +328,10 @@ Schedule:Compact, SCH_COOL, Temp,
     Through: 12/31, For: Weekdays, Until: 08:00, 30.0, Until: 18:00, 26.0, Until: 24:00, 30.0,
     For: AllOtherDays, Until: 24:00, 30.0;
 
+!-  재실자 대사량 W/인. People의 Activity Level Schedule은 빈칸을 허용하지 않는다.
+!-  120W ≒ 앉아서 하는 가벼운 활동(ASHRAE 55 기준 ~1.2 met).
+Schedule:Compact, SCH_ACT, Any, Through: 12/31, For: AllDays, Until: 24:00, 120;
+
 ThermostatSetpoint:DualSetpoint, TSTAT_SP, SCH_HEAT, SCH_COOL;
 Schedule:Compact, ALWAYS_4, Any, Through: 12/31, For: AllDays, Until: 24:00, 4;
 ScheduleTypeLimits, Any;
@@ -305,8 +342,16 @@ ScheduleTypeLimits, Any;
     for z in zones:
         out.append(f"""
 People,
-    PPL_{z}, {z}, SCH_OCC, Area/Person, , , 0.1,
-    0.3, , , , , autocalculate;
+    PPL_{z},                 !- Name
+    {z},                     !- Zone Name
+    SCH_OCC,                 !- Number of People Schedule Name
+    People/Area,             !- Number of People Calculation Method
+    ,                        !- Number of People
+    0.1,                     !- People per Floor Area {{person/m2}} = 10㎡/인
+    ,                        !- Floor Area per Person
+    0.3,                     !- Fraction Radiant
+    ,                        !- Sensible Heat Fraction
+    SCH_ACT;                 !- Activity Level Schedule Name (필수 — 빈칸이면 거절)
 
 Lights,
     LGT_{z}, {z}, SCH_OCC, Watts/Area, , 10.0, ,
