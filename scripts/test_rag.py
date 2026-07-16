@@ -365,6 +365,62 @@ def test_page_bundle_extraction():
         print(f"  [PASS] {name}: {len(pages)}쪽 · {chars:,}자")
 
 
+def test_doc_registry():
+    """
+    색인 원문 레지스트리 — 화면 목록이 색인과 어긋나지 않는가.
+
+    🔴 이 검사가 없어서 사이드바(15건)·Mode 01 헤더(10건)·Mode 01 본문("12개 법령")이
+       전부 서로 다르고 전부 실제 색인과 달랐다. 목록을 손으로 적으면 반드시 낡는다.
+       — 홈 등급 문자열을 하드코딩해 4등급→5등급 변경을 놓쳤던 것과 같은 버그 종류.
+    """
+    import re
+
+    print("\n" + "=" * 70)
+    print("색인 원문 레지스트리 — 화면 ↔ 색인 정합")
+    print("=" * 70)
+    from core.doc_registry import REGISTRY, group_indexed_docs
+
+    # ① 레지스트리 항목 자체가 온전한가
+    valid_groups = {"zeb", "gr", "incentive", "case"}
+    for fname, (g, label, answers) in REGISTRY.items():
+        assert g in valid_groups, f"{fname}: 알 수 없는 그룹 '{g}'"
+        assert label.strip() and answers.strip(), f"{fname}: 표시명/설명 비어 있음"
+    print(f"  [PASS] 레지스트리 {len(REGISTRY)}건: 그룹·표시명·설명 모두 유효")
+
+    # ② 실제 색인과 대조 — 양방향
+    if not (PROJECT_ROOT / "data" / "chroma_db").exists():
+        print("  [SKIP] 색인 없음 — 정합 검사 생략")
+        return
+    from core.rag_retriever import KeywordRetriever
+
+    # 앱과 동일하게 기본(상대) 경로로 연다. 절대경로를 넘기면 chromadb가
+    # 한글이 포함된 경로에서 hnsw 인덱스 로드에 실패한다(개발 PC 한정).
+    os.chdir(PROJECT_ROOT)
+    retriever = KeywordRetriever()
+    indexed = {m.get("file", "?") for m in retriever._cache["metas"]}
+
+    missing = indexed - set(REGISTRY)     # 색인엔 있는데 설명이 없다
+    orphan = set(REGISTRY) - indexed      # 설명은 있는데 색인에 없다 (삭제된 문서)
+    assert not missing, f"레지스트리에 설명 없는 색인 문서: {sorted(missing)}"
+    assert not orphan, f"색인에 없는 레지스트리 항목(유령): {sorted(orphan)}"
+    print(f"  [PASS] 색인 {len(indexed)}건 ↔ 레지스트리 {len(REGISTRY)}건 완전 일치")
+
+    # ③ 그룹 렌더에 '미분류'가 새지 않는가
+    groups = group_indexed_docs(indexed)
+    assert not any("미분류" in t for t, _ in groups), f"미분류 발생: {groups[-1][0]}"
+    total = sum(len(items) for _, items in groups)
+    assert total == len(indexed), f"그룹 합계 {total} ≠ 색인 {len(indexed)}"
+    for title, items in groups:
+        print(f"         {title}")
+
+    # ④ 화면에 문서 수/목록을 다시 손으로 적지 않았는가 (재발 방지)
+    for rel in ["streamlit_app.py", "modes/mode1_rag.py"]:
+        src = (PROJECT_ROOT / rel).read_text(encoding="utf-8")
+        for pat in [r"\d+개\s*법령", r"\d+건\s*·\s*[\d,]+\s*청크"]:
+            hits = [h for h in re.findall(pat, src) if "n_files" not in h]
+            assert not hits, f"{rel}: 문서 수가 하드코딩됨 {hits} — 색인에서 읽으세요"
+    print("  [PASS] 화면에 문서 수 하드코딩 없음 (색인에서 파생)")
+
 
 if __name__ == "__main__":
     try:
@@ -377,6 +433,7 @@ if __name__ == "__main__":
         test_mode1_index_ready_negative()
         test_extract_file_negative()
         test_page_bundle_extraction()
+        test_doc_registry()
         print("\n" + "=" * 70)
         print("모든 RAG 테스트 통과 ✅")
         print("=" * 70)

@@ -44,6 +44,33 @@ def _check_rag_index() -> bool:
     )
 
 
+@st.cache_data(show_spinner=False)
+def _index_summary() -> dict:
+    """
+    색인에서 원문 목록·청크 수를 직접 읽는다.
+
+    화면에 목록을 손으로 적지 않기 위한 함수다. 예전엔 사이드바·Mode 01 헤더·
+    Mode 01 본문에 각각 다른 목록이 하드코딩돼 있었고 전부 실제 색인과 어긋났다.
+    """
+    try:
+        from core.doc_registry import group_indexed_docs
+        from core.rag_retriever import KeywordRetriever
+
+        retriever = KeywordRetriever()
+        files = [m.get("file", "?") for m in retriever._cache["metas"]]
+        return {
+            "n_files": len(set(files)),
+            "n_chunks": retriever.count(),
+            "groups": group_indexed_docs(files),
+            "error": None,
+        }
+    except Exception as e:
+        return {
+            "n_files": 0, "n_chunks": 0, "groups": [],
+            "error": f"{type(e).__name__}: {e}",
+        }
+
+
 def _auto_unzip_chroma_if_needed():
     """
     data/chroma_db.zip을 항상 data/chroma_db/ 안에 올바른 폴더 구조로 압축 해제.
@@ -128,37 +155,35 @@ with st.sidebar:
 
             - 케이스: KEPCO 도담어린이집 (김천)
 
-            **RAG 색인 원문 (15건 · 1,140청크)**
-              - 04 녹색건축물 조성 지원법 (제20727호, 2026.2.1)
-              - 10 같은 법 시행령 (제36231호, 2026.3.31)
-              - 11 GR 지원사업 운영 고시 (제2023-385호)
-              - 12 ZEB 인증에 관한 규칙 (기후에너지환경부령 제1호)
-              - 06 에너지절약설계기준 (제2025-738호, 2025.12.31)
-              - 05 지방세특례제한법
-              - 13 건축법 시행령 (제35717호)
-              - 14 공공기관의 운영에 관한 법률
-              - 15 탄소중립기본법 시행령 (제36303호)
-              - 16·17 2026년 GR 공고 (민간 이자지원 / 공공 2.0)
-              - 18 2026 공공 GR 2.0 **가이드라인** (정량평가 배점표 원문)
-              - 01 GR 가이드라인 (79쪽) · 02 GR 기술요소 세부기준
-              - 09 영유아보육법 시행규칙 (어린이집 설치기준)
-
             **산정 데이터**
               - 07/08 조달청 단가DB·간접공사비
               - `data/params/*.yaml` (요율·한도 + 출처·시행일)
 
-            🔧 **2026-07 해결** — 01·02·09는 "이미지 스캔본이라 추출 불가"로
-            제외돼 있었으나, 실제로는 페이지마다 텍스트가 동봉된 **번들 포맷**이었습니다.
-            인덱서가 그 구조를 몰라 버리고 있었을 뿐입니다 (+114쪽 · 13만자 회수).
-            03은 12(ZEB 인증규칙)와 **동일 문서**라 중복 제외했습니다.
-
-            ⚠️ **아직 없는 원문** — 별표1(자립률 산식·대지외 보정계수)·별표2(등급표)·
-            별표1의2(BEMS 13항목)는 **ZEB 인증기준 공동고시**(국토부 제2024-893호 /
-            산업부 제2024-208호)에 있는데 미확보입니다. 인증규칙 §8③이 그 고시로
-            위임합니다. 확보 시 보정계수가 '확인 필요' → '원문대조'로 승격됩니다.
-
             상세 아키텍처: `docs/ARCHITECTURE.md`
             """
+        )
+
+    # 색인 원문 — 목록을 손으로 적지 않는다. 색인에서 읽어 역할별로 묶는다.
+    _idx = _index_summary()
+    with st.expander(f"📚 색인 원문 ({_idx['n_files']}건 · {_idx['n_chunks']:,}청크)", expanded=False):
+        if _idx["error"]:
+            st.caption(f"색인을 읽지 못했습니다 — {_idx['error']}")
+        else:
+            for _title, _items in _idx["groups"]:
+                st.markdown(f"**{_title}**")
+                for _label, _answers in _items:
+                    st.markdown(
+                        f"<div style='margin:0 0 .45rem .5rem; line-height:1.35;'>"
+                        f"<span style='font-size:.82rem;'>{_label}</span><br>"
+                        f"<span style='font-size:.72rem; color:#757575;'>↳ {_answers}</span>"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+        st.caption(
+            "⚠️ **아직 없는 원문** — 별표1(자립률 산식·대지외 보정계수)·별표2(등급표)·"
+            "별표1의2(BEMS 13항목)는 **ZEB 인증기준 공동고시**(국토부 제2024-893호 / "
+            "산업부 제2024-208호)에 있으나 미확보입니다. 인증규칙 §8③이 그 고시로 위임합니다. "
+            "확보 시 보정계수가 '확인 필요' → '원문대조'로 승격됩니다."
         )
 
     st.markdown("---")
@@ -468,7 +493,8 @@ def render_home():
         st.markdown(card_html(
             "💬",
             "정책 Q&A (RAG)",
-            "<b>12개 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 근거 조항을 찾아 <b>인용</b>해 답변합니다. "
+            f"<b>{_index_summary()['n_files']}건의 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 "
+            "근거 조항을 찾아 <b>인용</b>해 답변합니다. "
             "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
         ), unsafe_allow_html=True)
     with c2:

@@ -83,6 +83,16 @@ def is_index_ready(persist_dir: str = "./data/chroma_db") -> tuple:
         return False, f"인덱스 로드 실패: {type(e).__name__}: {e}", 0
 
 
+def _indexed_file_count(persist_dir: str = "./data/chroma_db") -> int:
+    """색인에 실제로 들어 있는 원문 파일 수. 화면에 숫자를 손으로 적지 않기 위함."""
+    try:
+        from core.rag_retriever import KeywordRetriever
+        retriever = KeywordRetriever(persist_dir=persist_dir)
+        return len({m.get("file", "?") for m in retriever._cache["metas"]})
+    except Exception:
+        return 0
+
+
 # ====================================================================
 # Streamlit UI
 # ====================================================================
@@ -94,23 +104,27 @@ def render_rag_panel() -> None:
     """
     import streamlit as st
 
-    st.markdown("""
+    # 인덱스 상태 확인
+    ready, msg, count = is_index_ready()
+
+    # 문서 수는 색인에서 읽는다. 예전엔 화면 다섯 군데에 손으로 적혀 있었고,
+    # 색인이 15건이 된 뒤에도 화면은 계속 12건이라고 말하고 있었다.
+    n_files = _indexed_file_count()
+
+    st.markdown(f"""
     <div style="margin-bottom:1.5rem;">
         <div style="font-size:0.85rem; color:#2E7D32; font-weight:600; letter-spacing:0.08em;">
             MODE 01 · POLICY Q&A
         </div>
         <h1 style="margin:0.2rem 0;">💬 정책 Q&A</h1>
         <div style="color:#757575;">
-            04 녹색건축법 · 10 같은 법 시행령 · 11 GR 지원사업 고시 · 12 ZEB 인증규칙 ·
-            06 에너지절약설계기준 · 05 지방세특례 · 13 건축법 시행령 · 14 공공기관운영법 ·
-            15 탄소중립기본법 시행령 · 16·17 2026년 GR 공고(민간·공공)
-            — <b>12개 법령·고시·공고 원문</b>에서 근거 조항을 인용해 답변합니다.
+            ZEB 인증 · GR 지원사업 · 세제 · 케이스 적격 판정의 근거가 되는
+            <b>{n_files}건의 법령·고시·공고 원문</b>을 조항 단위로 색인하고,
+            질문과 관련된 조항을 찾아 <b>근거를 인용</b>해 답변합니다.
+            전체 목록은 사이드바 <b>📚 색인 원문</b>에 있습니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    # 인덱스 상태 확인
-    ready, msg, count = is_index_ready()
     if not ready:
         st.info(
             "**정책 Q&A**는 그린리모델링 관련 법·고시·가이드라인 원문에서 "
@@ -118,11 +132,10 @@ def render_rag_panel() -> None:
             "**BIM 진단·ROI 엔진**에 집중되어 있습니다."
         )
         st.markdown(
-            "**동작 방식** — ZEB·그린리모델링 관련 12개 법령·고시·공고(녹색건축법 및 시행령, "
-            "GR 지원사업 고시, ZEB 인증규칙, 에너지절약설계기준, 지방세특례, 건축법 시행령, "
-            "공공기관운영법, 탄소중립기본법 시행령, 2026년 민간·공공 GR 공고)를 "
-            "조항 단위로 색인하고, 질문과 관련된 조항을 찾아 "
-            "**근거 조항을 인용**해 답변합니다."
+            "**동작 방식** — ZEB 인증 판정 · GR 지원사업 판정 · 세제 · 케이스 적격 판정의 "
+            "근거가 되는 법령·고시·공고 원문을 조항 단위로 색인하고, 질문과 관련된 조항을 찾아 "
+            "**근거 조항을 인용**해 답변합니다. 색인된 원문의 역할별 목록은 "
+            "사이드바 **📚 색인 원문**에서 볼 수 있습니다."
         )
         st.markdown("**이런 질문에 답합니다**")
         _ex = [
@@ -177,7 +190,7 @@ def render_rag_panel() -> None:
 
     # 답변 생성
     try:
-        with st.spinner("12개 법령·고시·공고 원문에서 근거 조항 검색 + 답변 생성 중..."):
+        with st.spinner(f"{n_files}건의 법령·고시·공고 원문에서 근거 조항 검색 + 답변 생성 중..."):
             result = answer_question(question, top_k=top_k)
     except Exception as e:
         from core.error_messages import friendly_error
