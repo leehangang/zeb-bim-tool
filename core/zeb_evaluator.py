@@ -102,14 +102,23 @@ def combine_reductions(ratios: list, mode: str = "multiplicative") -> float:
     """
     개별 요소 절감률들을 하나의 총 절감률로 결합한다.
 
+    mode="multiplicative" — 1 − Π(1−rᵢ).  **기본값.** 각 요소가 '남은' 에너지를 줄인다고 본다.
+                            상한이 100%로 수렴하고 적용 순서에 무관하다.
     mode="sum"            — 단순합산 Σrᵢ.  ⚠️ 물리적으로 성립하지 않는다:
                             10% 요소 11개면 110%가 되어 에너지가 음수가 된다.
-                            (레거시 호환·비교 표시용으로만 남긴다)
-    mode="multiplicative" — 1 − Π(1−rᵢ).  각 요소가 '남은' 에너지를 줄인다고 본다.
-                            상한이 100%로 수렴하고 적용 순서에 무관하다.
+                            (과거 기본값 — 비교 표시용으로만 남긴다)
 
-    ⚠️ 이것도 근사다. 실제 상호작용(외벽단열을 하면 고효율 보일러가 줄일 몫이 함께
-       줄어드는 등)은 ECO2/EnergyPlus 정식 해석으로만 정확히 잡힌다.
+    ⚠️ multiplicative도 근사다. 두 방식의 참값은 요소들이 같은 부하를 건드리는지에 달렸다:
+       · 겹치는 경우(외벽단열 ↔ 고효율보일러: 단열하면 보일러가 줄일 난방부하가 이미 줄어듦)
+         → 단순합산은 과대. multiplicative가 가깝다.
+       · 겹치지 않는 경우(LED(조명) ↔ 외벽단열(난방)) → 실제로는 거의 가산적이라
+         multiplicative가 다소 **과소**추정한다.
+       우리 11개 요소는 외피·설비·조명·환기·제어가 섞여 있어 참값은 두 값 사이에 있다.
+       그럼에도 multiplicative를 기본으로 삼는 이유:
+         (1) 단순합산은 100%를 넘길 수 있어 **정의상 틀렸다** — 방어 불가.
+         (2) 아래 실측 근거가 '보수적으로 잡는 쪽'을 지지한다.
+       정확한 값은 ECO2/EnergyPlus 정식 해석으로만 얻는다.
+
        실증 근거: KEEI 기본연구보고서 2025-14 (보도자료 2026-06-22) — GR 시행 공공건축물
        522동(어린이집 358동 = 68.6%) 실측 결과 연간 20.4 kWh/㎡ 절감으로,
        엔지니어링 사전 예측 33 kWh/㎡의 약 60% 수준. 설계단계 예측에 약 1.6배
@@ -125,17 +134,16 @@ def combine_reductions(ratios: list, mode: str = "multiplicative") -> float:
     return 1.0 - remaining
 
 
-def calculate_reduction_ratio(gr_mapping: dict) -> dict:
+def calculate_reduction_ratio(gr_mapping: dict, combine: str = "multiplicative") -> dict:
     """
     11개 GR 요소의 적용 상태 → 총 에너지 절감률.
 
-    ⚠️ total_reduction_ratio는 **단순합산**이라 과대추정된다(combine_reductions 참고).
-       물리적으로 방어 가능한 값은 total_reduction_ratio_multiplicative다.
-       둘 다 반환해 모드 5(근거·출처)에서 격차를 그대로 공개한다.
+    total_reduction_ratio = combine 방식으로 결합한 값 (기본 multiplicative).
+    비교용으로 두 방식 값을 모두 반환해 모드 5(근거·출처)에서 격차를 공개한다.
 
-       기본값을 아직 뒤집지 않은 이유: 도담 기준 단순합산 67%(→4등급) vs
-       상호작용 반영 50.5%(→5등급)로 **등급 결론이 바뀌는** 변경이라 팀 합의가 필요하다.
-       docs/ARCHITECTURE.md 참고.
+    이력 (2026-07): 기본값이 'sum'이었으나 단순합산은 100%를 넘길 수 있어 정의상 틀렸다.
+      도담 기준 sum 67.0%(→4등급) vs multiplicative 50.5%(→5등급)로 등급 결론이 바뀐다.
+      "숫자를 지키려고 틀린 산식을 남겨두지 않는다"는 판단으로 multiplicative로 전환.
     """
     breakdown = {}
     actuals = []
@@ -164,14 +172,17 @@ def calculate_reduction_ratio(gr_mapping: dict) -> dict:
 
     total_sum = combine_reductions(actuals, "sum")
     total_mult = combine_reductions(actuals, "multiplicative")
+    total = combine_reductions(actuals, combine)
 
     return {
-        "total_reduction_ratio": round(total_sum, 4),
-        "total_reduction_pct": round(total_sum * 100, 1),
-        # 물리적으로 방어 가능한 값 — 화면에서 단순합산과 나란히 공개한다
+        "total_reduction_ratio": round(total, 4),
+        "total_reduction_pct": round(total * 100, 1),
+        # 비교용 — 화면에서 두 방식의 격차를 그대로 보여준다
         "total_reduction_ratio_multiplicative": round(total_mult, 4),
         "total_reduction_pct_multiplicative": round(total_mult * 100, 1),
-        "_결합방식": "sum (⚠️ 과대추정 — multiplicative와 비교 표시 필수)",
+        "total_reduction_ratio_sum": round(total_sum, 4),
+        "total_reduction_pct_sum": round(total_sum * 100, 1),
+        "_결합방식": combine,
         "breakdown": breakdown,
     }
 

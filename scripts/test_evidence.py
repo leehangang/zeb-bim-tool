@@ -108,7 +108,39 @@ check("엔진이 두 값을 모두 노출한다",
 check("알 수 없는 결합 방식은 조용히 넘어가지 않는다",
       _raises(lambda: combine_reductions([0.1], "평균내기")))
 
-print("\n⑥ 주거/비주거 기준표 분기")
+print("\n⑥ 도담 케이스 회귀 고정 — 엔진의 실제 판정")
+# 왜: 홈 화면의 등급·소요량은 하드코딩 문자열이라, 엔진 결론이 바뀌어도 아무것도 깨지지
+#     않았다(4등급 → 5등급이 조용히 통과). 엔진의 실제 판정을 여기서 고정한다.
+import json  # noqa: E402
+from core.bim_diagnoser import map_to_gr_elements  # noqa: E402
+from core.zeb_evaluator import evaluate_zeb  # noqa: E402
+
+_bim = json.load(open("data/sample_bim/doam_archi_sample.json", encoding="utf-8"))
+_gr = map_to_gr_elements(_bim)
+_full = evaluate_zeb(_bim, _gr, assume_full_reinforcement=True, assume_bems=True)
+
+check("결합 기본값 = multiplicative", _full["reduction"]["_결합방식"] == "multiplicative")
+check("전체보강 절감률 = 50.5%", abs(_full["reduction"]["total_reduction_pct"] - 50.5) < 0.2,
+      f"{_full['reduction']['total_reduction_pct']}%")
+check("전체보강 1차E 소요량 ≈ 99.1", abs(_full["post_energy_kwh_m2"] - 99.1) < 0.3,
+      f"{_full['post_energy_kwh_m2']}")
+check("자립률 0% (태양광 없음 — 태양열 27㎡는 급탕)", _full["autonomy_pct"] == 0.0,
+      f"{_full['autonomy_pct']}%")
+check("제1호(자립률)로는 등급 미달", _full["grade_clause1"]["rank"] == 0)
+check("최종 등급 = ZEB 5등급 (제2호 근거)", _full["grade"]["grade"] == "5",
+      _full["grade"]["label"])
+check("등급 근거는 제2호", _full["grade"]["rank"] == _full["grade_clause2"]["rank"])
+
+# 과거 기본값(sum)이었다면 4등급이 나온다 — 결론이 산정 방식에 달렸음을 고정
+from core.zeb_evaluator import calculate_reduction_ratio, determine_grade_clause2  # noqa: E402
+_sum_r = calculate_reduction_ratio(
+    {k: {"status": "적용"} for k in GR_ENERGY_REDUCTION}, combine="sum",
+)["total_reduction_ratio"]
+_sum_grade = determine_grade_clause2(200 * (1 - _sum_r), is_residential=False)
+check("단순합산이면 4등급이 나온다 (방식 의존성 고정)", _sum_grade["grade"] == "4",
+      f"sum {_sum_r*100:.1f}% → {_sum_grade['label']}")
+
+print("\n⑦ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",
