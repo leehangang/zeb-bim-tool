@@ -198,21 +198,70 @@ def calculate_reduction_ratio(gr_mapping: dict, combine: str = "multiplicative")
     }
 
 
+def offsite_correction_factor(onsite_autonomy_pct: float) -> float:
+    """
+    대지 **외** 신재생 생산량에 곱하는 보정계수 (ZEB 인증기준 별표1).
+
+    대지 내 자립률이 낮을수록 대지 외 생산을 덜 인정한다:
+        대지 내 자립률 <10% → 0.7 / 10~15% → 0.8 / 15~20% → 0.9 / ≥20% → 1.0
+
+    ⚠️ 인자는 **대지 내 자립률**이지 전체 자립률이 아니다.
+    ⚠️ 근거 원문(별표1)이 우리 RAG 색인에 없다 — 03 ZEB 인증기준 고시가 이미지
+       스캔본이라 제외돼 있기 때문이다. 현재 근거는 **팀 학습문서 v4 §3-1**뿐이다.
+       원문 확보 시 재검증 필요 (data/params/zeb_incentive.yaml 참고).
+    """
+    from core import params as _P
+    try:
+        table = _P.get("zeb_incentive", "등급판정.보정계수_대지외생산.구간")
+    except Exception:
+        table = [[10, 0.7], [15, 0.8], [20, 0.9], [float("inf"), 1.0]]
+    for upper, factor in table:
+        if onsite_autonomy_pct < float(upper):
+            return float(factor)
+    return 1.0
+
+
 def calculate_pv_generation(bim: dict) -> dict:
+    """
+    PV 발전량 산정 — **대지 내/외를 분리**한다 (별표1 주4 / §3-1).
+
+    BIM의 각 PV 패널은 `onsite: false`로 대지 외임을 표시한다(기본 true = 대지 내).
+    대지 외 생산은 보정계수(0.7~1.0)를 곱해 인정하며, 그 계수는 **대지 내 자립률**에
+    따라 정해진다 — 그래서 대지 내를 먼저 계산해야 한다.
+
+    두 자립률이 나온다:
+      · 등급용   = (대지 내 + 대지 외×보정계수) 기준  ← 인증등급 판정
+      · 완화용   = **대지 내만** 기준 (별표1 주4)      ← 용적률·높이 완화 판정
+    값이 다르므로 절대 섞으면 안 된다.
+    """
     pv_list = bim.get("pv_panels", []) or []
     region = bim.get("region", "중부2")
     yield_per_kw = PV_YIELD_BY_REGION.get(region, 1300)
+    area_m2 = bim.get("total_area_m2", 1) or 1
 
-    total_kw = sum(p.get("capacity_kw", 0) for p in pv_list)
-    annual_kwh = total_kw * yield_per_kw
+    def _kw(items):
+        return sum(p.get("capacity_kw", 0) for p in items)
 
-    area_m2 = bim.get("total_area_m2", 1)
-    yield_per_m2 = annual_kwh / area_m2 if area_m2 > 0 else 0
+    # onsite 미표기는 대지 내로 본다 (기존 BIM 호환)
+    onsite = [p for p in pv_list if p.get("onsite", True)]
+    offsite = [p for p in pv_list if not p.get("onsite", True)]
+
+    onsite_kw, offsite_kw = _kw(onsite), _kw(offsite)
+    onsite_kwh = onsite_kw * yield_per_kw
+    offsite_kwh_raw = offsite_kw * yield_per_kw
 
     return {
-        "total_capacity_kw": total_kw,
-        "annual_generation_kwh": round(annual_kwh, 1),
-        "yield_per_m2_kwh": round(yield_per_m2, 2),
+        # 대지 내
+        "onsite_capacity_kw": onsite_kw,
+        "onsite_generation_kwh": round(onsite_kwh, 1),
+        "onsite_yield_per_m2_kwh": round(onsite_kwh / area_m2, 2),
+        # 대지 외 (보정 전 — 보정계수는 대지 내 자립률을 알아야 정해지므로 evaluate_zeb에서 적용)
+        "offsite_capacity_kw": offsite_kw,
+        "offsite_generation_kwh_raw": round(offsite_kwh_raw, 1),
+        # 합계 (보정 전)
+        "total_capacity_kw": onsite_kw + offsite_kw,
+        "annual_generation_kwh": round(onsite_kwh + offsite_kwh_raw, 1),
+        "yield_per_m2_kwh": round((onsite_kwh + offsite_kwh_raw) / area_m2, 2),
         "region_yield_per_kw": yield_per_kw,
         "region": region,
     }
@@ -355,9 +404,27 @@ def evaluate_zeb(
 
     # PV 발전(전력)을 1차에너지로 환산(×2.75) 후 자립률 산정
     # — ZEB 고시: 자립률 = 1차에너지 생산량 ÷ 1차에너지 소요량 (양쪽 모두 1차에너지)
-    pv_primary_per_m2 = pv["yield_per_m2_kwh"] * ELECTRICITY_PEF
+    # ── 대지 내/외 분리 + 보정계수 (별표1 / 별표1 주4) ─────────────
+    # ⚠️ 순서가 중요하다: 보정계수는 **대지 내 자립률**로 정해지므로 대지 내를 먼저 푼다.
+    area_m2 = bim.get("total_area_m2", 1) or 1
+    onsite_primary = pv.get("onsite_yield_per_m2_kwh", pv["yield_per_m2_kwh"]) * ELECTRICITY_PEF
+    offsite_primary_raw = (pv.get("offsite_generation_kwh_raw", 0) / area_m2) * ELECTRICITY_PEF
+
+    # ① 완화용 자립률 = **대지 내만** (별표1 주4) — 용적률·높이 완화 판정용
+    onsite_autonomy_pct = (onsite_primary / post_energy * 100) if post_energy > 0 else 0.0
+
+    # ② 대지 외 보정계수는 ①에 따라 정해진다
+    corr = offsite_correction_factor(onsite_autonomy_pct) if offsite_primary_raw > 0 else 1.0
+    offsite_primary = offsite_primary_raw * corr
+
+    # ③ 등급용 자립률 = 대지 내 + 대지 외×보정계수
+    pv_primary_per_m2 = onsite_primary + offsite_primary
     pv["yield_per_m2_primary_kwh"] = round(pv_primary_per_m2, 2)
     pv["primary_energy_factor"] = ELECTRICITY_PEF
+    pv["onsite_primary_per_m2"] = round(onsite_primary, 2)
+    pv["offsite_primary_per_m2_raw"] = round(offsite_primary_raw, 2)
+    pv["offsite_correction_factor"] = corr
+    pv["offsite_primary_per_m2_corrected"] = round(offsite_primary, 2)
 
     # 자립률(제1호) = 1차에너지 생산 ÷ 1차에너지 소비(보강 후 gross)
     if post_energy > 0:
@@ -386,7 +453,12 @@ def evaluate_zeb(
         "post_energy_kwh_m2": round(post_energy, 2),
         "net_primary_kwh_m2": round(net_primary, 2),
         "pv": pv,
+        # 등급 판정용 자립률 — 대지 내 + 대지 외×보정계수
         "autonomy_pct": round(autonomy_pct, 1),
+        # ⚠️ 완화(용적률·높이) 판정용 자립률 — **대지 내만** (별표1 주4).
+        #    등급용과 값이 다르다. 완화 계산에 autonomy_pct를 쓰면 과대 인정된다.
+        "autonomy_pct_onsite_only": round(onsite_autonomy_pct, 1),
+        "offsite_correction_factor": corr,
         "grade": grade,                 # 최종 ZEB 인증등급 (제1호·제2호 중 상위)
         "grade_clause1": grade_c1,      # 제1호 (자립률 기준)
         "grade_clause2": grade_c2,      # 제2호 (1차에너지소요량 기준)

@@ -316,7 +316,54 @@ check("check_u_value가 용도로 갈린다 (창 u=1.2)",
       "비주거 적합 / 주거 부적합")
 check("알 수 없는 지역은 조용히 넘어가지 않는다", _raises(lambda: u_limits("화성", False)))
 
-print("\n⑫ 주거/비주거 기준표 분기")
+print("\n⑫ 대지 외 보정계수 · 완화용 자립률 분리 (별표1 / 별표1 주4)")
+import copy as _copy  # noqa: E402
+from core.zeb_evaluator import offsite_correction_factor  # noqa: E402
+
+# 보정계수 구간 — 경계값 포함
+for _a, _exp in [(5, 0.7), (9.99, 0.7), (10, 0.8), (14.99, 0.8),
+                 (15, 0.9), (19.99, 0.9), (20, 1.0), (200, 1.0)]:
+    if offsite_correction_factor(_a) != _exp:
+        check(f"보정계수 {_a}% → {_exp}", False, f"{offsite_correction_factor(_a)}")
+        break
+else:
+    check("보정계수 4구간 (0.7/0.8/0.9/1.0) 경계 정확", True, "8개 경계값 통과")
+
+# 도담(PV 없음) 회귀 — 보정계수 도입이 기존 결과를 바꾸면 안 된다
+check("도담 회귀: 등급용·완화용 자립률 모두 0%",
+      _full["autonomy_pct"] == 0.0 and _full["autonomy_pct_onsite_only"] == 0.0)
+check("도담 회귀: 여전히 5등급 · 소요량 99.1",
+      _full["grade"]["grade"] == "5" and abs(_full["post_energy_kwh_m2"] - 99.08) < 0.1)
+
+# 🔴 대지 외는 보정계수만큼 덜 인정 + 완화용에는 아예 안 잡힌다
+_on = _copy.deepcopy(_bim); _on["pv_panels"] = [{"capacity_kw": 20, "onsite": True}]
+_off = _copy.deepcopy(_bim); _off["pv_panels"] = [{"capacity_kw": 20, "onsite": False}]
+_ron = evaluate_zeb(_on, map_to_gr_elements(_on), assume_full_reinforcement=True, assume_bems=True)
+_roff = evaluate_zeb(_off, map_to_gr_elements(_off), assume_full_reinforcement=True, assume_bems=True)
+
+check("같은 20kW라도 대지 외가 자립률이 낮다 (보정계수)",
+      _roff["autonomy_pct"] < _ron["autonomy_pct"],
+      f"대지내 {_ron['autonomy_pct']}% vs 대지외 {_roff['autonomy_pct']}%")
+check("대지 외만 있으면 보정계수 0.7 (대지내 자립률 0%)",
+      _roff["offsite_correction_factor"] == 0.7)
+check("🔴 완화용 자립률은 대지 외를 빼고 센다 (별표1 주4)",
+      _roff["autonomy_pct_onsite_only"] == 0.0 and _roff["autonomy_pct"] > 0,
+      f"완화용 {_roff['autonomy_pct_onsite_only']}% vs 등급용 {_roff['autonomy_pct']}%")
+check("대지 외면 등급이 실제로 내려간다",
+      _roff["grade"]["rank"] < _ron["grade"]["rank"],
+      f"{_ron['grade']['label']} → {_roff['grade']['label']}")
+check("대지 내는 등급용 = 완화용 (보정 없음)",
+      _ron["autonomy_pct"] == _ron["autonomy_pct_onsite_only"]
+      and _ron["offsite_correction_factor"] == 1.0)
+
+# onsite 미표기는 대지 내로 (기존 BIM 호환)
+_legacy = _copy.deepcopy(_bim); _legacy["pv_panels"] = [{"capacity_kw": 20}]
+_rleg = evaluate_zeb(_legacy, map_to_gr_elements(_legacy),
+                     assume_full_reinforcement=True, assume_bems=True)
+check("onsite 미표기 PV는 대지 내로 간주 (구 BIM 호환)",
+      _rleg["autonomy_pct"] == _ron["autonomy_pct"])
+
+print("\n⑬ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",

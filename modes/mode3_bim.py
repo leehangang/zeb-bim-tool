@@ -1149,7 +1149,17 @@ def _render_zeb_tab(result: dict) -> None:
     st.markdown("### 🏆 ZEB 인증 평가")
     st.caption(
         "BIM 데이터로 1차 에너지 소요량 + 신재생 발전량 → 에너지자립률 → 등급 자동 산정. "
-        "(ZEB 인증기준 고시 + ISO 13790 간이 방법 기반)"
+        "판정 규칙은 ZEB 인증기준 고시를 따르되, **에너지량은 용도별 원단위 × 요소별 "
+        "절감률의 간이 추정**입니다."
+    )
+
+    st.warning(
+        "⚠️ **이 등급은 '설계 검토용 추정'입니다 — 공식 인증 결과가 아닙니다.** "
+        "ZEB 공식 등급·자립률은 **ECO2**(월간·ISO 13790, 지역 기후 내장)로만 산정합니다. "
+        "우리 엔진은 용도별 원단위 × 요소별 절감률의 간이 추정이고, EnergyPlus 계열"
+        "(eppy·시간별 기후)로 바꾸더라도 **계산 엔진이 달라 ECO2와 값이 일치하지 않습니다.** "
+        "설계 방향을 잡는 용도로 쓰고, 확정은 인증기관을 거쳐야 합니다.",
+        icon="⚠️",
     )
 
     # 모드 선택
@@ -1157,7 +1167,8 @@ def _render_zeb_tab(result: dict) -> None:
         "평가 모드",
         ["🤖 자동 추정 (BIM 기반)", "📊 DesignBuilder 입력 (정밀)"],
         horizontal=True,
-        help="자동: 11개 GR 충족도 기반. DesignBuilder: 시뮬레이션 결과 직접 입력."
+        help="자동: 11개 GR 충족도 기반 간이 추정. "
+             "DesignBuilder: 시뮬레이션 결과 직접 입력 — 그래도 ECO2 값과는 다르다."
     )
 
     overrides = None

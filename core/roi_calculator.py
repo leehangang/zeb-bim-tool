@@ -512,6 +512,15 @@ def calculate_far_bonus(
     완화율은 core.params.zeb_far_bonus() **단일 소스**로 조회한다.
     ⚠️ 증축을 실제로 수행해야 편익이 발생한다 — base_area_m2가 증축분이 아니면
        실현되지 않을 금액을 계상하게 된다(zeb_incentive.yaml 용적률높이완화.실현조건).
+
+    🔴 zeb_grade를 ZEB 엔진에서 자동으로 끌어올 때 주의 — **완화 판정용 자립률은
+       '대지 내'만 반영한다**(별표1 주4). 등급용 자립률(대지 외 포함, 보정계수 적용)로
+       완화 등급을 정하면 **없는 완화를 계상**하게 된다.
+       → evaluate_zeb()는 두 값을 나눠 반환한다:
+           autonomy_pct              — 등급 판정용 (대지 내 + 대지 외×보정계수)
+           autonomy_pct_onsite_only  — **완화 판정용** (대지 내만)   ← 이걸 써야 한다
+       현재는 호출자가 zeb_target_grade를 명시로 넘기므로 이 경로가 자동 연결돼 있지 않다.
+       연결할 때 반드시 onsite_only 기준으로 등급을 다시 매길 것.
     """
     bonus_rate = _P.zeb_far_bonus(str(zeb_grade))
     extra_area_m2 = base_area_m2 * bonus_rate
