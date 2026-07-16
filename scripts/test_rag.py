@@ -562,6 +562,20 @@ def test_doc_registry():
     for title, items in groups:
         print(f"         {title}")
 
+    # ③-b 화면이 인용하는 **문서 번호**가 실존하는가
+    #     Mode 02 헤더가 "01 보조금"이라 적고 있었는데 보조율 50/70%의 출처는
+    #     01(GR 가이드라인)이 아니라 17(공공 GR 2.0 공고)이었다. 번호를 손으로 적으면 어긋난다.
+    _cited = {"05": "지방세특례", "06": "에너지절약", "10": "시행령",
+              "17": "공공GR2.0", "19": "ZEB_인증기준"}
+    for _n, _frag in _cited.items():
+        _hit = [f for f in indexed if f.startswith(_n + "_") and _frag in f]
+        assert _hit, f"Mode 02가 인용하는 {_n}({_frag})이 색인에 없음 — 화면 문구 정정 필요"
+    _m2 = (PROJECT_ROOT / "modes" / "mode2_roi.py").read_text(encoding="utf-8")
+    assert "01</b> 보조금" not in _m2 and "01 보조금" not in _m2, (
+        "Mode 02가 보조금 출처를 01로 표기 — 실제 출처는 17 공공 GR 2.0 공고다"
+    )
+    print(f"  [PASS] 화면 인용 문서번호 {len(_cited)}건 실존 (05·06·10·17·19)")
+
     # ④ 화면에 문서 수/목록을 다시 손으로 적지 않았는가 (재발 방지)
     #    주석/독스트링의 과거 기록(예: 버그 경위에 적은 '6건·438청크')은 화면이 아니므로 제외.
     for rel in ["streamlit_app.py", "modes/mode1_rag.py"]:
