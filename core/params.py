@@ -164,33 +164,69 @@ def gr_min_improvement_ratio() -> float:
     return float(get("gr_support", "공통자격.성능개선비율_최소", 0.20))
 
 
-def annual_saving_per_m2() -> float:
+def electricity_tariff_won_per_kwh() -> float:
     """
-    연간 에너지 절감 단가 (원/㎡·년) — ⚠️ **근거 없는 임시 가정치**.
+    전기 세후 실효단가 (원/kWh) — 한전 기본공급약관 [별표1] 2026.7.1 시행판.
 
-    energy_tariff.yaml의 `현재가정.annual_energy_saving_won_per_m2` 단일 소스.
-    과거 이 값이 roi_calculator·roi_tools·scenario_compare·mode3_bim 등 5곳에
-    각각 하드코딩돼 있었다. 우리가 내세우는 P2("숫자는 테이블에서 결정론적으로 조회")를
-    정작 최대 가정치에서 어기고 있었던 셈이라 여기로 모았다.
+    계절별 전력량요금을 **월수로 가중평균**(여름3·봄가을5·겨울4)한 뒤
+    기후환경요금·연료비조정요금을 더하고 부가세·전력산업기반기금을 적용한다.
 
-    ⚠️ 이 값은 kWh 절감량과 **연결돼 있지 않고** 연료원(전기/가스/열) 구분도 없다.
-       energy_tariff.yaml의 `현재가정.대체계획`대로
-       `Σ_연료원 [절감kWh × 단가]`로 교체해야 한다.
-       화면에 쓸 때는 반드시 '가정치'임을 함께 표기할 것 (annual_saving_is_assumption 참고).
-
-    도구 스키마(core/roi_tools.py) 정의 시점에 모듈 로드 중 호출되므로,
-    YAML이 없어도 import가 깨지지 않게 방어한다.
+    ⚠️ 월수 가중은 '월별 사용량이 균등하다'는 단순화다. 실제로는 냉난방으로
+       여름·겨울에 사용량이 몰리므로 실효단가가 이보다 높을 수 있다.
+       ECO2 월간 kWh가 나오면 사용량 가중으로 교체할 것.
     """
+    e = get("energy_tariff", "전기")
+    u, b, t = e["단가_원_per_kWh"], e["부과금_원_per_kWh"], e["세금_요율"]
+    # 여름 6~8월(3) · 봄가을 3~5,9~10월(5) · 겨울 11~2월(4) — 약관 제67조⑧
+    seasonal = (u["여름철"] * 3 + u["봄가을철"] * 5 + u["겨울철"] * 4) / 12
+    subtotal = seasonal + b["기후환경요금"] + b["연료비조정요금"]
+    return subtotal * (1 + t["부가가치세"] + t["전력산업기반기금"])
+
+
+def annual_saving_per_m2(reduction_primary_kwh_m2: Optional[float] = None) -> float:
+    """
+    연간 에너지 절감 단가 (원/㎡·년) = 절감 site kWh × 전기 실효단가.
+
+    2026-07-16까지 이 함수는 `9,900원/㎡`라는 **근거 없는 매직넘버**를 돌려줬다.
+    kWh 절감량과 연결이 끊겨 있어 ZEB 엔진이 절감률을 고쳐도 ROI는 꿈쩍하지 않았다.
+
+    리서치로 한전 약관 원문 단가를 확보해 계산식으로 교체했다:
+        절감 1차E(kWh/㎡·년) ÷ 2.75  →  절감 site 전기(kWh/㎡·년)
+        × 전기 세후 실효단가(원/kWh)  →  원/㎡·년
+    도담 기준 100.9 ÷ 2.75 × 140.9 ≈ **5,172원/㎡** — 옛 매직넘버는 **1.91배 과대**였다.
+    (연간 1,238만원 → 647만원. 방향은 KEEI 실측연구 '예측의 60%'와 독립적으로 일치한다.)
+
+    Args:
+        reduction_primary_kwh_m2: 1차에너지 절감량. None이면 params의 도담 기본값.
+
+    ⚠️ 남은 가정 — **전량 전기**로 본다. 도담의 실제 연료 구성(전기/가스)은 미확인이며,
+       경북 노유자시설 전기 비중은 82.2%다(건물에너지사용량통계 2024). 가스분이 있으면
+       환산계수가 1.1이라 site kWh가 커져 절감액은 이보다 **커진다** → 이 값은 보수적이다.
+    """
+    if reduction_primary_kwh_m2 is None:
+        try:
+            reduction_primary_kwh_m2 = float(
+                get("energy_tariff", "절감액산정.도담_1차E_절감_kWh_per_m2")
+            )
+        except Exception:
+            return 5_172.0          # YAML 없어도 import가 깨지지 않게 방어
     try:
-        return float(get("energy_tariff", "현재가정.annual_energy_saving_won_per_m2", 9_900))
+        factor = float(get("energy_tariff", "1차에너지환산계수.전력", 2.75))
+        site_kwh = float(reduction_primary_kwh_m2) / factor
+        return site_kwh * electricity_tariff_won_per_kwh()
     except Exception:
-        return 9_900.0
+        return 5_172.0
 
 
 def annual_saving_is_assumption() -> bool:
-    """위 단가가 아직 근거 미확보 상태인가 — 화면 경고 표기 여부 판단용."""
+    """
+    위 단가가 아직 근거 미확보 상태인가 — 화면 표기 판단용.
+
+    이제 **단가**는 약관 원문 근거가 있다. 그러나 **절감 kWh**(base 200·절감률 11개 값)는
+    아직 문헌 근거가 없고 ECO2 해석 전이므로, 곱해서 나온 절감액도 여전히 추정치다.
+    → 절감액 산정에 들어가는 값 중 하나라도 미확정이면 True.
+    """
     try:
-        status = str(get("energy_tariff", "현재가정.status", ""))
+        return "확인됨" not in str(get("energy_tariff", "절감액산정.status", ""))
     except Exception:
         return True      # 확인 못 하면 '가정치'로 본다 (안전한 쪽)
-    return ("임시가정" in status) or ("확인필요" in status) or ("근거없음" in status)

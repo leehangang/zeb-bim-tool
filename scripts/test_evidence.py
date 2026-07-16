@@ -159,9 +159,40 @@ check("9,900 매직넘버가 코드에 없다 (params 경유)", not _offenders,
       "위반: " + ", ".join(_offenders) if _offenders else "5곳 → 0곳")
 
 from core import params as _PP  # noqa: E402
-check("params.annual_saving_per_m2()가 YAML 값을 돌려준다",
-      _PP.annual_saving_per_m2() == 9900.0, f"{_PP.annual_saving_per_m2()}")
-check("단가가 '가정치'로 표시된다", _PP.annual_saving_is_assumption() is True)
+# 2026-07-16: 매직넘버 9,900원/㎡ → 한전 약관 원문 단가 기반 계산식으로 교체.
+#   절감액 = (1차E 절감 ÷ 2.75) × 전기 세후 실효단가
+# 값을 손으로 적지 않고 **재현**되는지 본다 — 상수 비교로 고정하면 그게 새 매직넘버다.
+_tariff = _PP.electricity_tariff_won_per_kwh()
+check("전기 실효단가가 약관 값에서 계산된다 (140~141원/kWh)",
+      140.0 < _tariff < 141.0, f"{_tariff:.2f}원/kWh")
+_expected = (100.92 / 2.75) * _tariff          # 도담 1차E 절감 ÷ 환산계수 × 단가
+check("절감 단가 = (1차E절감 ÷ 2.75) × 실효단가 로 재현됨",
+      abs(_PP.annual_saving_per_m2() - _expected) < 1.0,
+      f"{_PP.annual_saving_per_m2():.0f}원/㎡ vs 재현 {_expected:.0f}원/㎡")
+check("옛 매직넘버 9,900원이 사라졌다",
+      abs(_PP.annual_saving_per_m2() - 9900.0) > 1000,
+      f"{_PP.annual_saving_per_m2():.0f}원/㎡")
+# 단가는 원문 확정됐지만 곱해지는 절감 kWh(base 200·요소별 절감률)는 ECO2 전이라 추정.
+check("절감액은 여전히 '추정'으로 표시된다", _PP.annual_saving_is_assumption() is True)
+
+# 홈의 ④⑤가 엔진에서 나오는가 — 예전엔 "7.3년·+1.08억"이 손으로 적혀 있었고,
+# 같은 가정으로 엔진을 돌리면 6.8년·2.18배라 이미 어긋나 있었다.
+from core.roi_calculator import calculate_cashflow_metrics  # noqa: E402
+_cf = calculate_cashflow_metrics(self_burden=91_000_000,
+                                 annual_saving=_PP.annual_saving_per_m2() * 1251.0)
+check("현금흐름 지표가 엔진에서 산출됨", bool(_cf) and "NPV_원" in _cf)
+check("절감액 반토막에도 경제성은 성립 (NPV>0 · BC>1 · IRR>할인율)",
+      _cf["NPV_원"] > 0 and _cf["BC_ratio"] > 1.0 and _cf["IRR"] > 0.045,
+      f"NPV {_cf['NPV_원']/1e8:.2f}억 · BC {_cf['BC_ratio']:.2f} · IRR {_cf['IRR']*100:.1f}%")
+_home = (_ROOT / "streamlit_app.py").read_text(encoding="utf-8")
+# 주석/독스트링의 과거 기록(버그 경위)은 화면이 아니므로 제외 — 안 그러면 자기 경위에 걸린다.
+import re as _re2  # noqa: E402
+_home_code = "\n".join(
+    ln for ln in _home.splitlines() if not ln.lstrip().startswith("#")
+)
+_home_code = _re2.sub(r'"""[\s\S]*?"""', "", _home_code)
+_hard = [s for s in ("7.3년", "+1.08억", "14.7%", "2.19배") if s in _home_code]
+check("홈에 옛 재무 숫자가 하드코딩돼 있지 않다", not _hard, f"잔존: {_hard}")
 
 # 자립률 등급표도 엔진 단일 소스여야 한다
 _m3 = (_ROOT / "modes/mode3_bim.py").read_text(encoding="utf-8")
