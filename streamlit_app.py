@@ -101,6 +101,7 @@ with st.sidebar:
         "💰 ROI 시뮬레이션",
         "📋 사업 신청 인테이크",
         "📐 근거·출처",
+        "📖 용어사전",
     ]
     mode = st.radio(
         label="모드 선택",
@@ -498,6 +499,10 @@ elif mode == "📋 사업 신청 인테이크":
 elif mode == "📐 근거·출처":
     from modes.mode5_evidence import render_evidence_panel
     render_evidence_panel()
+
+elif mode == "📖 용어사전":
+    from modes.mode6_glossary import render_glossary_panel
+    render_glossary_panel()
 
 
 # 푸터

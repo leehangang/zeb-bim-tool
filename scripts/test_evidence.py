@@ -240,7 +240,39 @@ check("가점·감점이 final_score에 반영",
 check("가점은 항목별 상한을 넘지 않는다",
       score_compliance(_gr, {**_bim, "bonus_meter": 99})["bonus"] == 2)
 
-print("\n⑩ 주거/비주거 기준표 분기")
+print("\n⑩ 용어사전 — 세 제도 구분 · 엔진 연동")
+from modes.mode6_glossary import confusions, glossary, three_systems  # noqa: E402
+
+_sys = three_systems()
+check("세 제도(ZEB §17 / G-SEED §16 / GR §27)를 구분", len(_sys) == 3)
+check("근거 조항이 셋 다 다르다", len({s["근거"] for s in _sys}) == 3,
+      " · ".join(s["근거"].split("§")[-1] for s in _sys))
+check("G-SEED는 '평가하지 않음'으로 명시",
+      any("평가하지 않음" in s["우리"] for s in _sys))
+check("GR 지원사업은 '등급 없음'으로 명시",
+      any("등급 없음" in s["결과"] for s in _sys))
+
+_conf = confusions()
+check("우리가 틀렸던 혼동을 기록", len(_conf) >= 4, f"{len(_conf)}건")
+check("모든 혼동에 '우리 사고 기록'이 있다", all(c["우리사고"] for c in _conf))
+
+# 용어사전은 엔진에서 값을 읽어야 한다 — 하드코딩이면 기준표가 바뀔 때 갈라진다
+_g = glossary()
+check("용어 카테고리 3분야", len(_g) == 3)
+_flat = [t for v in _g.values() for t in v]
+check("용어 13개 이상", len(_flat) >= 13, f"{len(_flat)}개")
+check("모든 용어에 뜻이 있다", all(t.get("뜻") for t in _flat))
+
+_a = next(t for t in _g["Track A · ZEB 인증"] if t["용어"] == "1차에너지소요량")
+check("전력 환산계수를 엔진에서 읽는다 (×2.75)", "2.75" in _a["함정"])
+check("비주거 등급 구간을 엔진에서 읽는다 (<90)", "<90" in _a["우리도구"])
+_b = next(t for t in _g["Track B · 그린리모델링 사업"] if t["용어"] == "성능개선비율")
+check("GR 기준 20%를 params에서 읽는다", "20% 이상" in _b["우리도구"])
+check("정량평가표 용어가 '등급이 아니다'라고 경고",
+      any("등급이 아니다" in (t.get("함정") or "")
+          for t in _g["Track B · 그린리모델링 사업"]))
+
+print("\n⑪ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",
