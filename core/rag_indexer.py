@@ -32,6 +32,68 @@ from typing import Iterable, Optional
 # Phase 1 — PDF / 텍스트 파일 추출
 # ====================================================================
 
+def _extract_from_page_bundle(path) -> list:
+    """
+    '페이지 번들' ZIP에서 페이지별 텍스트를 뽑는다.
+
+    구조 (manifest.json):
+        {"num_pages": 8,
+         "pages": [{"page_number": 1,
+                    "image": {"path": "1.jpeg", ...},
+                    "text":  {"path": "1.txt"}}, ...]}
+
+    manifest가 없으면 `1.txt, 2.txt, ...` 규칙으로 폴백한다.
+    텍스트가 하나도 없으면 [] (호출자가 SKIP 처리).
+
+    왜 필요한가 — 이 번들들은 겉보기에 JPEG 묶음이라 "이미지 스캔본"으로 오인되지만
+    **페이지마다 .txt가 동봉돼 있다.** 우리는 그걸 못 보고 01/02/03/09(총 13만자,
+    114쪽)를 색인에서 통째로 버렸고, 그중 03은 별표1·2의 근거였다.
+    """
+    import json
+    import re
+    import zipfile
+
+    try:
+        zf = zipfile.ZipFile(path)
+    except Exception:
+        return []
+
+    with zf:
+        names = set(zf.namelist())
+
+        def _read(name: str) -> str:
+            try:
+                return zf.read(name).decode("utf-8", "replace")
+            except Exception:
+                return ""
+
+        ordered = []   # [(page_no, txt_name)]
+        if "manifest.json" in names:
+            try:
+                mf = json.loads(_read("manifest.json"))
+                for pg in mf.get("pages", []):
+                    tp = (pg.get("text") or {}).get("path")
+                    if tp and tp in names:
+                        ordered.append((int(pg.get("page_number", len(ordered) + 1)), tp))
+            except Exception:
+                ordered = []
+
+        if not ordered:   # 폴백: 숫자 이름의 .txt
+            txts = [n for n in names if n.lower().endswith(".txt")]
+            for n in txts:
+                m = re.search(r"(\d+)", n)
+                ordered.append((int(m.group(1)) if m else 0, n))
+
+        ordered.sort(key=lambda x: x[0])
+
+        pages = []
+        for no, tp in ordered:
+            text = _read(tp).strip()
+            if text:
+                pages.append({"page": no or (len(pages) + 1), "text": text})
+        return pages
+
+
 def extract_text_from_file(file_path: str) -> list:
     """
     PDF 또는 텍스트 파일 → 페이지별 텍스트 리스트.
@@ -73,12 +135,25 @@ def extract_text_from_file(file_path: str) -> list:
             # 쓰레기 청크가 색인된다(과거 04/06/03이 이 경로로 들어가 있었다).
             # → 조용히 넣지 말고 건너뛰고 경고한다.
             if header.startswith(b"PK"):
+                # ⚠️ 단, ZIP이라고 무조건 포기하면 안 된다.
+                # 페이지 이미지 + **페이지별 .txt** + manifest.json 으로 구성된
+                # 문서 번들이 있다(이미 OCR/추출된 텍스트가 동봉된 형태).
+                # 과거 우리는 .jpeg만 보고 "이미지 스캔본 → 텍스트 없음"이라 단정해
+                # 01/02/03/09를 색인에서 통째로 버렸다. 실제로는 텍스트가 있었다.
+                pages = _extract_from_page_bundle(path)
+                if pages:
+                    print(
+                        f"[BUNDLE] {path.name}: 페이지 번들(ZIP)에서 텍스트 추출 "
+                        f"— {len(pages)}쪽"
+                    )
+                    return pages
+
                 import zipfile
                 inner = ""
                 try:
                     names = zipfile.ZipFile(path).namelist()
                     if any(n.lower().endswith((".jpg", ".jpeg", ".png")) for n in names):
-                        inner = " (이미지 스캔본 묶음 — 텍스트 없음, OCR 필요)"
+                        inner = " (이미지만 있고 텍스트 동봉 없음 — OCR 필요)"
                     elif any(n.startswith("word/") for n in names):
                         inner = " (DOCX)"
                 except Exception:

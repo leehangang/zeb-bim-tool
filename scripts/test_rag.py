@@ -288,6 +288,84 @@ def test_extract_file_negative():
     print(f"  [PASS] 미지원 확장자: 빈 리스트")
 
 
+
+def test_page_bundle_extraction():
+    """
+    페이지 번들(ZIP) 텍스트 추출 — 회귀 방지.
+
+    🔴 이 버그로 01/02/09(114쪽·13만자)를 색인에서 통째로 버리고 있었다.
+       .pdf 확장자 안이 ZIP이고 .jpeg가 보이면 "이미지 스캔본 → 텍스트 없음"이라
+       단정했는데, 실제로는 페이지마다 .txt가 동봉된 번들이었다.
+       "스캔본이라 추출 불가"라는 우리 진단 자체가 틀렸던 것.
+    """
+    import json
+    import zipfile
+
+    print("\n" + "=" * 70)
+    print("페이지 번들(ZIP) 추출 — 01/02/09 회귀 방지")
+    print("=" * 70)
+    from core.rag_indexer import _extract_from_page_bundle, extract_text_from_file
+
+    JPEG = b"\xff\xd8\xff"   # 진짜 JPEG 헤더
+
+    # ① manifest 기반 번들
+    with tempfile.TemporaryDirectory() as d:
+        bp = os.path.join(d, "bundle.pdf")     # 확장자는 .pdf, 내용은 ZIP
+        with zipfile.ZipFile(bp, "w") as z:
+            z.writestr("manifest.json", json.dumps({
+                "num_pages": 2,
+                "pages": [
+                    {"page_number": 1, "image": {"path": "1.jpeg"}, "text": {"path": "1.txt"}},
+                    {"page_number": 2, "image": {"path": "2.jpeg"}, "text": {"path": "2.txt"}},
+                ],
+            }, ensure_ascii=False))
+            z.writestr("1.jpeg", JPEG)
+            z.writestr("2.jpeg", JPEG)
+            z.writestr("1.txt", "제1조 목적 조항 본문")
+            z.writestr("2.txt", "제2조 적용대상 조항 본문")
+
+        pages = extract_text_from_file(bp)
+        assert len(pages) == 2, f"번들에서 2쪽 나와야 함: {len(pages)}"
+        assert pages[0]["page"] == 1 and "제1조" in pages[0]["text"]
+        assert pages[1]["page"] == 2 and "제2조" in pages[1]["text"]
+        print("  [PASS] manifest 번들: 2쪽 추출 · 페이지 번호 보존")
+
+    # ② manifest 없어도 숫자 .txt 폴백 + 순서 (문자열 정렬이면 10 < 2가 되는 함정)
+    with tempfile.TemporaryDirectory() as d:
+        bp = os.path.join(d, "nomanifest.pdf")
+        with zipfile.ZipFile(bp, "w") as z:
+            for i in (1, 2, 10):
+                z.writestr(f"{i}.txt", f"{i}쪽 본문")
+                z.writestr(f"{i}.jpeg", JPEG)
+        pages = _extract_from_page_bundle(bp)
+        got = [p["page"] for p in pages]
+        assert got == [1, 2, 10], f"순서 오류: {got}"
+        print("  [PASS] manifest 없음: 숫자 순 폴백 (1,2,10 — 문자열 정렬 아님)")
+
+    # ③ 텍스트 없는 진짜 이미지 스캔본은 여전히 SKIP (가드 유지)
+    with tempfile.TemporaryDirectory() as d:
+        bp = os.path.join(d, "imageonly.pdf")
+        with zipfile.ZipFile(bp, "w") as z:
+            z.writestr("1.jpeg", JPEG)
+        assert extract_text_from_file(bp) == [], "텍스트 없는 스캔본은 SKIP돼야 함"
+        print("  [PASS] 텍스트 없는 스캔본: 여전히 SKIP (가드 유지)")
+
+    # ④ 실제 코퍼스 — 01/02/09가 살아 있는가
+    for name, min_pages in [("01_GR_가이드라인_pdf.pdf", 70),
+                            ("02_GR_기술요소.pdf", 2),
+                            ("09_영유아보육법_시행규칙.pdf", 20)]:
+        fp = PROJECT_ROOT / "data" / "policy_docs" / name
+        if not fp.exists():
+            print(f"  [SKIP] {name} 없음")
+            continue
+        pages = extract_text_from_file(str(fp))
+        chars = sum(len(p["text"]) for p in pages)
+        assert len(pages) >= min_pages, f"{name}: {len(pages)}쪽 (기대 {min_pages}+)"
+        assert chars > 2000, f"{name}: 텍스트 {chars}자"
+        print(f"  [PASS] {name}: {len(pages)}쪽 · {chars:,}자")
+
+
+
 if __name__ == "__main__":
     try:
         test_chunk_text()
@@ -298,6 +376,7 @@ if __name__ == "__main__":
         test_answer_with_rag_mock()
         test_mode1_index_ready_negative()
         test_extract_file_negative()
+        test_page_bundle_extraction()
         print("\n" + "=" * 70)
         print("모든 RAG 테스트 통과 ✅")
         print("=" * 70)
