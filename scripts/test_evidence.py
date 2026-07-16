@@ -272,7 +272,51 @@ check("정량평가표 용어가 '등급이 아니다'라고 경고",
       any("등급이 아니다" in (t.get("함정") or "")
           for t in _g["Track B · 그린리모델링 사업"]))
 
-print("\n⑪ 주거/비주거 기준표 분기")
+print("\n⑪ 별표1 열관류율 · 별표2 주5 — 팀 학습문서 v4 대조 (2026-07)")
+from core.bim_diagnoser import U_VALUE_LIMITS, U_VALUE_LIMITS_RES, check_u_value, u_limits  # noqa: E402
+from core.zeb_evaluator import RESIDENTIAL_USES  # noqa: E402
+
+# 별표2 주5: "주거용 = 단독주택 + 공동주택(**기숙사 제외**)"
+check("기숙사는 비주거다 (별표2 주5)", "기숙사" not in RESIDENTIAL_USES)
+check("오피스텔은 비주거다 (건축법상 업무시설)", "오피스텔" not in RESIDENTIAL_USES)
+check("단독·공동주택은 주거다",
+      {"단독주택", "공동주택"} <= RESIDENTIAL_USES)
+
+# 별표1 원문 (06 PDF p.19 파싱) — 외기 직접, 공동주택 외 vs 공동주택
+_ORIG = {  # 지역: (비주거외벽, 주거외벽, 비주거창, 주거창, 지붕, 바닥난방)
+    "중부1": (0.170, 0.150, 1.300, 0.900, 0.150, 0.150),
+    "중부2": (0.240, 0.170, 1.500, 1.000, 0.180, 0.170),
+    "남부":  (0.320, 0.220, 1.800, 1.200, 0.250, 0.220),
+    "제주":  (0.410, 0.290, 2.200, 1.600, 0.290, 0.290),
+}
+_bad = []
+for _r, (_wn, _wr, _gn, _gr_, _rf, _fl) in _ORIG.items():
+    _n, _s = u_limits(_r, False), u_limits(_r, True)
+    for _lbl, _exp, _got in [
+        ("비주거외벽", _wn, _n["외벽_직접"]), ("주거외벽", _wr, _s["외벽_직접"]),
+        ("비주거창", _gn, _n["창_직접"]), ("주거창", _gr_, _s["창_직접"]),
+        ("지붕", _rf, _n["지붕_직접"]), ("바닥", _fl, _n["바닥_직접"]),
+    ]:
+        if abs(_exp - _got) > 1e-9:
+            _bad.append(f"{_r}/{_lbl} {_exp}≠{_got}")
+check("별표1 원문과 완전 일치 (4지역 × 6부위)", not _bad, "; ".join(_bad) or "24/24")
+
+# 🔴 과거 버그: 비주거에 공동주택(주거) 기준을 쓰고 있었다
+check("비주거 기준이 주거보다 완화적 (별표1 구조)",
+      u_limits("중부2", False)["외벽_직접"] > u_limits("중부2", True)["외벽_직접"],
+      f"비주거 {u_limits('중부2', False)['외벽_직접']} > 주거 {u_limits('중부2', True)['외벽_직접']}")
+check("U_VALUE_LIMITS 기본값 = 비주거 (도담 등 공공 비주거가 대부분)",
+      U_VALUE_LIMITS["중부2"]["외벽_직접"] == 0.240)
+
+# check_u_value가 용도를 실제로 분기하는가 — 경계값으로 확인
+_bnd = 1.2   # 중부2: 비주거 창 1.5 → 적합 / 주거 창 1.0 → 부적합
+check("check_u_value가 용도로 갈린다 (창 u=1.2)",
+      check_u_value("창", _bnd, "중부2", "direct", is_residential=False)["compliant"] is True
+      and check_u_value("창", _bnd, "중부2", "direct", is_residential=True)["compliant"] is False,
+      "비주거 적합 / 주거 부적합")
+check("알 수 없는 지역은 조용히 넘어가지 않는다", _raises(lambda: u_limits("화성", False)))
+
+print("\n⑫ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",
