@@ -235,7 +235,7 @@ def render_bim_panel() -> None:
             f"<div style='font-size:0.78rem; color:#3D6B45; font-weight:600; letter-spacing:0.05em;'>"
             f"TRACK B · 그린리모델링 <span style='font-weight:400;'>(§27 · 상대 개선율)</span></div>"
             f"<div style='font-size:1.35rem; font-weight:700; margin-top:0.15rem;'>"
-            f"{score['total_score']}/100점 · {score['grade']}등급</div>"
+            f"{score['total_score']}/100점</div>"
             f"<div style='font-size:0.82rem; color:#5C665F;'>{_verdict['gr_sub']}</div></div>",
             unsafe_allow_html=True,
         )
@@ -341,8 +341,8 @@ def _render_diagnosis_tab(result: dict) -> None:
 
     with col_gauge:
         total = score["total_score"]
-        grade = score["grade"]
-        grade_color = GRADE_COLORS.get(grade, "#757575")
+        # 등급은 제도에 없다(선정 랭킹 점수) → 점수 구간으로 색만 준다.
+        grade_color = ("#1B5E20" if total >= 75 else "#C18A2D" if total >= 50 else "#B3472F")
 
         # SVG 도넛 게이지 (총점)
         # circumference = 2 * pi * r, r=80 -> ~502
@@ -604,7 +604,6 @@ def _render_roi_tab(result: dict) -> None:
     total_cost = sum(p.get("Max_Cost", 0) for p in plan)
     total_uplift = sum(p["점수상승"] for p in plan)
     new_score = score["total_score"] + total_uplift
-    new_grade = _grade_from_score(new_score)
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("전체 보강 비용", f"{total_cost/1e8:.2f}억",
@@ -612,8 +611,8 @@ def _render_roi_tab(result: dict) -> None:
     col2.metric("점수 상승", f"+{total_uplift}점",
                 f"{score['total_score']} → {new_score}")
     col3.metric("예상 총점", f"{new_score}/100")
-    col4.metric("예상 등급", new_grade,
-                delta=f"{score['grade']} → {new_grade}")
+    col4.metric("정량평가 점수", f"{new_score}점",
+                delta=f"+{total_uplift} (선정 랭킹 점수)")
 
     st.divider()
 
@@ -778,12 +777,13 @@ def _render_cumulative_chart(plan: list, current_score: int) -> None:
 
 
 def _render_optimization_tab(result: dict) -> None:
-    """탭3: 예산 상한 / 목표 등급 최적화."""
+    """탭3: 예산 상한 / 목표 점수 최적화. (등급은 제도에 없다 — 점수로 받는다)"""
     import streamlit as st
     import pandas as pd
     from core.bim_diagnoser import (
+        TARGET_SCORE_PRESETS,
         optimize_within_budget,
-        optimize_for_target_grade,
+        optimize_for_target_score,
     )
 
     plan = result.get("roi_plan")
@@ -797,7 +797,7 @@ def _render_optimization_tab(result: dict) -> None:
 
     mode = st.radio(
         "최적화 모드",
-        ["예산 상한 (점수 최대화)", "목표 등급 (비용 최소화)"],
+        ["예산 상한 (점수 최대화)", "목표 점수 (비용 최소화)"],
         horizontal=True,
     )
 
@@ -823,9 +823,8 @@ def _render_optimization_tab(result: dict) -> None:
         col3.metric("점수 상승",
                     f"+{opt['누적점수상승']}점",
                     delta=f"→ {opt['예상총점']}점")
-        col4.metric("예상 등급",
-                    opt['예상등급'],
-                    delta=f"{opt['현재등급']} → {opt['예상등급']}")
+        col4.metric("예상 총점", f"{opt['예상총점']}/100",
+                    delta=f"+{opt['누적점수상승']}점")
 
         st.divider()
 
@@ -855,32 +854,35 @@ def _render_optimization_tab(result: dict) -> None:
                 st.dataframe(df_s, hide_index=True, width="stretch")
 
     else:
-        # 목표 등급 선택
-        target = st.select_slider(
-            "목표 등급",
-            options=["C", "B", "A", "A+"],
-            value="B",
+        # 목표 **점수** 선택 — 등급은 제도에 없다(고득점 순 경쟁 선발)
+        target = st.slider(
+            "목표 정량평가 점수", min_value=30, max_value=100,
+            value=65, step=5,
+            help="정량평가표는 등급표가 아니라 고득점 순 선정용 랭킹 점수입니다. "
+                 "선정 커트라인은 해마다 경쟁 상황에 따라 달라집니다.",
+        )
+        st.caption(
+            "참고 눈금: " + " · ".join(f"{s}점 {label}" for s, label in TARGET_SCORE_PRESETS)
+            + " — ⚠️ 제도상 등급이 아니라 **우리가 UI 편의로 둔 눈금**입니다. "
+            "어떤 점수도 선정을 보장하지 않습니다."
         )
 
-        opt = optimize_for_target_grade(plan, target_grade=target, current_score=current_score)
+        opt = optimize_for_target_score(plan, target_score=target, current_score=current_score)
 
         if opt["achievable"]:
             st.success(
-                f"✅ 목표 등급 **{target}** 달성 가능 — "
-                f"{opt['필요비용']/1e8:.2f}억 필요"
+                f"✅ 목표 **{target}점** 달성 가능 — {opt['필요비용']/1e8:.2f}억 필요"
             )
         else:
             st.error(
-                f"⚠️ 목표 등급 **{target}** 도달 불가 — "
-                f"전 항목 보강 시 최대 {opt['달성점수']}점 (목표 {opt['목표점수']}점)"
+                f"⚠️ 목표 **{target}점** 도달 불가 — "
+                f"전 항목 보강 시 최대 {opt['달성점수']}점"
             )
 
         col1, col2, col3 = st.columns(3)
         col1.metric("필요 비용", f"{opt['필요비용']/1e8:.2f}억")
         col2.metric("달성 점수", f"{opt['달성점수']}/100")
-        col3.metric("달성 등급",
-                    _grade_from_score(opt['달성점수']),
-                    delta=f"{opt['현재등급']} → {_grade_from_score(opt['달성점수'])}")
+        col3.metric("목표 점수", f"{opt['목표점수']}/100")
 
         if opt['selected']:
             st.subheader(f"채택 항목 ({len(opt['selected'])}개)")
@@ -1444,13 +1446,6 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
 # 유틸
 # ====================================================================
 
-def _grade_from_score(score: int) -> str:
-    if score >= 85:
-        return "A+"
-    elif score >= 75:
-        return "A"
-    elif score >= 65:
-        return "B"
-    elif score >= 50:
-        return "C"
-    return "D"
+# _grade_from_score() 제거 (2026-07) — A+~D는 제도에 없는 등급이었다.
+# 정량평가표는 "고득점 순으로 선정"하는 랭킹 점수다(2026 공공 GR 2.0 가이드라인 p.18).
+# core.bim_diagnoser.score_compliance 주석 참고.

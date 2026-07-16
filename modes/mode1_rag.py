@@ -104,7 +104,7 @@ def render_rag_panel() -> None:
             04 녹색건축법 · 10 같은 법 시행령 · 11 GR 지원사업 고시 · 12 ZEB 인증규칙 ·
             06 에너지절약설계기준 · 05 지방세특례 · 13 건축법 시행령 · 14 공공기관운영법 ·
             15 탄소중립기본법 시행령 · 16·17 2026년 GR 공고(민간·공공)
-            — <b>11개 법령·고시·공고 원문</b>에서 근거 조항을 인용해 답변합니다.
+            — <b>12개 법령·고시·공고 원문</b>에서 근거 조항을 인용해 답변합니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -118,7 +118,7 @@ def render_rag_panel() -> None:
             "**BIM 진단·ROI 엔진**에 집중되어 있습니다."
         )
         st.markdown(
-            "**동작 방식** — ZEB·그린리모델링 관련 11개 법령·고시·공고(녹색건축법 및 시행령, "
+            "**동작 방식** — ZEB·그린리모델링 관련 12개 법령·고시·공고(녹색건축법 및 시행령, "
             "GR 지원사업 고시, ZEB 인증규칙, 에너지절약설계기준, 지방세특례, 건축법 시행령, "
             "공공기관운영법, 탄소중립기본법 시행령, 2026년 민간·공공 GR 공고)를 "
             "조항 단위로 색인하고, 질문과 관련된 조항을 찾아 "
@@ -177,7 +177,7 @@ def render_rag_panel() -> None:
 
     # 답변 생성
     try:
-        with st.spinner("11개 법령·고시·공고 원문에서 근거 조항 검색 + 답변 생성 중..."):
+        with st.spinner("12개 법령·고시·공고 원문에서 근거 조항 검색 + 답변 생성 중..."):
             result = answer_question(question, top_k=top_k)
     except Exception as e:
         from core.error_messages import friendly_error

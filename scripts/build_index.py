@@ -25,11 +25,11 @@ data/policy_docs/ 의 PDF/텍스트를 ChromaDB 인덱스로 변환.
     # sentence-transformers (118MB 모델): pip install sentence-transformers
     python scripts/build_index.py --provider local
 
-대상: data/policy_docs/ 의 11개 법령·고시·공고 원문 → 874청크
+대상: data/policy_docs/ 의 12개 법령·고시·공고 원문 → 974청크
     04 녹색건축법 · 05 지방세특례제한법 · 06 에너지절약설계기준 ·
     10 녹색건축법 시행령 · 11 GR 지원사업 고시 · 12 ZEB 인증규칙 ·
     13 건축법 시행령 · 14 공공기관운영법 · 15 탄소중립기본법 시행령 ·
-    16·17 2026년 GR 공고(민간·공공)
+    16·17 2026년 GR 공고(민간·공공) · 18 2026 공공 GR 2.0 가이드라인(배점표)
 
 ⚠️ 01·02·03·09는 .pdf 확장자지만 실제로는 **이미지 스캔본(ZIP)** 이라
    텍스트 추출이 불가 → 인덱서가 [SKIP] 경고를 내고 제외한다.

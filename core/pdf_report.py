@@ -158,12 +158,10 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     total_cost = sum(p.get("Max_Cost", 0) for p in plan)
     total_uplift = sum(p["점수상승"] for p in plan)
     new_score = score["total_score"] + total_uplift
-    new_grade = _grade_from_score_local(new_score)
 
     summary_data = [
         ["항목", "현재", "보강 후"],
-        ["총점 (100점)",      f"{score['total_score']}점",    f"{new_score}점"],
-        ["등급",              score["grade"],                 new_grade],
+        ["정량평가 점수 (100점)", f"{score['total_score']}점", f"{new_score}점"],
         ["GR 요소 점수 (80)", f"{score['gr_subtotal']}점",    f"{score['gr_subtotal']+total_uplift}점"],
         ["사업여건 (20)",     f"{score['site_subtotal']}점", f"{score['site_subtotal']}점"],
         ["보강 비용 (Max Cost)",  "-",                        f"{total_cost/1e8:.2f}억"],
@@ -358,15 +356,5 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     return pdf_bytes
 
 
-def _grade_from_score_local(score: int) -> str:
-    """등급 매핑 (로컬 헬퍼)."""
-    if score >= 85:
-        return "A+"
-    elif score >= 75:
-        return "A"
-    elif score >= 65:
-        return "B"
-    elif score >= 50:
-        return "C"
-    else:
-        return "D"
+# _grade_from_score_local() 제거 (2026-07) — A+~D는 제도에 없는 등급이었다.
+# 정량평가표는 선정 랭킹 점수다. core.bim_diagnoser.score_compliance 주석 참고.

@@ -30,7 +30,7 @@ from core.bim_diagnoser import (
     diagnose_from_json,
     build_reinforcement_plan,
     optimize_within_budget,
-    optimize_for_target_grade,
+    optimize_for_target_score,
     format_optimization_report,
 )
 
@@ -68,7 +68,11 @@ def test_full_pipeline():
     print(f"  사업여건:             {bd['사업여건']['소계']:>2}/20점")
     print(f"  ────────────────────")
     print(f"  총점:                 {result['score']['total_score']:>2}/100점")
-    print(f"  등급:                 {result['score']['grade']}")
+    assert "grade" not in result["score"], (
+        "score에 등급 키가 되살아났다 — 정량평가표는 선정 랭킹 점수이지 등급표가 아니다 "
+        "(2026 공공 GR 2.0 가이드라인 p.18 '고득점 순으로 선정')"
+    )
+    print(f"  평가성격:             {result['score']['_평가성격']}")
 
     # 검증 어설션
     print("\n[검증]")
@@ -278,9 +282,12 @@ def test_report_generation():
 
     report = result["report"]
     assert "# BIM 진단 리포트" in report
-    assert "총점" in report
+    assert "정량평가 점수" in report
     assert "11개 GR 기술요소 현황" in report
     assert "보강 권장 사항" in report
+    # 리포트가 없는 등급을 다시 말하지 않는지 고정
+    assert "**등급**" not in report, "리포트에 제도에 없는 등급이 되살아났다"
+    assert "선정 랭킹 점수" in report, "정량평가표의 성격 표기가 빠졌다"
 
     print(f"\n리포트 길이: {len(report)} chars")
     print("\n--- 리포트 첫 30줄 ---")
@@ -306,8 +313,11 @@ def test_optimization_budget():
     assert opt["사용예산"] <= 200_000_000, "예산 초과"
     assert len(opt["selected"]) > 0, "선택된 항목 없음"
     assert opt["누적점수상승"] > 0, "점수 상승 없음"
+    assert "현재등급" not in opt and "예상등급" not in opt, (
+        "등급 키가 되살아났다 — 정량평가표는 등급표가 아니라 선정 랭킹 점수다"
+    )
     print(f"  [PASS] 2억 예산: {opt['사용예산']:,}원 사용, "
-          f"+{opt['누적점수상승']}점 ({opt['현재등급']} → {opt['예상등급']})")
+          f"+{opt['누적점수상승']}점 (→ {opt['예상총점']}점)")
 
     # 예산 0
     opt0 = optimize_within_budget(plan, budget_won=0, current_score=current)
@@ -326,9 +336,9 @@ def test_optimization_budget():
 
 
 def test_optimization_target_grade():
-    """목표 등급 보강 조합 최적화 검증 (Step 3-D)."""
+    """목표 점수 보강 조합 최적화 검증 (등급은 제도에 없다)."""
     print("\n" + "=" * 70)
-    print("최적화 검증: 목표 등급 모드")
+    print("최적화 검증: 목표 점수 모드")
     print("=" * 70)
 
     sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
@@ -336,26 +346,28 @@ def test_optimization_target_grade():
     plan = result["roi_plan"]
     current = result["score"]["total_score"]   # 도담 = 25점
 
-    # B등급 (65점) - 도달 가능해야
-    opt_b = optimize_for_target_grade(plan, "B", current)
-    assert opt_b["achievable"], "B등급 달성 가능해야 함"
+    # 65점 - 도달 가능해야
+    opt_b = optimize_for_target_score(plan, 65, current)
+    assert opt_b["achievable"], "65점 달성 가능해야 함"
     assert opt_b["달성점수"] >= 65
-    print(f"  [PASS] B등급(65점): {opt_b['필요비용']:,}원, "
-          f"{opt_b['달성점수']}점 달성")
+    assert "목표등급" not in opt_b, "등급 키가 되살아났다"
+    print(f"  [PASS] 65점: {opt_b['필요비용']:,}원, {opt_b['달성점수']}점 달성")
 
-    # A+ (85점) - 도달 불가능 (도담 데이터로는 75점이 한계)
-    opt_a = optimize_for_target_grade(plan, "A+", current)
+    # 85점 - 도달 불가능 (도담 데이터로는 75점이 한계)
+    opt_a = optimize_for_target_score(plan, 85, current)
     assert not opt_a["achievable"], (
-        f"A+ 달성 불가여야 함 (도담은 75점 한계): {opt_a['달성점수']}"
+        f"85점 달성 불가여야 함 (도담은 75점 한계): {opt_a['달성점수']}"
     )
-    print(f"  [PASS] A+ 불가 감지 (최대 {opt_a['달성점수']}점, 목표 85점)")
+    print(f"  [PASS] 85점 불가 감지 (최대 {opt_a['달성점수']}점)")
 
-    # 잘못된 등급
-    try:
-        optimize_for_target_grade(plan, "Z", current)
-        assert False, "잘못된 등급에 ValueError 안 던짐"
-    except ValueError:
-        print(f"  [PASS] 잘못된 등급 거부")
+    # 범위 밖 점수는 조용히 넘어가면 안 된다
+    for bad in (-1, 101, "B"):
+        try:
+            optimize_for_target_score(plan, bad, current)
+            assert False, f"범위 밖 target_score({bad})에 ValueError 안 던짐"
+        except ValueError:
+            pass
+    print(f"  [PASS] 범위 밖/문자 목표점수 거부 (등급 문자 'B'도 거부)")
 
 
 def test_optimization_report_format():
@@ -369,12 +381,13 @@ def test_optimization_report_format():
     plan = result["roi_plan"]
     current = result["score"]["total_score"]
 
-    opt_b = optimize_for_target_grade(plan, "B", current)
+    opt_b = optimize_for_target_score(plan, 65, current)
     report = format_optimization_report(opt_b, mode="target")
-    assert "목표 등급 B" in report or "달성 보강 조합" in report
+    assert "목표 65점" in report or "달성 보강 조합" in report
     assert "채택 항목" in report
     assert "필요 비용" in report
-    print(f"  [PASS] 목표 등급 리포트 ({len(report)} chars)")
+    assert "등급" not in report, "리포트에 등급이 남아 있다: " + report[:300]
+    print(f"  [PASS] 목표 점수 리포트 ({len(report)} chars)")
 
     opt_budget = optimize_within_budget(plan, 200_000_000, current)
     report_b = format_optimization_report(opt_budget, mode="budget")

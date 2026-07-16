@@ -573,25 +573,26 @@ def score_compliance(gr_mapping: dict, bim: dict) -> dict:
     # ---------------------------------------------------------------
     total_score = gr_total + breakdown["사업여건"]["소계"]
 
-    # 등급
-    if total_score >= 85:
-        grade = "A+"
-    elif total_score >= 75:
-        grade = "A"
-    elif total_score >= 65:
-        grade = "B"
-    elif total_score >= 50:
-        grade = "C"
-    else:
-        grade = "D"
-
+    # ⚠️ 등급을 매기지 않는다 — 제도에 없기 때문이다.
+    #
+    # 과거 이 함수는 85/75/65/50 기준으로 A+·A·B·C·D 등급을 붙였다. 그런데 2026년
+    # 공공건축물 GR 2.0 가이드라인 원문(p.18)을 확인하니 정량평가표는 **등급표가 아니라
+    # 선정 랭킹 점수**였다:
+    #     "ㅇ정량평가 100%로 구성, **고득점 순으로 선정**"
+    #     "ㅇ동일 점수의 경우 아래의 순서 기준으로 우선 선정 ①~⑧"
+    # 동점자 처리 규칙이 8단계나 있는 건 명백히 경쟁 선발용 랭킹이라는 뜻이다.
+    # A+~D는 우리가 만든 것이고 제도에 존재하지 않는다 → 제거.
+    #
+    # (혼동 주의: '최우수·우수·우량·일반(그린1~4등급)'은 **녹색건축 인증(G-SEED,
+    #  녹색건축법 §16)** 의 등급으로 이 정량평가표와 무관한 별개 제도다.)
     return {
         "total_score": total_score,
         "max_score": 100,
-        "grade": grade,
         "gr_subtotal": gr_total,
         "site_subtotal": breakdown["사업여건"]["소계"],
         "breakdown": breakdown,
+        "_평가성격": "선정 랭킹 점수 (고득점 순 경쟁 선발) — 등급 아님",
+        "_근거": "2026 공공건축물 GR 2.0 지원사업 가이드라인 p.18 《표1 종합형(일반사업) 정량평가 기준》",
     }
 
 
@@ -670,8 +671,8 @@ def generate_diagnosis_report(
     # 헤더
     lines.append(f"# BIM 진단 리포트")
     lines.append("")
-    lines.append(f"**총점**: {score['total_score']}/{score['max_score']}점  ")
-    lines.append(f"**등급**: {score['grade']}  ")
+    lines.append(f"**정량평가 점수**: {score['total_score']}/{score['max_score']}점  ")
+    lines.append("*(선정 랭킹 점수 — 고득점 순 경쟁 선발. 제도상 등급이 아님)*  ")
     lines.append(f"**권역**: {region}  ")
     lines.append("")
 
@@ -1452,7 +1453,7 @@ build_reinforcement_plan 결과(전체 11개 항목)에서 사용자 제약을 �
        - 누적 Max_Cost ≤ 예산이면 채택, 초과 시 skip
        - 보강 후 누적 점수 + 등급 산출
 
-    B. 목표 등급 모드 (optimize_for_target_grade):
+    B. 목표 점수 모드 (optimize_for_target_score):
        - 효율 내림차순으로 누적 선택
        - 누적 점수가 목표 점수 도달하면 종료
        - 최소 비용 조합 + 도달 가능 여부 반환
@@ -1461,27 +1462,20 @@ build_reinforcement_plan 결과(전체 11개 항목)에서 사용자 제약을 �
 """
 
 
-# 등급 -> 최소 점수 매핑 (score_compliance와 동일 룰)
-GRADE_THRESHOLDS = {
-    "A+": 85,
-    "A":  75,
-    "B":  65,
-    "C":  50,
-    "D":  0,
-}
-
-
-def _score_to_grade(score: int) -> str:
-    """점수 -> 등급 (score_compliance의 룰과 동일)."""
-    if score >= 85:
-        return "A+"
-    elif score >= 75:
-        return "A"
-    elif score >= 65:
-        return "B"
-    elif score >= 50:
-        return "C"
-    return "D"
+# ⚠️ 등급(A+~D)은 제도에 없어서 제거했다 — score_compliance 주석 참고.
+#    정량평가표는 "고득점 순으로 선정"하는 **랭킹 점수**이지 등급표가 아니다
+#    (2026 공공 GR 2.0 가이드라인 p.18).
+#    따라서 최적화의 목표도 '등급'이 아니라 **점수**로 받는다.
+#
+# 아래는 화면에서 목표 점수를 고를 때 쓰는 **참고 기준선**이다.
+# ⚠️ 제도상 등급이 아니라 우리가 UI 편의로 둔 눈금이다. 선정 커트라인은
+#    해마다 경쟁 상황에 따라 달라지므로 어떤 점수도 합격을 보장하지 않는다.
+TARGET_SCORE_PRESETS = [
+    (85, "상위권 목표"),
+    (75, "중상위 목표"),
+    (65, "중위 목표"),
+    (50, "기본 목표"),
+]
 
 
 def optimize_within_budget(
@@ -1505,8 +1499,6 @@ def optimize_within_budget(
             "잔여예산": int,
             "누적점수상승": int,
             "예상총점": int,
-            "현재등급": str,
-            "예상등급": str,
         }
     """
     if budget_won <= 0:
@@ -1515,8 +1507,6 @@ def optimize_within_budget(
             "사용예산": 0, "잔여예산": 0,
             "누적점수상승": 0,
             "예상총점": current_score,
-            "현재등급": _score_to_grade(current_score),
-            "예상등급": _score_to_grade(current_score),
         }
 
     selected = []
@@ -1545,22 +1535,25 @@ def optimize_within_budget(
         "잔여예산": budget_won - used,
         "누적점수상승": uplift,
         "예상총점": new_score,
-        "현재등급": _score_to_grade(current_score),
-        "예상등급": _score_to_grade(new_score),
     }
 
 
-def optimize_for_target_grade(
+def optimize_for_target_score(
     plan: list,
-    target_grade: str,
+    target_score: int,
     current_score: int,
 ) -> dict:
     """
-    목표 등급 달성에 필요한 최소 비용 조합 (그리디).
+    목표 **점수** 달성에 필요한 최소 비용 조합 (그리디).
+
+    ⚠️ 과거 시그니처는 optimize_for_target_grade(plan, "B", score)로 **등급**을 받았다.
+       그런데 정량평가표는 등급표가 아니라 "고득점 순으로 선정"하는 랭킹 점수다
+       (2026 공공 GR 2.0 가이드라인 p.18). 없는 등급을 목표로 삼을 수 없으므로
+       목표를 점수로 바꿨다. 화면의 눈금은 TARGET_SCORE_PRESETS 참고.
 
     Args:
         plan: build_reinforcement_plan() 결과 (효율 내림차순)
-        target_grade: "A+", "A", "B", "C" 중 하나
+        target_score: 목표 총점 (0~100)
         current_score: 현재 진단 총점
 
     Returns:
@@ -1570,16 +1563,12 @@ def optimize_for_target_grade(
             "필요비용": int,
             "목표점수": int,
             "달성점수": int,
-            "현재등급": str,
-            "목표등급": str,
         }
     """
-    if target_grade not in GRADE_THRESHOLDS:
-        raise ValueError(
-            f"target_grade는 {list(GRADE_THRESHOLDS.keys())} 중 하나여야 함: {target_grade}"
-        )
+    if not isinstance(target_score, (int, float)) or not (0 <= target_score <= 100):
+        raise ValueError(f"target_score는 0~100 사이여야 함: {target_score}")
 
-    target_score = GRADE_THRESHOLDS[target_grade]
+    target_score = int(target_score)
     deficit = target_score - current_score
 
     if deficit <= 0:
@@ -1589,9 +1578,7 @@ def optimize_for_target_grade(
             "필요비용": 0,
             "목표점수": target_score,
             "달성점수": current_score,
-            "현재등급": _score_to_grade(current_score),
-            "목표등급": target_grade,
-            "_note": "이미 목표 등급 달성 상태",
+            "_note": "이미 목표 점수 달성 상태",
         }
 
     selected = []
@@ -1618,8 +1605,6 @@ def optimize_for_target_grade(
         "필요비용": accumulated_cost,
         "목표점수": target_score,
         "달성점수": achieved_score,
-        "현재등급": _score_to_grade(current_score),
-        "목표등급": target_grade,
     }
 
 
@@ -1629,7 +1614,7 @@ def optimize_for_target_grade(
 
 def format_optimization_report(opt_result: dict, mode: str = "budget") -> str:
     """
-    optimize_within_budget 또는 optimize_for_target_grade 결과를
+    optimize_within_budget 또는 optimize_for_target_score 결과를
     마크다운 리포트로 포맷.
 
     Args:
@@ -1652,14 +1637,12 @@ def format_optimization_report(opt_result: dict, mode: str = "budget") -> str:
             f"**점수 변화**: {opt_result['예상총점']-opt_result['누적점수상승']}점 → "
             f"{opt_result['예상총점']}점 (+{opt_result['누적점수상승']})  "
         )
-        lines.append(
-            f"**등급 변화**: {opt_result['현재등급']} → {opt_result['예상등급']}  "
-        )
+
     elif mode == "target":
         if opt_result["achievable"]:
-            lines.append(f"## 목표 등급 {opt_result['목표등급']} 달성 보강 조합")
+            lines.append(f"## 목표 {opt_result['목표점수']}점 달성 보강 조합")
         else:
-            lines.append(f"## 목표 등급 {opt_result['목표등급']} 달성 불가")
+            lines.append(f"## 목표 {opt_result['목표점수']}점 달성 불가")
             lines.append("")
             lines.append(
                 f"⚠️ 11개 항목 전체 보강 시에도 목표 점수 "
@@ -1675,10 +1658,7 @@ def format_optimization_report(opt_result: dict, mode: str = "budget") -> str:
             f"**점수 변화**: {opt_result['달성점수']-sum(p['점수상승'] for p in opt_result['selected'])}점 → "
             f"{opt_result['달성점수']}점  "
         )
-        lines.append(
-            f"**등급 변화**: {opt_result['현재등급']} → "
-            f"{_score_to_grade(opt_result['달성점수'])}"
-        )
+
 
     lines.append("")
     selected = opt_result.get("selected", [])
