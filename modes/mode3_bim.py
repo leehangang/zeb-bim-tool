@@ -197,8 +197,11 @@ def render_bim_panel() -> None:
                 _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
                 st.success(f"✅ gbXML 파싱 — {_cnt}", icon="📐")
 
-                # EnergyPlus IDF 내보내기 — GR 성능개선비율의 '센터 지정 프로그램' 경로.
-                # E+ 실행은 무료 티어에서 불가(240MB 바이너리)라 사용자 로컬로 넘긴다.
+                # EnergyPlus — GR 성능개선비율의 '센터 지정 프로그램' 경로.
+                # E+는 Streamlit 무료 티어에서 못 돈다(CPU 0.078코어 하한·apt 부재).
+                # 서비스 URL이 있으면 거기서 돌리고, 없으면 IDF를 내려줘 로컬 실행으로 물러선다.
+                from core.eplus_client import health as _ep_health
+                from core.eplus_client import run_idf as _ep_run
                 from core.idf_writer import write_idf
 
                 _idf = write_idf(_peek)
@@ -213,17 +216,78 @@ def render_bim_panel() -> None:
                     )
                 with _c2:
                     st.caption(
-                        f"외피 {_idf['stats']['surfaces']}/{_idf['stats']['surfaces_total']}면 반영. "
-                        "**EnergyPlus는 GR 센터 지정 프로그램**입니다(2026 민간 GR 공고 p.16) — "
-                        "이 IDF를 로컬 EnergyPlus(무료)로 돌려 개선 전·후를 비교하면 "
-                        "성능개선비율이 **인정 대상**이 됩니다. ZEB 인증은 ECO2라 별개입니다.\n\n"
-                        "⚠️ 자동 변환이라 그대로 신청서에 쓰면 안 됩니다 — 단일 존·IdealLoads·"
-                        "표준 일정 가정이 들어 있고, 날씨 파일(.epw)은 따로 필요합니다."
+                        f"외피 {_idf['stats']['surfaces']}/{_idf['stats']['surfaces_total']}면 · "
+                        f"존 {len(_peek.get('spaces') or []) or 1}개 반영. "
+                        "**EnergyPlus는 GR 센터 지정 프로그램**입니다"
+                        "(2026 민간 GR 공고 p.3 각주) — 개선 전·후를 비교하면 성능개선비율이 "
+                        "**인정 대상**이 됩니다. ZEB 인증은 ECO2라 별개입니다.\n\n"
+                        "⚠️ 자동 변환이라 그대로 신청서에 쓰면 안 됩니다 — IdealLoads·표준 일정 "
+                        "가정이 들어 있습니다."
                     )
                 if _idf["skipped"]:
                     with st.expander(f"⚠️ IDF에서 빠진 면 {len(_idf['skipped'])}건 — 왜 빠졌나"):
                         for _s in _idf["skipped"]:
                             st.markdown(f"- {_s}")
+
+                # ── 서비스에서 바로 실행 ──────────────────────────────
+                _h = _ep_health()
+                if not _h["configured"]:
+                    st.info(
+                        "🔬 **에너지 해석은 아직 이 사이트에서 못 돌립니다.** "
+                        "EnergyPlus는 Streamlit 무료 티어에서 실행이 막혀 있어"
+                        "(apt 저장소에 패키지 없음 · CPU 하한 0.078코어) 별도 서비스가 필요합니다. "
+                        "위 IDF를 내려받아 **로컬 EnergyPlus(무료)** 로 돌리시면 됩니다. "
+                        "서비스를 띄우는 방법은 `energyplus_service/README.md`에 있습니다.",
+                        icon="🔬",
+                    )
+                elif not _h["ok"]:
+                    st.warning(
+                        f"EnergyPlus 서비스에 연결하지 못했습니다 — {_h['error']}\n\n"
+                        "IDF를 내려받아 로컬에서 실행하시면 됩니다.",
+                        icon="⚠️",
+                    )
+                else:
+                    st.success(f"🔬 EnergyPlus 서비스 연결됨 — {_h['energyplus']}", icon="🔬")
+                    _epw = st.file_uploader(
+                        "기상파일 (.epw) — 없으면 서버 기본값",
+                        type=["epw"], key="_epw_up",
+                        help="도담(김천) 최근접 관측소는 추풍령 471350입니다. "
+                             "climate.onebuilding.org에서 받을 수 있습니다.",
+                    )
+                    if st.button("🔬 EnergyPlus 실행 (연간 해석)", type="primary"):
+                        with st.spinner("EnergyPlus 연간 해석 중… 수 분 걸릴 수 있습니다"):
+                            _res = _ep_run(
+                                _idf["idf"],
+                                epw_bytes=_epw.getvalue() if _epw else None,
+                            )
+                        if _res.get("ok"):
+                            st.success(f"✅ 해석 완료 — 기상: {_res.get('weather', '?')}")
+                            _m = _res.get("meters") or {}
+                            if _m:
+                                import pandas as pd
+
+                                st.dataframe(
+                                    pd.DataFrame([
+                                        {"미터": k, "연간 kWh": round(v["annual_kWh"], 1)}
+                                        for k, v in _m.items()
+                                    ]),
+                                    width="stretch", hide_index=True,
+                                )
+                            _w = (_res.get("errors") or {}).get("warning_count", 0)
+                            if _w:
+                                st.caption(f"EnergyPlus 경고 {_w}건 — 결과 해석 시 참고하세요.")
+                        else:
+                            # E+ 실패는 대부분 eplusout.err 몇 줄로 원인이 잡힌다.
+                            # 감추면 사용자는 '실패'만 보고 끝난다 → 그대로 보여준다.
+                            st.error(f"❌ EnergyPlus 실행 실패 — {_res.get('error', '')}")
+                            _e = _res.get("errors") or {}
+                            for _f in (_e.get("fatal") or [])[:5]:
+                                st.markdown(f"- 🔴 **Fatal**: {_f}")
+                            for _s in (_e.get("severe") or [])[:5]:
+                                st.markdown(f"- 🟠 Severe: {_s}")
+                            if _e.get("raw_tail"):
+                                with st.expander("eplusout.err 원문"):
+                                    st.code(_e["raw_tail"][-2000:])
                 _no_u = [
                     x["id"]
                     for k in ("walls", "roofs", "floors")
