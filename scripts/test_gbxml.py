@@ -143,8 +143,62 @@ try:
 except Exception as e:
     check("진단이 끝까지 완주", False, f"{type(e).__name__}: {e}")
 
+print("\n⑧ 좌표 보존 (IDF 생성의 전제)")
+# 면적만 뽑고 좌표를 버리면 IDF를 못 쓴다 — BuildingSurface:Detailed가 꼭짓점을 요구한다.
+check("벽에 꼭짓점이 남는다", len(walls["su-wall-1"].get("vertices") or []) == 4)
+check("창에 꼭짓점이 남는다", len(bim["windows"][0].get("vertices") or []) == 4)
+check("창이 어느 벽에 붙었는지(host) 남는다",
+      bim["windows"][0].get("host") == "su-wall-1", str(bim["windows"][0].get("host")))
+check("RectangularGeometry가 있어도 면적은 Rect, 좌표는 PolyLoop에서",
+      abs(walls["su-wall-1"]["area"] - 345.0) < 0.01
+      and len(walls["su-wall-1"]["vertices"]) == 4)
+
+print("\n⑨ IDF 생성 (EnergyPlus = GR 센터 지정 프로그램)")
+from core.idf_writer import _material_r, write_idf  # noqa: E402
+
+# U → 재료 R 역산이 왕복해야 한다. 표면열저항을 안 빼면 단열이 실제보다 좋게 나온다.
+for u, kind, rsurf in ((0.24, "wall", 0.17), (0.15, "roof", 0.14)):
+    r = _material_r(u, kind)
+    check(f"U={u} {kind} → R 역산 왕복 (표면열저항 {rsurf} 차감)",
+          abs(1.0 / (r + rsurf) - u) < 1e-6, f"R={r:.4f} → U={1/(r+rsurf):.4f}")
+check("U가 커도 R이 음수로 안 감 (E+ 거부 방지)", _material_r(50.0, "wall") > 0)
+
+res = write_idf(bim)
+idf = res["idf"]
+check("IDF 텍스트 생성", len(idf) > 1000 and idf.lstrip().startswith("!-"))
+check("Version·Zone·GlobalGeometryRules 포함",
+      "Version, 26.1;" in idf and "Zone,\n    ZONE_1" in idf
+      and "GlobalGeometryRules" in idf)
+check("외피가 BuildingSurface:Detailed로 나감",
+      idf.count("BuildingSurface:Detailed") == 3, f'{idf.count("BuildingSurface:Detailed")}개')
+check("창·문이 FenestrationSurface:Detailed로 나감 (2개)",
+      idf.count("FenestrationSurface:Detailed") == 2,
+      f'{idf.count("FenestrationSurface:Detailed")}개')
+check("개구부가 부모 벽에 붙는다 (Building Surface Name = host)",
+      "su-wall-1," in idf.split("FenestrationSurface:Detailed")[1][:200])
+check("창호는 SimpleGlazingSystem으로 U를 그대로 (역산 안 함)",
+      "WindowMaterial:SimpleGlazingSystem" in idf and "1.5," in idf)
+check("설정온도가 ZEB 별표3과 같다 (냉방26·난방20)",
+      "20.0" in idf and "26.0" in idf)
+
+# 🔑 U를 모르는 면은 IDF에서 빠져야 한다. 기본값을 넣으면 E+가 '측정된 것처럼' 답한다.
+check("U-value 미상 면은 IDF에서 제외 + skipped에 기록",
+      any("su-floor-1" in s for s in res["skipped"]) and "su-floor-1" not in idf,
+      f'skipped={res["skipped"]}')
+check("빠진 면을 조용히 버리지 않는다", len(res["skipped"]) > 0)
+check("SHGC 가정을 warnings에 남긴다",
+      any("SHGC" in w for w in res["warnings"]), f'{res["warnings"]}')
+
+# 좌표 없는 면은 IDF에 못 넣는다 — 우리 JSON 스키마(면적만)로 IDF를 만들면 안 되는 이유
+_no_geom = {"walls": [{"id": "X1", "area": 10.0, "u_value": 0.2, "vertices": []}],
+            "roofs": [], "floors": [], "windows": [], "doors": [], "_meta": {}}
+_r2 = write_idf(_no_geom)
+check("좌표 없는 면은 IDF 제외 (지오메트리 지어내지 않음)",
+      "BuildingSurface:Detailed,\n    X1" not in _r2["idf"]
+      and any("좌표 없음" in s for s in _r2["skipped"]))
+
 print()
 if fails:
     print(f"❌ 실패 {len(fails)}건: {fails}")
     sys.exit(1)
-print("✅ 전부 통과 — gbXML → 우리 스키마 변환이 재현됨")
+print("✅ 전부 통과 — gbXML → 우리 스키마 → IDF 생성이 재현됨")

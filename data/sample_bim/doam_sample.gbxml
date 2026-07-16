@@ -22,24 +22,50 @@
       </Space>
     </Building>
 
-    <!-- 외벽 1: RectangularGeometry 경로 (창 포함 총면적 → 파서가 창을 빼야 함) -->
+    <!-- 외벽 1: Revit은 RectangularGeometry와 PlanarGeometry를 **둘 다** 내보낸다.
+         면적은 Rect(40×10=400)에서, 좌표는 PolyLoop에서 가져와야 한다.
+         창 50 + 문 5를 빼서 345가 나와야 함. -->
     <Surface id="su-wall-1" surfaceType="ExteriorWall" constructionIdRef="con-wall">
       <AdjacentSpaceId spaceIdRef="sp-1"/>
       <RectangularGeometry>
         <Width>40.0</Width>
         <Height>10.0</Height>
       </RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>10.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>10.0</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
       <Opening id="op-win-1" openingType="FixedWindow" windowTypeIdRef="wt-1">
         <RectangularGeometry>
           <Width>20.0</Width>
           <Height>2.5</Height>
         </RectangularGeometry>
+        <PlanarGeometry>
+          <PolyLoop>
+            <CartesianPoint><Coordinate>5.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>1.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>25.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>1.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>25.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>5.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          </PolyLoop>
+        </PlanarGeometry>
       </Opening>
       <Opening id="op-door-1" openingType="NonSlidingDoor" windowTypeIdRef="wt-door">
         <RectangularGeometry>
           <Width>2.0</Width>
           <Height>2.5</Height>
         </RectangularGeometry>
+        <PlanarGeometry>
+          <PolyLoop>
+            <CartesianPoint><Coordinate>30.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>32.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>32.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>2.5</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>30.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>2.5</Coordinate></CartesianPoint>
+          </PolyLoop>
+        </PlanarGeometry>
       </Opening>
     </Surface>
 
@@ -60,12 +86,28 @@
     <Surface id="su-roof-1" surfaceType="Roof" constructionIdRef="con-roof">
       <AdjacentSpaceId spaceIdRef="sp-1"/>
       <RectangularGeometry><Width>30.0</Width><Height>20.0</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0</Coordinate><Coordinate>0</Coordinate><Coordinate>10</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>30</Coordinate><Coordinate>0</Coordinate><Coordinate>10</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>30</Coordinate><Coordinate>20</Coordinate><Coordinate>10</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0</Coordinate><Coordinate>20</Coordinate><Coordinate>10</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
     </Surface>
 
     <!-- 바닥 (지면접지) -->
     <Surface id="su-floor-1" surfaceType="SlabOnGrade" constructionIdRef="con-floor">
       <AdjacentSpaceId spaceIdRef="sp-1"/>
       <RectangularGeometry><Width>30.0</Width><Height>20.0</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0</Coordinate><Coordinate>0</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0</Coordinate><Coordinate>20</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>30</Coordinate><Coordinate>20</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>30</Coordinate><Coordinate>0</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
     </Surface>
 
     <!-- 내벽 — 외피가 아니므로 파서가 건너뛰어야 함 (여기 붙은 창도 무시) -->

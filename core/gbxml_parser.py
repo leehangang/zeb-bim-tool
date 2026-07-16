@@ -89,6 +89,30 @@ def _polygon_area_3d(points: list) -> float:
     return (nx * nx + ny * ny + nz * nz) ** 0.5 / 2.0
 
 
+def _vertices(el) -> list:
+    """
+    Surface/Opening의 3D 꼭짓점 목록. 없으면 [].
+
+    ⚠️ 면적만 뽑고 좌표를 버리면 **IDF를 쓸 수 없다** — EnergyPlus의
+       BuildingSurface:Detailed는 꼭짓점을 요구한다. RectangularGeometry(W×H)만 있는
+       면은 좌표가 없으므로 IDF export 대상에서 빠진다(core/idf_writer.py 참고).
+    """
+    for loop in el.iter():
+        if not loop.tag.endswith("PolyLoop"):
+            continue
+        pts = []
+        for cp in loop.findall("g:CartesianPoint", _NS):
+            coords = [c.text for c in cp.findall("g:Coordinate", _NS)]
+            if len(coords) >= 3:
+                try:
+                    pts.append(tuple(float(c) for c in coords[:3]))
+                except (ValueError, TypeError):
+                    pass
+        if len(pts) >= 3:
+            return pts
+    return []
+
+
 def _geometry_area(el) -> float:
     """Surface/Opening의 면적. RectangularGeometry 우선, 없으면 PolyLoop."""
     rect = el.find("g:RectangularGeometry", _NS)
@@ -99,20 +123,8 @@ def _geometry_area(el) -> float:
                 return float(w) * float(h)
             except ValueError:
                 pass
-    # PolyLoop (PlanarGeometry 안 또는 RectangularGeometry 안)
-    for loop in el.iter():
-        if loop.tag.endswith("PolyLoop"):
-            pts = []
-            for cp in loop.findall("g:CartesianPoint", _NS):
-                coords = [c.text for c in cp.findall("g:Coordinate", _NS)]
-                if len(coords) >= 3:
-                    try:
-                        pts.append(tuple(float(c) for c in coords[:3]))
-                    except (ValueError, TypeError):
-                        pass
-            if len(pts) >= 3:
-                return _polygon_area_3d(pts)
-    return 0.0
+    pts = _vertices(el)
+    return _polygon_area_3d(pts) if pts else 0.0
 
 
 def _collect_u_values(root) -> dict:
@@ -185,6 +197,8 @@ def parse_gbxml(source) -> dict:
                     "facing": facing,
                     "u_value": u_by_id.get(uid),
                     "type": otype or None,
+                    "vertices": _vertices(op),      # IDF 생성용 — 없으면 []
+                    "host": surf.get("id"),         # 창이 붙은 벽 (IDF 부모면)
                 }
                 if otype in _OPENING_DOOR:
                     bim["doors"].append(item)
@@ -207,6 +221,8 @@ def parse_gbxml(source) -> dict:
             "id": surf.get("id") or f"S{len(bim[bucket])+1}",
             "area": round(net, 2),
             "u_value": u_by_id.get(surf.get("constructionIdRef")),
+            "vertices": _vertices(surf),        # IDF 생성용 — 없으면 []
+            "surface_type": stype,              # IDF BuildingSurface 종류 매핑용
         }
         if bucket == "walls":
             entry["facing"] = facing

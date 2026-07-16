@@ -196,6 +196,34 @@ def render_bim_panel() -> None:
                 _g = _peek["_meta"]["gbxml"]
                 _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
                 st.success(f"✅ gbXML 파싱 — {_cnt}", icon="📐")
+
+                # EnergyPlus IDF 내보내기 — GR 성능개선비율의 '센터 지정 프로그램' 경로.
+                # E+ 실행은 무료 티어에서 불가(240MB 바이너리)라 사용자 로컬로 넘긴다.
+                from core.idf_writer import write_idf
+
+                _idf = write_idf(_peek)
+                _c1, _c2 = st.columns([1, 2])
+                with _c1:
+                    st.download_button(
+                        "⬇️ EnergyPlus IDF 내려받기",
+                        data=_idf["idf"].encode("utf-8"),
+                        file_name=Path(uploaded.name).stem + ".idf",
+                        mime="text/plain",
+                        width="stretch",
+                    )
+                with _c2:
+                    st.caption(
+                        f"외피 {_idf['stats']['surfaces']}/{_idf['stats']['surfaces_total']}면 반영. "
+                        "**EnergyPlus는 GR 센터 지정 프로그램**입니다(2026 민간 GR 공고 p.16) — "
+                        "이 IDF를 로컬 EnergyPlus(무료)로 돌려 개선 전·후를 비교하면 "
+                        "성능개선비율이 **인정 대상**이 됩니다. ZEB 인증은 ECO2라 별개입니다.\n\n"
+                        "⚠️ 자동 변환이라 그대로 신청서에 쓰면 안 됩니다 — 단일 존·IdealLoads·"
+                        "표준 일정 가정이 들어 있고, 날씨 파일(.epw)은 따로 필요합니다."
+                    )
+                if _idf["skipped"]:
+                    with st.expander(f"⚠️ IDF에서 빠진 면 {len(_idf['skipped'])}건 — 왜 빠졌나"):
+                        for _s in _idf["skipped"]:
+                            st.markdown(f"- {_s}")
                 _no_u = [
                     x["id"]
                     for k in ("walls", "roofs", "floors")
