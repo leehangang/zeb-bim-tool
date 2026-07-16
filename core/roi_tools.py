@@ -18,6 +18,8 @@ Claude API에 노출할 ROI 시뮬레이션 도구 정의 + 디스패처.
 import os
 from typing import Optional
 
+from core import params as _P
+
 
 # ====================================================================
 # 도구 명세 (Claude API tool schema)
@@ -125,9 +127,10 @@ CALCULATE_ZEB_ROI_TOOL = {
                 "type": "number",
                 "description": (
                     "연간 단위면적당 에너지 절감액 (원/㎡·년). "
-                    "ZEB 5등급 도담 케이스 기본 9,900원."
+                    "⚠️ 기본값은 근거가 확인되지 않은 임시 가정치이며 "
+                    "kWh 절감량·연료원과 연결돼 있지 않다. 실측 고지서 값이 있으면 반드시 그것을 넣을 것."
                 ),
-                "default": 9_900,
+                "default": _P.annual_saving_per_m2(),
             },
             "analysis_years": {
                 "type": "integer",
@@ -228,7 +231,7 @@ def _dispatch_calculate_zeb_roi(args: dict) -> dict:
             args.get("build_cost_per_pyeong", 9_750_000)
         ),
         "annual_energy_saving_won_per_m2": float(
-            args.get("annual_energy_saving_won_per_m2", 9_900)
+            args.get("annual_energy_saving_won_per_m2", _P.annual_saving_per_m2())
         ),
         "analysis_years": int(args.get("analysis_years", 20)),
         "discount_rate": float(args.get("discount_rate", 0.045)),

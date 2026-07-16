@@ -787,7 +787,11 @@ def calculate_roi(
     )
 
     # 연간 에너지 절감액
-    annual_saving_per_m2 = building_info.get("annual_energy_saving_won_per_m2", 9_900)
+    # ⚠️ 기본 단가는 근거 없는 임시 가정치다 — params 단일 소스에서 조회한다(하드코딩 금지).
+    #    kWh 절감량과 연결돼 있지 않고 연료원 구분도 없다. energy_tariff.yaml 현재가정 참고.
+    annual_saving_per_m2 = building_info.get(
+        "annual_energy_saving_won_per_m2", _P.annual_saving_per_m2(),
+    )
     annual_saving = building_info["total_area_m2"] * annual_saving_per_m2
 
     # 현금흐름 기반 수익성 (NPV / IRR / B-C / 할인회수) — 자부담 기준

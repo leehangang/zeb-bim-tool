@@ -219,8 +219,12 @@ def build_inputs_from_diagnosis(diagnosis_result: dict) -> Dict:
     # 연면적: BIM 추출값(total_area_m2) 우선, 구버전 scenario 키 fallback
     area_m2 = bim_data.get("total_area_m2") or scenario.get("연면적_m2", 1000)
 
-    # 연간 절감액 추정 (단가DB 기반 보강 시 평균 12,400원/m2/year 적용)
-    annual_saving_per_m2 = 9900  # 보수적
+    # 연간 절감액 추정 — params 단일 소스에서 조회 (하드코딩 금지)
+    # ⚠️ 이 단가는 근거 없는 임시 가정치다(energy_tariff.yaml 현재가정: 임시가정_근거없음).
+    #    과거 주석은 "단가DB 기반 평균 12,400원 적용"이라 적혀 있었으나 실제 코드는 9,900을
+    #    썼다 — 주석과 코드가 달랐다. 값은 테이블에만 두고 여기선 조회만 한다.
+    from core import params as _P
+    annual_saving_per_m2 = _P.annual_saving_per_m2()
     annual_saving = area_m2 * annual_saving_per_m2
 
     # 용적률 자산가치 + 취득세 감면 추정 (전체 보강 시)

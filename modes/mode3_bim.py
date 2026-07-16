@@ -110,7 +110,7 @@ def render_bim_panel() -> None:
             ("doam_archi_sample.json",
              "🏫 도담어린이집",
              "1,251㎡ · 2014년 · 어린이집",
-             "KEPCO 검증 케이스. 일부 보강 완료 (바닥/태양광)"),
+             "KEPCO 검증 케이스. 일부 보강 완료 (바닥단열/태양열)"),
             ("library_archi_sample.json",
              "📚 공공도서관",
              "3,500㎡ · 1998년 · 도서관",
@@ -853,7 +853,9 @@ def _render_sensitivity_tab(result: dict) -> None:
     # 연면적: 진단 결과의 BIM 추출값(total_area_m2) 우선, 구버전 scenario 키 fallback
     area_m2 = bim_data.get("total_area_m2") or scenario.get("연면적_m2", 1000)
     total_cost = sum(p.get("Max_Cost", 0) for p in plan)
-    annual_saving = area_m2 * 9_900  # 보수적 단가 (원/m2/year)
+    # ⚠️ 단가는 params 단일 소스에서 조회 — 근거 없는 임시 가정치다(하드코딩 금지).
+    from core import params as _P
+    annual_saving = area_m2 * _P.annual_saving_per_m2()
 
     st.markdown("### 📈 민감도·시나리오 분석")
     st.caption(
@@ -1255,8 +1257,13 @@ def _render_zeb_tab(result: dict) -> None:
     st.markdown("#### 🎯 등급 도달 가이드 (제1호 · 자립률 기준)")
     st.caption("각 ZEB 등급의 자립률 기준(제1호) 도달에 필요한 PV 용량. 제2호(소요량)로도 등급 산정 가능.")
 
-    target_grades = [("+등급", 120), ("1등급", 100), ("2등급", 80),
-                     ("3등급", 60), ("4등급", 40), ("5등급", 20)]
+    # 등급표는 엔진(ZEB_AUTONOMY_THRESHOLDS)에서 읽는다 — 여기서 다시 적지 않는다.
+    # 과거 자립률을 두 모듈이 따로 계산해 5.6% vs 9.3%로 갈렸던 것과 같은 종류의 버그를 막는다.
+    from core.zeb_evaluator import ZEB_AUTONOMY_THRESHOLDS
+    target_grades = [
+        (("+등급" if g == "+" else f"{g}등급"), lo)
+        for lo, g, _label, _rank in ZEB_AUTONOMY_THRESHOLDS
+    ]
     post_e = eval_result["post_energy_kwh_m2"]
     area = eval_result["area_m2"]
 

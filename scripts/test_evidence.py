@@ -140,7 +140,35 @@ _sum_grade = determine_grade_clause2(200 * (1 - _sum_r), is_residential=False)
 check("단순합산이면 4등급이 나온다 (방식 의존성 고정)", _sum_grade["grade"] == "4",
       f"sum {_sum_r*100:.1f}% → {_sum_grade['label']}")
 
-print("\n⑦ 주거/비주거 기준표 분기")
+print("\n⑦ 단일 소스 원칙 — 매직넘버가 코드로 다시 스며들지 않는가")
+# 왜: 9,900원/㎡는 energy_tariff.yaml에 '임시가정_근거없음'으로 등록돼 있는데도
+#     roi_calculator·roi_tools·scenario_compare·mode3_bim 5곳이 각자 하드코딩하고 있었다.
+#     우리가 내세우는 P2("숫자는 테이블에서 결정론적 조회")를 최대 가정치에서 어긴 셈.
+import re as _re  # noqa: E402
+from pathlib import Path as _Path  # noqa: E402
+
+_ROOT = _Path(__file__).resolve().parent.parent
+_SRC = ["core/roi_calculator.py", "core/roi_tools.py", "core/scenario_compare.py",
+        "modes/mode3_bim.py"]
+_offenders = []
+for _rel in _SRC:
+    for _i, _line in enumerate(( _ROOT / _rel).read_text(encoding="utf-8").splitlines(), 1):
+        if _re.search(r"(?<![\w.])9[_,]?900(?![\d])", _line) and not _line.lstrip().startswith("#"):
+            _offenders.append(f"{_rel}:{_i}")
+check("9,900 매직넘버가 코드에 없다 (params 경유)", not _offenders,
+      "위반: " + ", ".join(_offenders) if _offenders else "5곳 → 0곳")
+
+from core import params as _PP  # noqa: E402
+check("params.annual_saving_per_m2()가 YAML 값을 돌려준다",
+      _PP.annual_saving_per_m2() == 9900.0, f"{_PP.annual_saving_per_m2()}")
+check("단가가 '가정치'로 표시된다", _PP.annual_saving_is_assumption() is True)
+
+# 자립률 등급표도 엔진 단일 소스여야 한다
+_m3 = (_ROOT / "modes/mode3_bim.py").read_text(encoding="utf-8")
+check("mode3가 자립률 등급표를 재정의하지 않는다",
+      '("3등급", 60)' not in _m3 and "ZEB_AUTONOMY_THRESHOLDS" in _m3)
+
+print("\n⑧ 주거/비주거 기준표 분기")
 res = grade_sensitivity(200.0, building_use="공동주택")
 nonres = grade_sensitivity(200.0, building_use="어린이집")
 check("주거와 비주거의 임계가 다름",

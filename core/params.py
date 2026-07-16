@@ -162,3 +162,35 @@ def gr_subsidy_rate(owner_type: str) -> float:
 def gr_min_improvement_ratio() -> float:
     """GR 지원 자격 — 성능개선비율 최소치 (고시 제9조 제1항)."""
     return float(get("gr_support", "공통자격.성능개선비율_최소", 0.20))
+
+
+def annual_saving_per_m2() -> float:
+    """
+    연간 에너지 절감 단가 (원/㎡·년) — ⚠️ **근거 없는 임시 가정치**.
+
+    energy_tariff.yaml의 `현재가정.annual_energy_saving_won_per_m2` 단일 소스.
+    과거 이 값이 roi_calculator·roi_tools·scenario_compare·mode3_bim 등 5곳에
+    각각 하드코딩돼 있었다. 우리가 내세우는 P2("숫자는 테이블에서 결정론적으로 조회")를
+    정작 최대 가정치에서 어기고 있었던 셈이라 여기로 모았다.
+
+    ⚠️ 이 값은 kWh 절감량과 **연결돼 있지 않고** 연료원(전기/가스/열) 구분도 없다.
+       energy_tariff.yaml의 `현재가정.대체계획`대로
+       `Σ_연료원 [절감kWh × 단가]`로 교체해야 한다.
+       화면에 쓸 때는 반드시 '가정치'임을 함께 표기할 것 (annual_saving_is_assumption 참고).
+
+    도구 스키마(core/roi_tools.py) 정의 시점에 모듈 로드 중 호출되므로,
+    YAML이 없어도 import가 깨지지 않게 방어한다.
+    """
+    try:
+        return float(get("energy_tariff", "현재가정.annual_energy_saving_won_per_m2", 9_900))
+    except Exception:
+        return 9_900.0
+
+
+def annual_saving_is_assumption() -> bool:
+    """위 단가가 아직 근거 미확보 상태인가 — 화면 경고 표기 여부 판단용."""
+    try:
+        status = str(get("energy_tariff", "현재가정.status", ""))
+    except Exception:
+        return True      # 확인 못 하면 '가정치'로 본다 (안전한 쪽)
+    return ("임시가정" in status) or ("확인필요" in status) or ("근거없음" in status)
