@@ -203,8 +203,10 @@ check("U가 커도 R이 음수로 안 감 (E+ 거부 방지)", _material_r(50.0,
 res = write_idf(bim)
 idf = res["idf"]
 check("IDF 텍스트 생성", len(idf) > 1000 and idf.lstrip().startswith("!-"))
+# 존 이름은 이제 gbXML space id다 (예전엔 ZONE_1 하드코딩) — 그래야 ECO2 용도프로필과
+# 대응이 붙는다. ZONE_1 fallback은 AdjacentSpaceId가 없는 gbXML에만 쓴다.
 check("Version·Zone·GlobalGeometryRules 포함",
-      "Version, 26.1;" in idf and "Zone,\n    ZONE_1" in idf
+      "Version, 26.1;" in idf and "Zone,\n    sp-1" in idf
       and "GlobalGeometryRules" in idf)
 check("외피가 BuildingSurface:Detailed로 나감",
       idf.count("BuildingSurface:Detailed") == 3, f'{idf.count("BuildingSurface:Detailed")}개')
