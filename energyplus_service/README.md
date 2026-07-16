@@ -47,11 +47,22 @@ $1이 몇 번의 해석에 해당하는지는 **아직 실측 못 했습니다**
 컴퓨트를 씁니다. 대시보드 Credits 카운터로 확인하면서 씁니다.
 (Streamlit·HF와 달리 Modal은 **초 단위 종량제**라 "무료 티어"라는 말 자체가 성립하지 않습니다.)
 
-검증된 것 (이 저장소 venv, Python 3.14):
-- `modal 1.5.2` 설치됨 — 3.14 호환
-- `modal_app.py` import 성공, 이미지 그래프 생성됨, `App(name="zeb-energyplus")` 확인
-- 쓰는 API 전부 실존 확인: `Image.from_registry/add_local_file/add_local_dir/env/pip_install`,
-  `App.function(timeout=, scaledown_window=)`, `modal.concurrent`, `modal.asgi_app`
+### ✅ 배포됨 (2026-07-17)
+
+```
+https://leehangang--zeb-energyplus-web.modal.run
+```
+`modal deploy` 34초. `/health` 응답 (HTTP 200, 4.1초 — 콜드스타트 포함):
+```json
+{"ok":true,"energyplus":"EnergyPlus, Version 25.1.0-68a4a7c774","weather_files":[]}
+```
+→ **EnergyPlus 바이너리가 실제로 실행된다** (존재 확인이 아니라 `--version` 실행 결과).
+
+### ⛔ 남은 관문 — 기상파일이 없다
+
+`weather_files: []`. **NREL 이미지에는 .epw가 0개**다 (`/usr/local`·`/opt`·`/root`
+전수 조사 결과 0건). E+는 기상파일 없이 못 돌아가므로, `weather/`에 .epw를 넣거나
+요청마다 업로드해야 한다. 그 전까지 **우리 IDF는 E+에 한 번도 안 들어간 상태**다.
 
 ```bash
 pip install modal
