@@ -239,6 +239,17 @@ check("바닥 없는 존을 경고한다 (해석 성공 ≠ 맞는 값)",
 #    있었다. skipped만 그리고 warnings는 통째로 빠져 있었다.
 _ui = (PROJECT_ROOT / "modes" / "mode3_bim.py").read_text(encoding="utf-8")
 check("화면이 _idf['warnings']를 실제로 그린다", '_idf["warnings"]' in _ui)
+
+# 화면 안내가 낡으면 기능이 있어도 못 찾는다. 실제로 gbXML·에너지해석을 붙여놓고
+# 상단 안내는 "Dynamo로 추출한 BIM JSON 업로드"에 멈춰 있어 사용자가 헤맸다.
+# (표시 문자열은 사용자가 읽는 유일한 계약이다 — 소스만 맞으면 되는 게 아니다.)
+_intro = _ui.split("st.expander(", 1)[0]     # 헤더 영역만
+check("상단 안내가 gbXML을 첫 입력으로 말한다",
+      "gbXML" in _intro and "Dynamo로 추출한 BIM JSON 업로드" not in _intro)
+check("상단 안내가 EnergyPlus 해석까지 한다고 말한다", "EnergyPlus" in _intro)
+check("업로더 라벨이 gbXML을 권장으로 표시", "gbXML**(권장)" in _ui or "gbXML**(권장" in _ui)
+check("두 입력이 다른 결과를 준다는 걸 화면이 설명한다",
+      "에너지 해석 불가" in _ui or "에너지 해석은 안 됩니다" in _ui)
 check("바닥 누락 경고는 접지 않고 본문에 띄운다 (조용한 실패라서)",
       '"존 면적이 0" in w' in _ui and "st.warning(" in _ui)
 

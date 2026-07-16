@@ -1,10 +1,16 @@
 """
 modes/mode3_bim.py — BIM 진단 + ROI 통합 UI
 ============================================
-Dynamo 추출 JSON 업로드 → core.bim_diagnoser 호출 → 진단 + ROI + 최적화.
+Revit gbXML(권장) 또는 Dynamo JSON 업로드 → 진단 + ROI + 최적화 + EnergyPlus 해석.
+
+**두 입력이 같은 걸 주지 않는다:**
+    gbXML → 진단·ROI + IDF 생성 + EnergyPlus 연간 해석
+    JSON  → 진단·ROI만. 면적만 있고 꼭짓점 좌표가 없어 IDF를 못 만든다
+            (BuildingSurface:Detailed가 좌표를 요구한다. 지어내지 않는다.)
 
 처리 흐름:
-    JSON 파일 업로드 (Streamlit file_uploader)
+    파일 업로드 (Streamlit file_uploader)
+    → gbXML이면 core.gbxml_parser.parse_gbxml()로 우리 스키마로 변환
     → core.bim_diagnoser.diagnose_from_json(with_roi=True)
     → Streamlit UI:
         탭1: 진단 결과 (11개 GR 매핑, 점수 분해, 등급)
@@ -118,8 +124,9 @@ def render_bim_panel() -> None:
         </div>
         <h1 style="margin:0.2rem 0;">🏢 BIM 진단 + ROI 분석</h1>
         <div style="color:#757575;">
-            Dynamo로 추출한 BIM JSON 업로드 → 11개 GR 기술요소 자동 매핑 →
-            01 가이드라인 정량평가표 채점 → 보강 우선순위 + 비용 산정.
+            <b>Revit gbXML</b>을 올리면 외피·열관류율을 읽어 11개 GR 기술요소를 매핑하고,
+            정량평가표 채점 → 보강 우선순위 + 비용 → <b>EnergyPlus 연간 에너지 해석</b>까지
+            한 번에 돌립니다. (Dynamo BIM JSON도 받지만 지오메트리가 없어 에너지 해석은 안 됩니다.)
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -130,7 +137,19 @@ def render_bim_panel() -> None:
         "🏢 분석할 건물 선택 — 데모 케이스 클릭 또는 BIM 파일 업로드",
         expanded=not _has_result,
     ):
-        st.caption("실제 BIM 파일이 없어도 데모 케이스로 진단 흐름을 체험할 수 있습니다.")
+        st.markdown(
+            "**어떤 파일을 넣느냐에 따라 나오는 게 다릅니다.**\n\n"
+            "| 넣는 것 | 어디서 | 나오는 것 |\n"
+            "|---|---|---|\n"
+            "| **`.gbxml`** ← 권장 | Revit → File > Export > **gbXML** | GR 진단·점수·비용·ROI "
+            "+ **EnergyPlus 연간 에너지 해석** |\n"
+            "| `.json` | Dynamo 추출 | GR 진단·점수·비용·ROI (지오메트리가 없어 **에너지 해석 불가**) |\n"
+            "| 아래 데모 버튼 | 파일 없이 | GR 진단 흐름 체험 |\n"
+        )
+        st.caption(
+            "gbXML만 에너지 해석이 되는 이유: EnergyPlus는 면의 꼭짓점 좌표를 요구하는데, "
+            "JSON 스키마엔 면적만 있어 좌표를 지어내야 합니다 — 그건 하지 않습니다."
+        )
         sample_cols = st.columns(3)
         samples = [
             ("doam_archi_sample.json",
@@ -159,7 +178,7 @@ def render_bim_panel() -> None:
         col_upload, col_opts = st.columns([2, 1])
         with col_upload:
             uploaded = st.file_uploader(
-                "또는 **Revit gbXML** · BIM JSON 업로드",
+                "⬆️ 여기에 **Revit gbXML**(권장) 또는 BIM JSON을 올리세요",
                 type=["gbxml", "xml", "json"],
                 help=(
                     "Revit → File > Export > gbXML 로 내보낸 파일을 그대로 올리세요. "
@@ -349,8 +368,8 @@ def render_bim_panel() -> None:
 
     if source_for_diagnosis is None and cached_result is None:
         st.info(
-            "위에서 데모 케이스를 클릭하거나 BIM JSON 파일을 업로드하면 "
-            "진단이 시작됩니다."
+            "👆 **위 '분석할 건물 선택'에서 시작하세요** — 데모 케이스를 클릭하면 파일 없이 "
+            "바로 진단 흐름을 볼 수 있고, **Revit gbXML**을 올리면 에너지 해석까지 돌아갑니다."
         )
         return
 
