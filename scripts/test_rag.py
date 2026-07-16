@@ -365,6 +365,76 @@ def test_page_bundle_extraction():
         print(f"  [PASS] {name}: {len(pages)}쪽 · {chars:,}자")
 
 
+def test_retrieval_quality():
+    """
+    검색 품질 하한선 — 청킹·전처리를 건드렸을 때 조용히 나빠지는 걸 막는다.
+
+    🔴 2026-07-16: "화면이 '조항 단위 색인'이라 하니 실제로 조 단위로 쪼개자"는
+       그럴듯한 개선을 넣었다가 측정하고 되돌렸다. 문서 적중은 그대로였는데
+       **인용 청크에 답이 들어있는 비율이 top3 90% → 60%로 무너졌다**
+       (조가 짧아 top-k에 담기는 본문 총량이 줄어든 탓). 청크만 49% 늘었다.
+       측정이 없었으면 개악을 배포했다. 그래서 이 테스트가 있다.
+
+    두 가지를 잰다:
+      ① 문서 적중 — 질문에 맞는 '파일'이 top3에 오는가
+      ② 인용 품질 — 실제 답 문구가 검색된 '청크 안'에 있는가 (앱이 인용하는 단위)
+    """
+    print("\n" + "=" * 70)
+    print("검색 품질 하한선 (문서 적중 · 인용 품질)")
+    print("=" * 70)
+    if not (PROJECT_ROOT / "data" / "chroma_db").exists():
+        print("  [SKIP] 색인 없음")
+        return
+    os.chdir(PROJECT_ROOT)
+    from core.rag_retriever import KeywordRetriever
+
+    r = KeywordRetriever()
+
+    # ① 문서 적중 — (질문, 정답 파일 접두)
+    DOCS = [
+        ("보조금 교부 결정 용도 외 사용 금지", "21_"),
+        ("2030년 국가 온실가스 감축 목표 부문별", "22_"),
+        ("대지 외 생산량 보정계수 가중치", "19_"),
+        ("제로에너지건축물 인증등급 비주거용 기준", "19_"),
+        ("ZEB 인증 신청 자격 누가", "12_"),
+        ("취득세 감면 녹색건축 인증 건축물", "05_"),
+        ("노유자시설 용도 분류", "13_"),
+        ("한국전력공사는 공기업인가 준정부기관인가", "14_"),
+        ("어린이집 설치 기준 면적", "09_"),
+        ("지역별 열관류율 중부2 외벽", "06_"),
+        ("성능개선비율 산정 기준 개선공사 이전", "16_"),
+        ("공공건축물 그린리모델링 정량평가 배점", "18_"),
+    ]
+    hit3 = sum(
+        1 for q, exp in DOCS
+        if any(h["file"].startswith(exp) for h in r.retrieve(q, top_k=3))
+    )
+    print(f"  문서 적중 top3: {hit3}/{len(DOCS)}")
+    assert hit3 >= 10, f"문서 적중 하한 미달: {hit3}/{len(DOCS)} (기준 10)"
+
+    # ② 인용 품질 — (질문, 답이 담긴 원문 문구)
+    CITE = [
+        ("대지 외 생산량 보정계수 가중치", "0.7"),
+        ("제로에너지건축물 인증등급 비주거용 기준", "130"),
+        ("취득세 감면 녹색건축 인증 건축물", "녹색건축 인증 건축물에 대한 감면"),
+        ("2030년 국가 온실가스 감축 목표", "2018년"),
+        ("보조금 교부 결정", "교부 결정"),
+        ("기존 건축물의 종류 및 공사의 범위", "10년이 지난"),
+        ("건축물에너지관리시스템 설치기준 항목", "시스템 확장성"),
+        ("ZEB 인증 수수료 환불 자율 인증", "100분의 30"),
+    ]
+    cite3 = sum(
+        1 for q, need in CITE
+        if any(need in h["text"] for h in r.retrieve(q, top_k=3))
+    )
+    print(f"  인용 청크에 답 포함 top3: {cite3}/{len(CITE)}")
+    assert cite3 >= 6, (
+        f"인용 품질 하한 미달: {cite3}/{len(CITE)} (기준 6). "
+        f"청킹을 바꿨다면 되돌리세요 — 조 단위 분할이 여기서 무너집니다."
+    )
+    print("  [PASS] 문서 적중·인용 품질 모두 하한선 이상")
+
+
 def test_doc_registry():
     """
     색인 원문 레지스트리 — 화면 목록이 색인과 어긋나지 않는가.
@@ -433,6 +503,7 @@ if __name__ == "__main__":
         test_mode1_index_ready_negative()
         test_extract_file_negative()
         test_page_bundle_extraction()
+        test_retrieval_quality()
         test_doc_registry()
         print("\n" + "=" * 70)
         print("모든 RAG 테스트 통과 ✅")
