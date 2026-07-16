@@ -229,6 +229,24 @@ def render_bim_panel() -> None:
                         for _s in _idf["skipped"]:
                             st.markdown(f"- {_s}")
 
+                # write_idf의 경고를 그동안 화면에 안 그렸다. 만들어놓고 아무도 못 보면
+                # 없는 것과 같다 — 오히려 "경고했다"고 착각하게 만들어 더 나쁘다.
+                # 바닥 누락(존 면적 0 → 부하 전부 0)은 해석이 '성공'해도 값이 틀리는
+                # 조용한 실패라, 접히지 않게 본문에 띄운다.
+                if _idf["warnings"]:
+                    _zero = [w for w in _idf["warnings"] if "존 면적이 0" in w]
+                    _rest = [w for w in _idf["warnings"] if w not in _zero]
+                    if _zero:
+                        st.warning(
+                            "**해석은 돌아가지만 값이 틀립니다.**\n\n"
+                            + "\n".join(f"- {w}" for w in _zero),
+                            icon="⚠️",
+                        )
+                    if _rest:
+                        with st.expander(f"⚠️ IDF 생성 시 둔 가정 {len(_rest)}건"):
+                            for _w in _rest:
+                                st.markdown(f"- {_w}")
+
                 # ── 서비스에서 바로 실행 ──────────────────────────────
                 _h = _ep_health()
                 if not _h["configured"]:

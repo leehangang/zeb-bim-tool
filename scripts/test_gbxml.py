@@ -230,6 +230,18 @@ check("빠진 면을 조용히 버리지 않는다", len(res["skipped"]) > 0)
 check("SHGC 가정을 warnings에 남긴다",
       any("SHGC" in w for w in res["warnings"]), f'{res["warnings"]}')
 
+# 🔑 바닥이 빠지면 존 면적이 0 → 조명·기기·재실 부하가 전부 0인데 해석은 '성공'한다.
+# 2026-07-17 첫 성공 실행이 정확히 이 상태였다 (Electricity:Facility = 0.0 kWh).
+check("바닥 없는 존을 경고한다 (해석 성공 ≠ 맞는 값)",
+      any("존 면적이 0" in w for w in res["warnings"]), f'{res["warnings"]}')
+
+# 🔴 만들어놓고 화면이 안 그리면 없는 것과 같다 — 실제로 warnings를 한 번도 안 그리고
+#    있었다. skipped만 그리고 warnings는 통째로 빠져 있었다.
+_ui = (PROJECT_ROOT / "modes" / "mode3_bim.py").read_text(encoding="utf-8")
+check("화면이 _idf['warnings']를 실제로 그린다", '_idf["warnings"]' in _ui)
+check("바닥 누락 경고는 접지 않고 본문에 띄운다 (조용한 실패라서)",
+      '"존 면적이 0" in w' in _ui and "st.warning(" in _ui)
+
 # 좌표 없는 면은 IDF에 못 넣는다 — 우리 JSON 스키마(면적만)로 IDF를 만들면 안 되는 이유
 _no_geom = {"walls": [{"id": "X1", "area": 10.0, "u_value": 0.2, "vertices": []}],
             "roofs": [], "floors": [], "windows": [], "doors": [], "_meta": {}}
