@@ -370,6 +370,73 @@ check("주거와 비주거의 임계가 다름",
       [c["임계_절감률_pct"] for c in res["cliffs"]]
       != [c["임계_절감률_pct"] for c in nonres["cliffs"]])
 
+print("\n⑭ ZEB 인증기준 공동고시 원문 ↔ 엔진·params 대조")
+# 2026-07-16 원문 확보 전까지 보정계수·등급표의 근거는 팀 학습문서뿐이었다.
+# 이제 원문이 있으니, 우리 숫자가 원문과 일치하는지 **원문 파일을 읽어** 검증한다.
+_gaz = (Path(__file__).resolve().parent.parent
+        / "data" / "policy_docs" / "19_ZEB_인증기준_공동고시.txt")
+if not _gaz.exists():
+    check("공동고시 원문 파일 존재", False, str(_gaz))
+else:
+    _t = _gaz.read_text(encoding="utf-8")
+    _flat = _t.replace(" ", "")
+
+    # (1) 보정계수 — 원문 별표1 제2호 나목 3)의 네 구간이 그대로 있는가
+    check("별표1 보정계수 표 원문에 존재",
+          "0.7" in _flat and "0.8" in _flat and "0.9" in _flat
+          and "대지외생산량가중치" in _flat)
+    from core.zeb_evaluator import offsite_correction_factor as _f
+    check("엔진 보정계수 = 원문 구간 (0/10/15/20% 경계)",
+          (_f(0), _f(9.99), _f(10), _f(14.9), _f(15), _f(19.9), _f(20), _f(50))
+          == (0.7, 0.7, 0.8, 0.8, 0.9, 0.9, 1.0, 1.0))
+
+    # (2) 별표2 등급표 — 비주거 경계 12개가 원문대로 재현되는가
+    from core.zeb_evaluator import determine_grade_clause2 as _g
+    _boundaries = [(-71, "+"), (-70, "1"), (-31, "1"), (-30, "2"), (9, "2"),
+                   (10, "3"), (49, "3"), (50, "4"), (89, "4"), (90, "5"),
+                   (129, "5"), (130, "-")]
+    _bad = [(n, e, _g(n, is_residential=False)["grade"])
+            for n, e in _boundaries if _g(n, is_residential=False)["grade"] != e]
+    check("별표2 비주거 등급 경계 12개 일치", not _bad, f"불일치: {_bad}" if _bad else "")
+    check("별표2 등급표 원문에 존재", "130미만" in _flat and "-70미만" in _flat)
+
+    # (3) 별표2 주5 — 주거용 정의(기숙사 제외). 기숙사를 주거로 재면 등급이 과소평가된다.
+    check("별표2 주5 '기숙사 제외' 원문에 존재", "공동주택(기숙사제외)" in _flat)
+    from core.zeb_evaluator import RESIDENTIAL_USES
+    check("엔진 주거 목록에 기숙사·오피스텔 없음",
+          "기숙사" not in RESIDENTIAL_USES and "오피스텔" not in RESIDENTIAL_USES)
+
+    # (4) 별표1 주4 — 완화 판정용 자립률은 대지 내만
+    check("별표1 주4 '건축기준 완화 시 대지 내…만을' 원문에 존재",
+          "건축기준완화시대지내" in _flat and "순생산량만을고려" in _flat)
+
+    # (5) 별표1의2 BEMS — 13개 항목이 원문에 모두 있는가
+    _bems = ["일반사항", "시스템설치", "데이터수집및표시", "정보감시", "데이터조회",
+             "에너지소비현황분석", "설비의성능및효율분석", "실내외환경정보제공",
+             "에너지소비예측", "에너지비용조회및분석", "제어시스템연동",
+             "종합유지관리", "시스템확장성"]
+    _miss = [b for b in _bems if b not in _flat]
+    check("별표1의2 BEMS 13항목 전부 원문에 존재", not _miss, f"누락: {_miss}" if _miss else "")
+
+    # (6) 별표4 수수료 — 도담(1,251㎡ 비주거) = 390만원
+    from core import params as _PP
+    _fee = _PP.get("zeb_incentive", "인증수수료.전용면적구간_원")
+    _doam = next(v for u, v in _fee if 1251 < float(u))
+    check("도담 인증수수료 = 별표4 원문 390만원", _doam == 3_900_000, f"{_doam:,}원")
+
+    # (7) 원문을 읽고 새로 생긴 숙제가 params에 기록됐는가 (조용히 넘어가지 않았는가)
+    _yaml = (Path(__file__).resolve().parent.parent
+             / "data" / "params" / "zeb_incentive.yaml").read_text(encoding="utf-8")
+    check("별표2 주7 '용도별 보정계수' 미구현이 params에 기록됨",
+          "용도별보정계수_제2호" in _yaml and "확인필요_운영세칙미확보" in _yaml)
+    check("수수료 환불 적용례 쟁점(2024.12.31)이 params에 기록됨",
+          "확인필요_적용례쟁점" in _yaml and "2024.12.31" in _yaml)
+    # status: 값만 본다. 본문 산문에는 과거 경위로 '확인필요_원문미확보'가 언급된다.
+    import re as _re
+    _statuses = _re.findall(r"^\s*status:\s*(\S+)", _yaml, _re.M)
+    check("보정계수 status가 원문대조로 승격됨 (원문미확보 status 잔존 없음)",
+          "확인필요_원문미확보" not in _statuses, f"현재 status들: {sorted(set(_statuses))}")
+
 print()
 if fails:
     print(f"❌ 실패 {len(fails)}건: {fails}")
