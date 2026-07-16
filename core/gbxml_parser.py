@@ -173,9 +173,36 @@ def parse_gbxml(source) -> dict:
     bim = {
         "_meta": {"source": "gbXML", "gbxml": {}},
         "walls": [], "windows": [], "doors": [], "roofs": [], "floors": [],
-        "pv_panels": [],
+        "pv_panels": [], "spaces": [],
     }
     skipped = {}
+
+    # 공간(Space) — gbXML이 주는 **존 분할**이다. 예전엔 이걸 통째로 버리고 IDF를
+    # 단일 존으로 만들었다. 두 번 손해다:
+    #   ① EnergyPlus는 존별 온도·부하를 따로 푸는데 하나로 뭉치면 그 해상도가 사라진다.
+    #   ② ECO2의 용도프로필(운영규정 별표2)이 **바로 이 space 단위**로 배정된다.
+    #      gbXML의 spaceType이 그 배정의 단서인데 버리면 다시 못 만든다.
+    for sp in root.iter():
+        if not sp.tag.endswith("Space"):
+            continue
+        sid = sp.get("id")
+        if not sid:
+            continue
+        area = _text(sp, "g:Area")
+        vol = _text(sp, "g:Volume")
+
+        def _f(v):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+
+        bim["spaces"].append({
+            "id": sid,
+            "spaceType": sp.get("spaceType"),   # ECO2 용도프로필 배정의 단서
+            "area": _f(area),
+            "volume": _f(vol),
+        })
 
     for surf in root.iter():
         if not surf.tag.endswith("Surface"):
@@ -217,12 +244,14 @@ def parse_gbxml(source) -> dict:
         if net <= 0:
             continue
 
+        adj = surf.find("g:AdjacentSpaceId", _NS)
         entry = {
             "id": surf.get("id") or f"S{len(bim[bucket])+1}",
             "area": round(net, 2),
             "u_value": u_by_id.get(surf.get("constructionIdRef")),
             "vertices": _vertices(surf),        # IDF 생성용 — 없으면 []
             "surface_type": stype,              # IDF BuildingSurface 종류 매핑용
+            "space": adj.get("spaceIdRef") if adj is not None else None,   # 소속 존
         }
         if bucket == "walls":
             entry["facing"] = facing

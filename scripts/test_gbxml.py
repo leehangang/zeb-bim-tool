@@ -109,6 +109,43 @@ try:
 except Exception as e:
     check("bim_diagnoser.map_to_gr_elements() 통과", False, f"{type(e).__name__}: {e}")
 
+print("\n⑥-b 존(Space)을 버리지 않는가")
+# 🔴 gbXML은 <Space spaceType>과 면의 <AdjacentSpaceId>로 **존 분할**을 준다.
+#    파서가 이걸 통째로 버리고 IDF를 단일 존으로 만들고 있었다. 두 번 손해다:
+#    ① E+는 존별로 온도·부하를 따로 푸는데 하나로 뭉치면 그 해상도가 사라진다
+#    ② ECO2 용도프로필(운영규정 별표2)이 **바로 이 space 단위**로 배정된다 —
+#       gbXML spaceType이 그 배정의 단서인데 버리면 다시 못 만든다
+check("Space를 읽는다", len(bim.get("spaces") or []) == 1, str(bim.get("spaces")))
+check("spaceType을 보존한다 (ECO2 용도프로필 배정 단서)",
+      bim["spaces"][0].get("spaceType") == "DayCare")
+check("면이 소속 존을 안다 (AdjacentSpaceId)",
+      walls["su-wall-1"].get("space") == "sp-1", str(walls["su-wall-1"].get("space")))
+
+from core.idf_writer import write_idf  # noqa: E402
+
+# 존이 **여럿일 때**가 진짜 관건 — 단일 존이면 버그가 안 드러난다
+_multi = {
+    "_meta": {}, "spaces": [{"id": "A", "spaceType": "Classroom"},
+                            {"id": "B", "spaceType": "Office"}],
+    "walls": [
+        {"id": "wA", "area": 10, "u_value": 0.24, "space": "A",
+         "surface_type": "ExteriorWall", "vertices": [(0, 0, 0), (5, 0, 0), (5, 0, 2), (0, 0, 2)]},
+        {"id": "wB", "area": 10, "u_value": 0.24, "space": "B",
+         "surface_type": "ExteriorWall", "vertices": [(0, 5, 0), (5, 5, 0), (5, 5, 2), (0, 5, 2)]},
+    ],
+    "roofs": [], "floors": [], "windows": [], "doors": [],
+}
+_rm = write_idf(_multi)
+_i = _rm["idf"]
+check("존 2개가 각각 Zone으로 나감", _i.count("\nZone,\n") == 2, f'{_i.count(chr(10)+"Zone,"+chr(10))}개')
+check("각 면이 자기 존에 붙는다", "    A,   !- Zone Name" in _i and "    B,   !- Zone Name" in _i)
+# 존이 여럿인데 설비를 하나만 쓰면, 빠진 존은 온도제어가 없어 E+가 부하를 0으로 낸다
+check("존마다 IdealLoads가 있다", "IDEAL_A" in _i and "IDEAL_B" in _i)
+check("존마다 온도제어가 있다", "TSTAT_A" in _i and "TSTAT_B" in _i)
+check("존마다 내부부하가 있다", "LGT_A" in _i and "LGT_B" in _i)
+check("spaceType을 IDF 주석에 남긴다", "spaceType: Classroom" in _i)
+
+
 print("\n⑦ 업로드 → 진단 완주 (UI 경로 그대로)")
 # 파서만 맞고 업로드 경계에서 끊기면 사용자에겐 아무 소용이 없다.
 # Streamlit UploadedFile을 흉내내 save_uploaded_to_temp → 진단까지 실제로 돌린다.

@@ -34,6 +34,7 @@
 · 날씨 파일(.epw)은 사용자가 넣어야 한다 — 우리가 배포하지 않는다.
 """
 
+import re
 from typing import Optional
 
 # ISO 6946 표면열저항 (㎡·K/W) — U에서 재료 R을 역산할 때 뺀다.
@@ -69,11 +70,22 @@ def _fmt_vertices(pts: list) -> str:
     return ",\n".join(f"    {x:.4f}, {y:.4f}, {z:.4f}" for x, y, z in pts)
 
 
+def _zone_of(item: dict, fallback: str) -> str:
+    """면이 속한 존 이름. gbXML AdjacentSpaceId가 있으면 그걸 쓴다."""
+    sid = item.get("space")
+    return _safe(sid) if sid else fallback
+
+
+def _safe(name: str) -> str:
+    """IDF 이름에 쉼표·세미콜론이 들어가면 필드가 깨진다."""
+    return re.sub(r"[,;!]", "_", str(name)).strip()
+
+
 def write_idf(
     bim: dict,
     zone_name: str = "ZONE_1",
     ep_version: str = "26.1",
-    weather_hint: str = "김천(경북) — 기상청 표준기상데이터(.epw) 필요",
+    weather_hint: str = "김천(경북) — 추풍령 471350 최근접 (.epw 필요)",
 ) -> dict:
     """
     BIM dict(gbXML 파서 산출) → IDF 텍스트.
@@ -133,10 +145,32 @@ GlobalGeometryRules,
 
 RunPeriod,
     Annual, 1, 1, , 12, 31, , , , , , Yes;
-
-Zone,
-    {zone_name}, 0, 0, 0, 0, , 1, , , autocalculate, autocalculate;
 """)
+
+    # ── 존 ──────────────────────────────────────────────────────────
+    # gbXML의 Space가 곧 존이다. 예전엔 이걸 버리고 단일 존으로 뭉갰다.
+    # 면에 AdjacentSpaceId가 없으면 fallback 존 하나로 모은다.
+    zones = []
+    for sp in (bim.get("spaces") or []):
+        zid = _safe(sp["id"])
+        if zid not in zones:
+            zones.append(zid)
+    used_zones = {_zone_of(i, zone_name) for i, _, _ in surfaces}
+    for z in sorted(used_zones):
+        if z not in zones:
+            zones.append(z)
+    if not zones:
+        zones = [zone_name]
+
+    out.append("!-  ===== 존 (gbXML Space = 존) =====\n")
+    _stype = {_safe(s["id"]): s.get("spaceType") for s in (bim.get("spaces") or [])}
+    for z in zones:
+        st = _stype.get(z)
+        out.append(
+            f"Zone,\n    {z}, 0, 0, 0, 0, , 1, , , autocalculate, autocalculate;"
+            + (f"   !- gbXML spaceType: {st}" if st else "")
+            + "\n\n"
+        )
 
     # ── 재료·구성 (U-value → Material:NoMass) ───────────────────────
     out.append("!-  ===== 구성 (U-value에서 역산) =====\n")
@@ -200,7 +234,7 @@ Zone,
             f"    {item['id']},            !- Name\n"
             f"    {stype},                 !- Surface Type\n"
             f"    CON_{item['id']},        !- Construction Name\n"
-            f"    {zone_name},             !- Zone Name\n"
+            f"    {_zone_of(item, zone_name)},   !- Zone Name (gbXML AdjacentSpaceId)\n"
             f"    ,                        !- Space Name\n"
             f"    {obc},                   !- Outside Boundary Condition\n"
             f"    ,                        !- Outside Boundary Condition Object\n"
@@ -261,37 +295,42 @@ Schedule:Compact, SCH_COOL, Temp,
     Through: 12/31, For: Weekdays, Until: 08:00, 30.0, Until: 18:00, 26.0, Until: 24:00, 30.0,
     For: AllOtherDays, Until: 24:00, 30.0;
 
+ThermostatSetpoint:DualSetpoint, TSTAT_SP, SCH_HEAT, SCH_COOL;
+Schedule:Compact, ALWAYS_4, Any, Through: 12/31, For: AllDays, Until: 24:00, 4;
+ScheduleTypeLimits, Any;
+""")
+
+    # 부하·설비는 **존마다** 필요하다. 단일 존일 때 하나만 쓰면 되던 게,
+    # 존이 여럿이면 빠진 존은 온도제어도 설비도 없어 E+가 부하를 0으로 낸다.
+    for z in zones:
+        out.append(f"""
 People,
-    PPL_{zone_name}, {zone_name}, SCH_OCC, Area/Person, , , 0.1,
+    PPL_{z}, {z}, SCH_OCC, Area/Person, , , 0.1,
     0.3, , , , , autocalculate;
 
 Lights,
-    LGT_{zone_name}, {zone_name}, SCH_OCC, Watts/Area, , 10.0, ,
+    LGT_{z}, {z}, SCH_OCC, Watts/Area, , 10.0, ,
     0.0, 0.4, 0.2, , General;
 
 ElectricEquipment,
-    EQP_{zone_name}, {zone_name}, SCH_OCC, Watts/Area, , 5.0, ,
+    EQP_{z}, {z}, SCH_OCC, Watts/Area, , 5.0, ,
     0.0, 0.5, 0.0;
 
-ThermostatSetpoint:DualSetpoint, TSTAT_SP, SCH_HEAT, SCH_COOL;
-
 ZoneControl:Thermostat,
-    TSTAT_{zone_name}, {zone_name}, ALWAYS_4, ThermostatSetpoint:DualSetpoint, TSTAT_SP;
-
-Schedule:Compact, ALWAYS_4, Any, Through: 12/31, For: AllDays, Until: 24:00, 4;
-ScheduleTypeLimits, Any;
+    TSTAT_{z}, {z}, ALWAYS_4, ThermostatSetpoint:DualSetpoint, TSTAT_SP;
 
 ZoneHVAC:IdealLoadsAirSystem,
-    IDEAL_{zone_name}, , NODE_SUP_{zone_name}, , , 50, 13, 0.0156, 0.0077,
+    IDEAL_{z}, , NODE_SUP_{z}, , , 50, 13, 0.0156, 0.0077,
     NoLimit, , , NoLimit;
 
 ZoneHVAC:EquipmentConnections,
-    {zone_name}, EQL_{zone_name}, NODE_SUP_{zone_name}, , NODE_AIR_{zone_name},
-    NODE_RET_{zone_name};
+    {z}, EQL_{z}, NODE_SUP_{z}, , NODE_AIR_{z}, NODE_RET_{z};
 
 ZoneHVAC:EquipmentList,
-    EQL_{zone_name}, SequentialLoad, ZoneHVAC:IdealLoadsAirSystem, IDEAL_{zone_name}, 1, 1;
+    EQL_{z}, SequentialLoad, ZoneHVAC:IdealLoadsAirSystem, IDEAL_{z}, 1, 1;
+""")
 
+    out.append("""
 !-  ===== 출력 =====
 !-  성능개선비율은 '개선 전 대비'라 이 값들의 전후 비교로 산출한다.
 Output:Meter, DistrictHeating:Facility, Monthly;
