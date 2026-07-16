@@ -365,6 +365,85 @@ def test_page_bundle_extraction():
         print(f"  [PASS] {name}: {len(pages)}쪽 · {chars:,}자")
 
 
+def test_zip_refresh_on_change():
+    """
+    배포 재현 — 낡은 색인이 이미 풀려 있을 때 **새 zip이 반영되는가**.
+
+    🔴 2026-07-16: 라이브가 6건·438청크를 표시하고 있었다. 커밋 5453785 시점의 색인이다.
+       그 뒤 세 번(874 → 1,140 → 1,300청크) 재색인해 push했지만 **한 번도 사이트에
+       도달하지 않았다.** 원인은 _auto_unzip_chroma_if_needed()의 첫 줄:
+           if (chroma_dir / "chroma.sqlite3").exists(): return
+       한 번 풀리면 새 zip을 영원히 무시했다(docstring엔 "항상 압축 해제"라 적혀 있었다).
+       배포 환경은 리포 디렉토리를 재사용하므로 낡은 색인이 계속 살아남았다.
+
+       로컬 테스트는 전부 통과했다 — 로컬 색인 디렉토리를 직접 보기 때문이다.
+       **배포에서만 죽는 버그**라 이 시뮬레이션이 필요하다.
+    """
+    import shutil
+    import subprocess
+    import zipfile
+
+    print("\n" + "=" * 70)
+    print("배포 시뮬 — zip이 바뀌면 색인이 갱신되는가")
+    print("=" * 70)
+
+    # 앱의 압축 해제 로직만 떼어온다 (streamlit import 회피)
+    src = (PROJECT_ROOT / "streamlit_app.py").read_text(encoding="utf-8")
+    s = src.index("def _auto_unzip_chroma_if_needed")
+    e = src.index("# 앱 시작 시 1회 실행")
+    ns = {}
+    exec(src[s:e], ns)
+    unzip = ns["_auto_unzip_chroma_if_needed"]
+
+    cwd0 = os.getcwd()
+    with tempfile.TemporaryDirectory() as d:
+        work = Path(d)
+        (work / "data").mkdir()
+
+        # ① '낡은 zip' — 청크 2개짜리 가짜 색인을 만들어 심는다
+        old_dir = work / "_old"
+        (old_dir).mkdir()
+        (old_dir / "chroma.sqlite3").write_bytes(b"OLD-INDEX-PLACEHOLDER")
+        old_zip = work / "data" / "chroma_db.zip"
+        with zipfile.ZipFile(old_zip, "w") as z:
+            z.write(old_dir / "chroma.sqlite3", "chroma.sqlite3")
+
+        os.chdir(work)
+        unzip()
+        got = (work / "data" / "chroma_db" / "chroma.sqlite3").read_bytes()
+        assert got == b"OLD-INDEX-PLACEHOLDER", "낡은 zip이 안 풀림"
+        print("  [PASS] ① 낡은 zip 압축 해제됨")
+
+        # ② 같은 zip으로 재시작 — 다시 풀 필요 없다 (스탬프 일치)
+        stamp1 = (work / "data" / "chroma_db" / ".zip_stamp").read_text()
+        unzip()
+        assert (work / "data" / "chroma_db" / ".zip_stamp").read_text() == stamp1
+        print("  [PASS] ② 같은 zip 재시작: 불필요한 재압축 없음")
+
+        # ③ zip 교체 — 이게 라이브에서 무시되던 그 지점
+        with zipfile.ZipFile(old_zip, "w") as z:
+            z.writestr("chroma.sqlite3", "NEW-INDEX-PLACEHOLDER")
+        unzip()
+        got = (work / "data" / "chroma_db" / "chroma.sqlite3").read_bytes()
+        assert got == b"NEW-INDEX-PLACEHOLDER", (
+            "🔴 새 zip이 무시됐다 — 라이브가 6건·438청크에 얼어붙던 바로 그 버그"
+        )
+        assert (work / "data" / "chroma_db" / ".zip_stamp").read_text() != stamp1
+        print("  [PASS] ③ zip 교체 → 색인 갱신됨 (배포 반영)")
+
+        # Windows는 사용 중인 디렉토리를 못 지운다 — with를 빠져나가기 전에 벗어난다
+        os.chdir(cwd0)
+
+    # ④ 실제 배포 zip이 현재 색인과 같은 내용인가 — push 전 최종 확인
+    os.chdir(PROJECT_ROOT)
+    zp = PROJECT_ROOT / "data" / "chroma_db.zip"
+    if zp.exists():
+        with zipfile.ZipFile(zp) as z:
+            names = {n.replace("\\", "/").split("/")[-1] for n in z.namelist()}
+        assert "chroma.sqlite3" in names, f"zip에 chroma.sqlite3 없음: {sorted(names)[:5]}"
+        print(f"  [PASS] ④ 배포 zip 정상 ({zp.stat().st_size/1e6:.1f}MB)")
+
+
 def test_retrieval_quality():
     """
     검색 품질 하한선 — 청킹·전처리를 건드렸을 때 조용히 나빠지는 걸 막는다.
@@ -484,10 +563,15 @@ def test_doc_registry():
         print(f"         {title}")
 
     # ④ 화면에 문서 수/목록을 다시 손으로 적지 않았는가 (재발 방지)
+    #    주석/독스트링의 과거 기록(예: 버그 경위에 적은 '6건·438청크')은 화면이 아니므로 제외.
     for rel in ["streamlit_app.py", "modes/mode1_rag.py"]:
         src = (PROJECT_ROOT / rel).read_text(encoding="utf-8")
+        code = "\n".join(
+            ln for ln in src.splitlines() if not ln.lstrip().startswith("#")
+        )
+        code = re.sub(r'"""[\s\S]*?"""', "", code)      # 독스트링 제거
         for pat in [r"\d+개\s*법령", r"\d+건\s*·\s*[\d,]+\s*청크"]:
-            hits = [h for h in re.findall(pat, src) if "n_files" not in h]
+            hits = re.findall(pat, code)
             assert not hits, f"{rel}: 문서 수가 하드코딩됨 {hits} — 색인에서 읽으세요"
     print("  [PASS] 화면에 문서 수 하드코딩 없음 (색인에서 파생)")
 
@@ -503,6 +587,7 @@ if __name__ == "__main__":
         test_mode1_index_ready_negative()
         test_extract_file_negative()
         test_page_bundle_extraction()
+        test_zip_refresh_on_change()
         test_retrieval_quality()
         test_doc_registry()
         print("\n" + "=" * 70)

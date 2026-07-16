@@ -73,20 +73,38 @@ def _index_summary() -> dict:
 
 def _auto_unzip_chroma_if_needed():
     """
-    data/chroma_db.zip을 항상 data/chroma_db/ 안에 올바른 폴더 구조로 압축 해제.
-    Windows(PowerShell) zip의 역슬래시 경로를 슬래시로 정규화해
-    배포 환경(Linux)에서도 UUID 폴더가 폴더로 풀리게 한다.
+    data/chroma_db.zip → data/chroma_db/ 압축 해제. **zip이 바뀌면 다시 푼다.**
+
+    🔴 2026-07-16까지 이 함수는 이렇게 시작했다:
+           if (chroma_dir / "chroma.sqlite3").exists():
+               return
+       한 번 풀리고 나면 새 zip을 **영원히 무시**했다. docstring은 "항상 압축 해제"라고
+       적어놓고 실제로는 정반대였다. 배포 환경은 리포 디렉토리를 재사용하므로,
+       색인을 아무리 다시 만들어 push해도 사이트는 낡은 색인을 계속 들고 있었다.
+       실제로 라이브가 6건·438청크(= 커밋 7b59a09 이전 상태)를 표시하고 있었고,
+       그 사이 세 번의 재색인이 사이트에 도달한 적이 없었다.
+       테스트는 로컬 색인을 보므로 전부 통과했다 — 배포에서만 죽는 종류의 버그다.
+
+    → zip 내용 해시를 스탬프로 남기고, 다르면 지우고 다시 푼다.
+      Windows(PowerShell) zip의 역슬래시 경로도 슬래시로 정규화한다(Linux 대비).
     """
     from pathlib import Path
+    import hashlib
+    import shutil
     import zipfile
 
     chroma_dir = Path("./data/chroma_db")
     chroma_zip = Path("./data/chroma_db.zip")
+    stamp = chroma_dir / ".zip_stamp"
 
-    if (chroma_dir / "chroma.sqlite3").exists():
-        return
     if not chroma_zip.exists():
         return
+
+    digest = hashlib.md5(chroma_zip.read_bytes()).hexdigest()
+    if (chroma_dir / "chroma.sqlite3").exists():
+        if stamp.exists() and stamp.read_text().strip() == digest:
+            return                       # 이미 이 zip으로 풀려 있음
+        shutil.rmtree(chroma_dir, ignore_errors=True)   # zip이 바뀜 → 갈아엎는다
 
     chroma_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(chroma_zip, "r") as zf:
@@ -98,6 +116,7 @@ def _auto_unzip_chroma_if_needed():
             target.parent.mkdir(parents=True, exist_ok=True)
             with zf.open(info) as src, open(target, "wb") as dst:
                 dst.write(src.read())
+    stamp.write_text(digest)
 
 # 앱 시작 시 1회 실행
 _auto_unzip_chroma_if_needed()
@@ -179,18 +198,9 @@ with st.sidebar:
                         f"</div>",
                         unsafe_allow_html=True,
                     )
-        st.caption(
-            "✅ **2026-07-16 확보** — 오랫동안 비어 있던 **ZEB 인증기준 공동고시**"
-            "(국토부 제2024-893호 / 산업부 제2024-208호)를 국가법령정보센터에서 받아 "
-            "별표1(자립률 산식·대지외 보정계수)·별표1의2(BEMS 13항목)·별표2(등급표)·"
-            "별표3·별표4를 색인했습니다. 대조 결과 **보정계수·등급표·수수료·주거 판정이 "
-            "전부 원문과 일치**해 '확인 필요' → '원문대조'로 승격했습니다.\n\n"
-            "⚠️ **다만 원문을 읽고 새로 생긴 숙제 2건** — ① 별표2 **주7**이 제2호 등급을 "
-            "'**용도별 보정계수**를 반영한 1차E소요량'으로 재라고 하는데, 그 계수는 "
-            "운영기관 **운영세칙**에 있어 아직 없습니다(우리는 미반영 값으로 판정 중). "
-            "② 부칙 제2020-574호 제2조가 수수료 환불을 **2024.12.31 신청분까지**로 "
-            "한정하는데 연장 조항이 안 보입니다 — 도담 환불 78만원은 '확인 필요'입니다."
-        )
+        # 확보 경위·미해결 쟁점 서사는 여기 두지 않는다 — 📐 근거·출처 ④에 있다.
+        # 사이드바는 '무엇이 색인돼 있는가'만 답한다.
+        st.caption("확보 경위와 미해결 쟁점은 **📐 근거·출처 → ④ 계산 경로·한계**에 있습니다.")
 
     st.markdown("---")
     st.caption(
