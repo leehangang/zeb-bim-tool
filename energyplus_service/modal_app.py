@@ -7,7 +7,12 @@ EnergyPlus 실행 서비스 — Modal 배포용 진입점.
 Hugging Face Spaces가 1순위였으나 **2026-07-16 계정에서 확인 결과 Docker SDK가
 "Paid"로 잠겨 있었다** (Static만 무료). 2026-07-09 포럼 이슈가 실제로 재현된 것이다.
 HF 공식 문서는 여전히 "CPU Basic FREE"라 적혀 있어 문서와 실제가 어긋나 있다.
-→ 같은 NREL 이미지를 Modal에 올린다. $30/월 컴퓨트 크레딧 무료, 유휴 시 과금 0.
+→ 같은 NREL 이미지를 Modal에 올린다. 유휴 시 과금 0 (요청 없으면 컨테이너 0으로 내려감).
+
+⚠️ 비용 — "$30/월 무료, 카드 불필요"는 틀렸다 (2026-07-17 대시보드 확인).
+   실제: "You have $1 of $30/mo in free credits. Add a payment method to unlock the rest."
+   카드 미등록 실사용 한도는 $1이다. $1이 몇 회 해석인지는 미실측 — 빌드도 컴퓨트를 쓴다.
+   Modal은 초 단위 종량제라 "무료 티어"라는 말이 성립하지 않는다.
 
 Dockerfile과의 관계
 -------------------

@@ -35,7 +35,23 @@ NREL 공식 이미지 `nrel/energyplus:25.1.0`은 **압축 106.5MB**이고 `FROM
 ## 배포 (Modal) — 현재 경로
 
 `modal_app.py`가 **같은 NREL 이미지 · 같은 `app.py`** 를 Modal에 올립니다.
-Modal은 $30/월 컴퓨트 크레딧 무료, **유휴 시 과금 0**, 슬립 없음, 신용카드 불필요.
+**유휴 시 과금 0** (요청이 없으면 컨테이너가 0으로 내려감), 슬립로 인한 재설치 없음.
+
+⚠️ **무료 크레딧 정정 (2026-07-17 대시보드에서 확인)**
+"$30/월 무료 + 카드 불필요"라고 적었던 건 **틀렸습니다.** 실제 배너:
+
+> You have **$1 of $30**/mo in free credits. Add a payment method to unlock the rest.
+
+즉 **카드 미등록 상태의 실사용 한도는 $1**이고, $30은 카드를 넣어야 열립니다.
+$1이 몇 번의 해석에 해당하는지는 **아직 실측 못 했습니다** — 이미지 빌드 자체도
+컴퓨트를 씁니다. 대시보드 Credits 카운터로 확인하면서 씁니다.
+(Streamlit·HF와 달리 Modal은 **초 단위 종량제**라 "무료 티어"라는 말 자체가 성립하지 않습니다.)
+
+검증된 것 (이 저장소 venv, Python 3.14):
+- `modal 1.5.2` 설치됨 — 3.14 호환
+- `modal_app.py` import 성공, 이미지 그래프 생성됨, `App(name="zeb-energyplus")` 확인
+- 쓰는 API 전부 실존 확인: `Image.from_registry/add_local_file/add_local_dir/env/pip_install`,
+  `App.function(timeout=, scaledown_window=)`, `modal.concurrent`, `modal.asgi_app`
 
 ```bash
 pip install modal
