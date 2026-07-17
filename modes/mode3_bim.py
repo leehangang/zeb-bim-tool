@@ -238,21 +238,26 @@ def render_bim_panel() -> None:
             "gbXML만 에너지 해석이 되는 이유: EnergyPlus는 면의 꼭짓점 좌표를 요구하는데, "
             "JSON 스키마엔 면적만 있어 좌표를 지어내야 합니다 — 그건 하지 않습니다."
         )
-        sample_cols = st.columns(3)
+        # 4칸이다. 3칸에 넣으려다 보건지소를 밀어낼 뻔했다 — 데모를 조용히 지우지 않는다.
         samples = [
-            ("doam_archi_sample.json",
-             "🏫 도담어린이집",
-             "1,251㎡ · 2014년 · 어린이집",
-             "KEPCO 검증 케이스. 일부 보강 완료 (바닥단열/태양열)"),
             ("demo_daycare_full.gbxml",
              "🔬 데모 gbXML (가상)",
              "1,252㎡ · 어린이집 · 외피 6면",
-             "에너지 해석까지 도는 예시. 실제 건물 아님"),
+             "**에너지 해석까지** 도는 예시. 실제 건물 아님"),
+            ("doam_archi_sample.json",
+             "🏫 도담어린이집",
+             "1,251㎡ · 2014년 · 어린이집",
+             "KEPCO 검증 케이스. JSON이라 해석은 안 됨"),
             ("library_archi_sample.json",
              "📚 공공도서관",
              "3,500㎡ · 1998년 · 도서관",
              "노후 중대형 건물. 부분 보강 완료, 큰 잠재력"),
+            ("health_center_sample.json",
+             "🏥 보건지소",
+             "450㎡ · 1985년 · 보건소",
+             "최악 상태 소규모. 점수 상승 잠재력 극대"),
         ]
+        sample_cols = st.columns(len(samples))
         for i, (fname, title, meta, desc) in enumerate(samples):
             with sample_cols[i]:
                 if st.button(f"**{title}**\n\n{meta}\n\n{desc}",

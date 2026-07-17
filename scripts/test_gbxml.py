@@ -237,6 +237,8 @@ check("바닥 없는 존을 경고한다 (해석 성공 ≠ 맞는 값)",
 
 # 🔴 만들어놓고 화면이 안 그리면 없는 것과 같다 — 실제로 warnings를 한 번도 안 그리고
 #    있었다. skipped만 그리고 warnings는 통째로 빠져 있었다.
+import re  # noqa: E402
+
 _ui = (PROJECT_ROOT / "modes" / "mode3_bim.py").read_text(encoding="utf-8")
 check("화면이 _idf['warnings']를 실제로 그린다", '_idf["warnings"]' in _ui)
 
@@ -250,6 +252,17 @@ check("상단 안내가 EnergyPlus 해석까지 한다고 말한다", "EnergyPlu
 check("업로더 라벨이 gbXML을 권장으로 표시", "gbXML**(권장)" in _ui or "gbXML**(권장" in _ui)
 check("두 입력이 다른 결과를 준다는 걸 화면이 설명한다",
       "에너지 해석 불가" in _ui or "에너지 해석은 안 됩니다" in _ui)
+
+# 데모 버튼에 걸린 파일이 실제로 있어야 한다. 없으면 클릭하는 순간 죽는다.
+# (칸 수를 넘겨 데모를 조용히 밀어낸 적이 있어 개수도 같이 지킨다.)
+_samples = re.findall(r'\("([\w.]+\.(?:json|gbxml))",', _ui)
+check(f"데모 케이스 {len(_samples)}개가 전부 실재하는 파일",
+      all((PROJECT_ROOT / "data" / "sample_bim" / f).exists() for f in _samples),
+      f'{[f for f in _samples if not (PROJECT_ROOT / "data" / "sample_bim" / f).exists()]}')
+check("gbXML 데모가 최소 1개 있다 (에너지 해석을 눌러볼 수 있어야 한다)",
+      any(f.endswith(".gbxml") for f in _samples), f'{_samples}')
+check("데모 칸 수를 하드코딩하지 않는다 (st.columns(3)에 4개 넣다 하나 잃었다)",
+      "st.columns(len(samples))" in _ui)
 check("바닥 누락 경고는 접지 않고 본문에 띄운다 (조용한 실패라서)",
       '"존 면적이 0" in w' in _ui and "st.warning(" in _ui)
 
