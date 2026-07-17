@@ -147,7 +147,6 @@ with st.sidebar:
         "💰 ROI 시뮬레이션",
         "📋 사업 신청 인테이크",
         "📐 근거·출처",
-        "📖 용어사전",
     ]
     mode = st.radio(
         label="모드 선택",
@@ -427,10 +426,11 @@ def render_home():
     # 핵심 수치 (KEPCO 도담 검증 기준) — ZEB 등급 평가가 우리 플랫폼의 출발점
     #
     # 편집 원칙 — 여기는 **결과만** 둔다.
-    #   제도 해설·우리가 틀렸던 이력·연구 근거는 📖 용어사전 / 📐 근거·출처에 이미 있다.
+    #   제도 해설·우리가 틀렸던 이력·연구 근거는 📐 근거·출처에 있다.
     #   같은 글을 홈에도 적으면 (1) 홈이 읽히지 않고 (2) 두 곳이 따로 낡는다.
-    #   실제로 홈의 긴 캡션 4개가 용어사전 confusions()와 통째로 중복이었다.
     #   남기는 건 '숫자가 못 믿을 값일 때의 경고'뿐 — 그건 숫자에 붙어 있어야 한다.
+    # (2026-07-17: 용어사전 모드를 화면에서 뺐다. modes/mode6_glossary.py는 남아 있지만
+    #  어디서도 안 부른다 — 되살릴 땐 streamlit_app.py의 mode_options에 다시 넣으면 된다.)
     st.markdown("### 검증 결과 — KEPCO 도담어린이집")
     st.caption("1,251㎡ · 2014년 사용승인 · 노유자시설(비주거) · 공공기관 소유 · 태양광 없음")
 
@@ -466,7 +466,7 @@ def render_home():
         g3.metric("GR 자격", "충족 ✅" if gr["자격충족"] else "미달 ❌", gr["사업유형"])
         st.caption(
             f"분모가 **개선 전**({imp['개선전']})이라 ZEB 절감률"
-            f"({zeb['절감률'] if zeb else 50.5}%, 분모 base 200)과 다릅니다 → **📖 용어사전**. "
+            f"({zeb['절감률'] if zeb else 50.5}%, 분모 base 200)과 다릅니다 → **📐 근거·출처**. "
             "인정은 센터 지정 프로그램 결과로만 되므로 이 판정은 참고용입니다."
         )
 
@@ -479,7 +479,7 @@ def render_home():
     d3.metric("전체 보강비 (Max Cost)", "5.31억", "11개 항목 전체")
     st.caption(
         "가이드라인 p.18 *\"고득점 순으로 선정\"* 에 따른 **경쟁 선발용 랭킹 점수**입니다 "
-        "— 등급이 아니고, 커트라인은 해마다 달라집니다 → **📖 용어사전**"
+        "— 등급이 아니고, 커트라인은 해마다 달라집니다"
     )
 
     # ④⑤ 숫자는 전부 엔진에서 읽는다 — _doam_roi() 주석 참고 (하드코딩이 어긋나 있었다)
@@ -540,11 +540,6 @@ elif mode == "📋 사업 신청 인테이크":
 elif mode == "📐 근거·출처":
     from modes.mode5_evidence import render_evidence_panel
     render_evidence_panel()
-
-elif mode == "📖 용어사전":
-    from modes.mode6_glossary import render_glossary_panel
-    render_glossary_panel()
-
 
 # 푸터
 render_footer()
