@@ -153,6 +153,19 @@ def _collect_u_values(root) -> dict:
     return out
 
 
+def _DEFAULT_LOCATIONS_HIT(root) -> bool:
+    """Revit이 프로젝트 위치를 안 잡았을 때 넣는 기본 좌표(보스턴)인가."""
+    loc = root.find(".//g:Location", _NS)
+    if loc is None:
+        return False
+    try:
+        lat = float(loc.findtext("g:Latitude", default="", namespaces=_NS))
+        lon = float(loc.findtext("g:Longitude", default="", namespaces=_NS))
+    except ValueError:
+        return False
+    return abs(lat - 42.3584) < 0.01 and abs(lon + 71.0598) < 0.01
+
+
 def parse_gbxml(source) -> dict:
     """
     gbXML(파일 경로·파일객체·bytes·str) → 우리 BIM 스키마 dict.
@@ -275,6 +288,32 @@ def parse_gbxml(source) -> dict:
                 bim["_meta"]["gbxml"]["buildingType"] = b.get("buildingType")
             break
 
+    # ── Revit 해석 모델이 만들어졌는가 ──────────────────────────────
+    # 2026-07-17 실제 도담 Revit export(1,251㎡)를 넣었더니 해석 공간이 **15㎡**뿐이었고
+    # 나머지 99%가 Shade 377개로 빠졌다. 그런데 화면엔 "walls 6개"라고만 떠서 멀쩡해 보였다.
+    # 세어만 놓고 판단을 안 하면 사용자는 쓰레기를 받아들고 모른다.
+    _envelope = sum(len(bim[k]) for k in ("walls", "roofs", "floors"))
+    _shade = int(skipped.get("Shade", 0))
+    blockers = []
+    if _envelope and _shade > _envelope * 3:
+        blockers.append(
+            f"외피 {_envelope}면 대비 **차양(Shade) {_shade}면** — Revit이 건물을 "
+            f"닫힌 공간으로 인식하지 못하고 대부분을 차양으로 내보냈습니다. "
+            f"Revit [해석] 탭 > 에너지 설정에서 해석 모델을 먼저 만드세요."
+        )
+    _sp_area = sum(float(s.get("area") or 0) for s in bim["spaces"])
+    if bim["spaces"] and _sp_area < 50:
+        blockers.append(
+            f"해석 공간 총 면적이 **{_sp_area:,.1f}㎡** ({len(bim['spaces'])}개)뿐입니다 — "
+            f"건물 전체가 아니라 일부만 인식된 export입니다."
+        )
+    if _DEFAULT_LOCATIONS_HIT(root):
+        blockers.append(
+            "Location이 Revit 기본값(미국 보스턴 42.36°N / -71.06°E)입니다 — "
+            "프로젝트 위치가 설정되지 않았습니다. (우리는 .epw를 따로 쓰므로 해석 자체엔 "
+            "영향이 없지만, 이 export가 기본 설정 그대로라는 신호입니다.)"
+        )
+
     # 무엇이 안 채워졌는지 드러낸다 — 조용히 0으로 두면 진단이 조용히 틀린다
     missing = []
     if not bim.get("total_area_m2"):
@@ -291,6 +330,9 @@ def parse_gbxml(source) -> dict:
         "surfaces": {k: len(bim[k]) for k in ("walls", "windows", "doors", "roofs", "floors")},
         "skipped_surface_types": skipped,
         "missing": missing,
+        # 🔴 '값이 없다'가 아니라 **'이 export를 쓰면 안 된다'** — 성격이 다르다.
+        "blockers": blockers,
+        "space_area_m2": round(_sp_area, 2),
         "note": (
             "Revit → File > Export > gbXML 로 내보낸 파일입니다. "
             "Revit은 IDF를 직접 export하지 않으며(2026 기준), Insight/GBS 경로는 2025-07-01 폐지."

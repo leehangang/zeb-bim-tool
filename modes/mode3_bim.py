@@ -344,6 +344,18 @@ def render_bim_panel() -> None:
                 _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
                 st.success(f"✅ gbXML 파싱 — {_cnt}", icon="📐")
 
+                # 🔴 파싱이 됐다고 쓸 수 있는 건 아니다. 실제 도담 export는 1,251㎡ 건물에서
+                #    해석 공간이 15㎡뿐이었는데 화면엔 "walls 6개"만 떠서 멀쩡해 보였다.
+                #    이건 '값 몇 개 없음'이 아니라 '이 파일을 쓰면 안 됨'이다.
+                if _g.get("blockers"):
+                    st.error(
+                        "🚫 **이 gbXML로는 진단할 수 없습니다** — Revit 해석 모델이 "
+                        "제대로 만들어지지 않았습니다.\n\n"
+                        + "\n".join(f"- {b}" for b in _g["blockers"])
+                        + "\n\n아래 결과는 **건물 전체가 아닙니다.** 참고용으로만 보세요.",
+                        icon="🚫",
+                    )
+
                 # EnergyPlus — GR 성능개선비율의 '센터 지정 프로그램' 경로.
                 # E+는 Streamlit 무료 티어에서 못 돈다(CPU 0.078코어 하한·apt 부재).
                 # 서비스 URL이 있으면 거기서 돌리고, 없으면 IDF를 내려줘 로컬 실행으로 물러선다.

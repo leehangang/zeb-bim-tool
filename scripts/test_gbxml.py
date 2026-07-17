@@ -263,6 +263,46 @@ check("gbXML 데모가 최소 1개 있다 (에너지 해석을 눌러볼 수 있
       any(f.endswith(".gbxml") for f in _samples), f'{_samples}')
 check("데모 칸 수를 하드코딩하지 않는다 (st.columns(3)에 4개 넣다 하나 잃었다)",
       "st.columns(len(samples))" in _ui)
+
+# ── 쓸 수 없는 export를 '쓸 수 없다'고 말하는가 ──────────────────────────
+# 2026-07-17 실제 도담 Revit export: 1,251㎡ 건물인데 해석 공간이 15㎡, 나머지 99%가
+# Shade 377면. 그런데 화면엔 "walls 6개"만 떠서 멀쩡해 보였다. 세어놓고 판단을 안 했다.
+_BAD = """<gbXML xmlns="http://www.gbxml.org/schema" version="7.03">
+  <Campus id="c">
+    <Location><Latitude>42.358429</Latitude><Longitude>-71.0597763</Longitude></Location>
+    <Building id="b" buildingType="Office"><Area>14.96</Area>
+      <Space id="s1"><Area>5.25</Area></Space>
+    </Building>
+    <Surface id="w1" surfaceType="ExteriorWall" constructionIdRef="c1">
+      <AdjacentSpaceId spaceIdRef="s1"/>
+      <RectangularGeometry><Width>2</Width><Height>2</Height></RectangularGeometry>
+    </Surface>
+    {shades}
+  </Campus>
+  <Construction id="c1"><U-value unit="WPerSquareMeterK">0.81</U-value></Construction>
+</gbXML>"""
+_shade_xml = "".join(
+    f'<Surface id="sh{i}" surfaceType="Shade">'
+    f"<RectangularGeometry><Width>1</Width><Height>1</Height></RectangularGeometry></Surface>"
+    for i in range(30)
+)
+_bad = parse_gbxml(_BAD.format(shades=_shade_xml))["_meta"]["gbxml"]
+check("차양이 외피를 압도하면 막는다 (해석 모델 미생성)",
+      any("차양" in b for b in _bad["blockers"]), f'{len(_bad["blockers"])}건')
+check("해석 공간이 건물이라 하기엔 너무 작으면 막는다",
+      any("일부만 인식" in b for b in _bad["blockers"]))
+check("Revit 기본 위치(보스턴)를 알아챈다",
+      any("보스턴" in b for b in _bad["blockers"]))
+check("blockers를 화면이 접지 않고 st.error로 띄운다",
+      '_g.get("blockers")' in _ui and "st.error(" in _ui)
+
+# 🔑 오탐이 나면 정상 파일도 막혀 아무도 못 쓴다
+check("정상 gbXML엔 blockers가 없다 (오탐 금지)",
+      parse_gbxml(FIXTURE)["_meta"]["gbxml"]["blockers"] == [],
+      f'{parse_gbxml(FIXTURE)["_meta"]["gbxml"]["blockers"]}')
+_full = PROJECT_ROOT / "data" / "sample_bim" / "demo_daycare_full.gbxml"
+check("데모 gbXML에도 blockers가 없다",
+      parse_gbxml(str(_full))["_meta"]["gbxml"]["blockers"] == [])
 check("바닥 누락 경고는 접지 않고 본문에 띄운다 (조용한 실패라서)",
       '"존 면적이 0" in w' in _ui and "st.warning(" in _ui)
 
