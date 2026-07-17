@@ -225,6 +225,61 @@ def test_intake_session_flow():
     print(f"  [PASS] 민간 draft 생성 ({len(_pm)} chars) — 제목·근거·서류가 민간")
 
 
+def test_screen_path_carries_track():
+    """화면이 초안을 그릴 때 트랙을 넘기는가.
+
+    위 테스트는 IntakeSession.generate_draft()만 봤다. 그건 self.track을 넘기니
+    항상 통과한다. 정작 사용자가 보는 건 mode4의 _render_draft_tab이고, 거기서
+    render_application_markdown(session.application)을 track 없이 불러서
+    **민간 신청자가 공공 서식을 내려받고 있었다.** 엔진 경로만 시험하면 못 잡는다.
+    """
+    import inspect
+    import pathlib
+    import re
+
+    from core.intake_tools import render_application_markdown
+
+    print("\n" + "=" * 70)
+    print("화면 경로가 트랙을 넘기는가")
+    print("=" * 70)
+
+    # ① 기본값이 있으면 호출부의 실수가 조용히 정답이 된다
+    sig = inspect.signature(render_application_markdown)
+    assert sig.parameters["track"].default is inspect.Parameter.empty, (
+        "render_application_markdown(track=...)에 기본값이 생겼다. "
+        "기본값은 track을 안 넘긴 호출부를 조용히 공공으로 만든다."
+    )
+    print("  [PASS] track에 기본값이 없다 — 안 넘기면 터진다")
+
+    # ② 화면 호출부가 실제로 track을 넘기는가
+    src = pathlib.Path("modes/mode4_intake.py").read_text(encoding="utf-8")
+    calls = re.findall(r"render_application_markdown\(([^)]*)\)", src)
+    assert calls, "mode4가 초안을 안 그린다?"
+    for c in calls:
+        assert c.count(",") >= 1, f"track 없이 부른다: render_application_markdown({c})"
+    print(f"  [PASS] mode4 호출 {len(calls)}곳 모두 track을 넘긴다")
+
+    # ③ 초기화 버튼이 트랙을 버리지 않는가
+    resets = re.findall(r"IntakeSession\(([^)]*)\)", src)
+    for r in resets:
+        assert "track" in r, f"IntakeSession({r}) — 초기화가 공공으로 되돌린다"
+    print(f"  [PASS] IntakeSession 생성 {len(resets)}곳 모두 track을 넘긴다")
+
+    # ④ 민간 세션의 화면 미리보기가 민간 서식인가 (실제 경로 재현)
+    from core.intake_schema import FIELDS, all_required_fields
+    from core.intake_tools import IntakeSession
+
+    priv = IntakeSession(track="private")
+    priv.make_dispatcher()(
+        "update_application",
+        {k: FIELDS[k]["example"] for k in all_required_fields("private")},
+    )
+    preview = render_application_markdown(priv.application, priv.track)
+    assert "민간건축물" in preview, preview[:80]
+    assert "공공건축물 그린리모델링 지원사업" not in preview, "미리보기가 공공 서식이다"
+    print("  [PASS] 민간 세션의 화면 미리보기가 민간 서식")
+
+
 def test_session_rejects_unknown_fields():
     """알 수 없는 필드는 거부."""
     print("\n" + "=" * 70)
@@ -339,6 +394,7 @@ if __name__ == "__main__":
         test_next_question_suggestion()
         test_run_intake_turn_mock()
         test_full_conversation_to_draft()
+        test_screen_path_carries_track()
         print("\n" + "=" * 70)
         print("Mode 4 테스트 전체 통과 ✅")
         print("=" * 70)

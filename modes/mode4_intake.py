@@ -403,9 +403,11 @@ def _render_state_tab(session) -> None:
         st.dataframe(df, hide_index=True, width="stretch")
 
     if st.button("🔄 신청서 전체 초기화"):
-        st.session_state["_mode4_session"] = __import__(
-            "core.intake_tools", fromlist=["IntakeSession"]
-        ).IntakeSession()
+        # 지금 트랙을 그대로 유지한다. 예전엔 track을 안 넘겨 공공으로 되돌아갔는데,
+        # _mode4_track은 그대로라 위쪽 재생성 가드(#215)가 못 잡고 계속 어긋났다.
+        from core.intake_tools import IntakeSession
+
+        st.session_state["_mode4_session"] = IntakeSession(track=session.track)
         st.session_state["_mode4_history"] = []
         st.session_state["_mode4_last_draft"] = None
         st.rerun()
@@ -429,8 +431,9 @@ def _render_draft_tab(session) -> None:
             st.markdown(f"- {label}")
 
     # 현재까지의 상태로 임시 미리보기 (필수 부족해도)
+    # session.track을 반드시 넘긴다 — 안 넘기면 민간 신청자가 공공 서식을 받는다.
     st.subheader("📄 신청서 미리보기 (현재 상태 기준)")
-    preview_md = render_application_markdown(session.application)
+    preview_md = render_application_markdown(session.application, session.track)
     with st.expander("초안 전문 보기/숨기기", expanded=progress["is_ready_for_draft"]):
         st.markdown(preview_md)
 

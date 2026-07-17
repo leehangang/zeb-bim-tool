@@ -270,11 +270,16 @@ def _required_documents(app: dict, track: str) -> list:
     return docs
 
 
-def render_application_markdown(app: dict, track: str = "public") -> str:
+def render_application_markdown(app: dict, track: str) -> str:
     """현재 신청서 dict → 마크다운 초안.
 
     ⚠️ 예전엔 제목이 '공공건축물 …'으로 하드코딩돼 있어, 민간 신청자도
        공공 서식 초안을 받았다. 두 사업은 근거·서식·제출 주체가 전부 다르다.
+
+    track에 기본값을 두지 않는다. 한때 `track="public"`이 기본이었는데, 그게
+    **이 함수를 고친 뒤에도 버그를 살려뒀다** — 화면(mode4)이 track을 안 넘겨서
+    민간 신청자가 계속 공공 서식을 내려받았고, 기본값이 있으니 아무도 안 터졌다.
+    기본값은 호출부의 실수를 조용히 정답처럼 만든다. 트랙은 부를 때 정하는 것이다.
     """
     lines = []
     is_private = track == "private"
