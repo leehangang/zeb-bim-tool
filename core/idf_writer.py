@@ -334,6 +334,7 @@ Schedule:Compact, SCH_ACT, Any, Through: 12/31, For: AllDays, Until: 24:00, 120;
 
 ThermostatSetpoint:DualSetpoint, TSTAT_SP, SCH_HEAT, SCH_COOL;
 Schedule:Compact, ALWAYS_4, Any, Through: 12/31, For: AllDays, Until: 24:00, 4;
+Schedule:Compact, ALWAYS_1, Any, Through: 12/31, For: AllDays, Until: 24:00, 1;
 ScheduleTypeLimits, Any;
 """)
 
@@ -364,9 +365,37 @@ ElectricEquipment,
 ZoneControl:Thermostat,
     TSTAT_{z}, {z}, ALWAYS_4, ThermostatSetpoint:DualSetpoint, TSTAT_SP;
 
+!-  침기 0.5회/h — 없으면 존이 완전 밀폐 상자가 된다.
+ZoneInfiltration:DesignFlowRate,
+    INF_{z}, {z}, ALWAYS_1, AirChanges/Hour, , , , 0.5;
+
+!-  외기 도입 7.5 L/s·인. 이게 없으면 내부발열이 갇혀 **한겨울에도 냉방**이 돈다 —
+!-  실제로 2026-07-17 데모 실행에서 1월 냉방이 최대치로 나왔고, 원인이 이것이었다.
+DesignSpecification:OutdoorAir,
+    DSOA_{z}, Flow/Person, 0.0075, , , , SCH_OCC;
+
 ZoneHVAC:IdealLoadsAirSystem,
-    IDEAL_{z}, , NODE_SUP_{z}, , , 50, 13, 0.0156, 0.0077,
-    NoLimit, , , NoLimit;
+    IDEAL_{z},               !- Name
+    ,                        !- Availability Schedule
+    NODE_SUP_{z},            !- Zone Supply Air Node Name
+    ,                        !- Zone Exhaust Air Node Name
+    ,                        !- System Inlet Air Node Name
+    50,                      !- Max Heating Supply Air Temp
+    13,                      !- Min Cooling Supply Air Temp
+    0.0156,                  !- Max Heating Supply Air Humidity Ratio
+    0.0077,                  !- Min Cooling Supply Air Humidity Ratio
+    NoLimit,                 !- Heating Limit
+    ,                        !- Max Heating Air Flow Rate
+    ,                        !- Max Sensible Heating Capacity
+    NoLimit,                 !- Cooling Limit
+    ,                        !- Max Cooling Air Flow Rate
+    ,                        !- Max Total Cooling Capacity
+    ,                        !- Heating Availability Schedule
+    ,                        !- Cooling Availability Schedule
+    None,                    !- Dehumidification Control Type
+    ,                        !- Cooling Sensible Heat Ratio
+    None,                    !- Humidification Control Type
+    DSOA_{z};                !- Design Specification Outdoor Air Object Name
 
 ZoneHVAC:EquipmentConnections,
     {z}, EQL_{z}, NODE_SUP_{z}, , NODE_AIR_{z}, NODE_RET_{z};
@@ -378,7 +407,10 @@ ZoneHVAC:EquipmentList,
     out.append("""
 !-  ===== 출력 =====
 !-  성능개선비율은 '개선 전 대비'라 이 값들의 전후 비교로 산출한다.
-Output:Meter, DistrictHeating:Facility, Monthly;
+!-  ⚠️ 미터 이름은 E+ 버전을 탄다. DistrictHeating:Facility는 25.1에서 없어졌고
+!-     (DistrictHeatingWater:Facility로 바뀜) 요청하면 Warning만 내고 조용히 빠진다 —
+!-     실제로 난방이 미터에서 통째로 누락돼 있었다. 이름을 바꿀 땐 EP_VERSION도 같이 본다.
+Output:Meter, DistrictHeatingWater:Facility, Monthly;
 Output:Meter, DistrictCooling:Facility, Monthly;
 Output:Meter, Electricity:Facility, Monthly;
 Output:Variable, *, Zone Ideal Loads Supply Air Total Heating Energy, Monthly;

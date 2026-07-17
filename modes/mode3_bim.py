@@ -63,18 +63,23 @@ GBXML_SUFFIXES = (".gbxml", ".xml")
 
 
 def save_uploaded_to_temp(uploaded_file) -> str:
+    """Streamlit UploadedFile → 엔진이 읽는 임시 JSON 경로."""
+    return save_bytes_to_temp(uploaded_file.getvalue(), uploaded_file.name)
+
+
+def save_bytes_to_temp(raw: bytes, name: str) -> str:
     """
-    Streamlit UploadedFile → 엔진이 읽는 임시 **JSON** 파일 경로.
+    업로드 바이트 → 엔진이 읽는 임시 **JSON** 파일 경로.
 
     gbXML(.gbxml/.xml)이면 여기서 우리 스키마로 변환해 JSON으로 떨군다.
     엔진(diagnose_from_json)은 JSON만 알면 되게 두고, 포맷 차이는 이 경계에서 흡수한다.
+    업로드와 데모 파일이 **같은 경계**를 지나게 한다 — 두 갈래면 한쪽만 고쳐진다.
 
     왜 gbXML인가 — Revit이 실제로 내보내는 유일한 에너지 해석 포맷이다.
     (Revit 2026 Export 목록에 IDF 없음. Insight/GBS 경로는 2025-07-01 폐지.)
     자세한 경위는 core/gbxml_parser.py 참고.
     """
-    raw = uploaded_file.getvalue()
-    suffix = Path(uploaded_file.name).suffix.lower() or ".json"
+    suffix = Path(name).suffix.lower() or ".json"
 
     if suffix in GBXML_SUFFIXES:
         import json
@@ -93,6 +98,89 @@ def save_uploaded_to_temp(uploaded_file) -> str:
     ) as tmp:
         tmp.write(raw)
         return tmp.name
+
+
+_MONTHS = ["1월", "2월", "3월", "4월", "5월", "6월",
+           "7월", "8월", "9월", "10월", "11월", "12월"]
+
+
+def _render_eplus_result(res: dict, bim: dict) -> None:
+    """EnergyPlus 결과 → 화면.
+
+    원본 미터명은 사용자가 읽을 물건이 아니다 —
+    "IDEAL_SP-MAIN:Zone Ideal Loads Supply Air Total Heating Energy [J](Monthly)".
+    시설 미터만 골라 이름을 붙이고, 월별 프로파일을 그린다.
+    (월별을 보여주는 이유: 1월에 냉방이 최대로 나오면 한눈에 틀린 걸 안다.
+     실제로 환기가 빠져 그런 결과가 나온 적이 있다.)
+    """
+    import streamlit as st
+
+    from core.eplus_client import label_meter
+
+    meters = res.get("meters") or {}
+    if not meters:
+        st.warning("해석은 끝났는데 미터가 비어 있습니다 — 아래 원문을 확인하세요.", icon="⚠️")
+        return
+
+    area = 0.0
+    for _sp in (bim.get("spaces") or []):
+        area += float(_sp.get("area") or 0)
+
+    named = []
+    for k, v in meters.items():
+        lb = label_meter(k)
+        if lb and isinstance(v, dict):
+            named.append((lb[1], lb[0], v, k))
+
+    if named:
+        cols = st.columns(len(named))
+        for c, (icon, label, v, _k) in zip(cols, named):
+            _kwh = v["annual_kWh"]
+            c.metric(
+                f"{icon} {label}",
+                f"{_kwh:,.0f} kWh",
+                delta=(f"{_kwh / area:,.1f} kWh/㎡" if area > 0 else None),
+                delta_color="off",
+            )
+        if area > 0:
+            st.caption(
+                f"연면적 {area:,.0f}㎡ 기준 · 합계 "
+                f"{sum(v['annual_kWh'] for _, _, v, _ in named) / area:,.1f} kWh/㎡·년"
+            )
+
+    # 월별 프로파일 — 계절이 뒤집혀 있으면 여기서 바로 보인다
+    _monthly = {
+        label: [x / 3_600_000.0 for x in v.get("monthly") or []]
+        for _, label, v, _ in named
+        if len(v.get("monthly") or []) == 12
+    }
+    if _monthly:
+        import pandas as pd
+
+        st.bar_chart(pd.DataFrame(_monthly, index=_MONTHS), height=260)
+        st.caption("월별 kWh — 난방은 겨울, 냉방은 여름에 몰려야 정상입니다.")
+
+    with st.expander("🔬 EnergyPlus 원본 미터 전체"):
+        import pandas as pd
+
+        st.dataframe(
+            pd.DataFrame([
+                {"미터": k, "연간 kWh": round(v["annual_kWh"], 1)}
+                for k, v in meters.items() if isinstance(v, dict)
+            ]),
+            width="stretch", hide_index=True,
+        )
+        st.caption(
+            "`IDEAL_*`는 Output:Variable(존별 부하), `*:Facility`는 Output:Meter(시설 합계)라 "
+            "냉·난방이 두 번 보입니다. 위 요약과 성능개선비율은 **시설 미터만** 셉니다."
+        )
+
+    st.warning(
+        "**이 값을 신청서에 그대로 쓰지 마세요.** 실제 설비가 아니라 IdealLoads(이상적 "
+        "공조)로 부하만 뽑은 값이고, 재실·조명·기기 일정과 SHGC는 표준 가정입니다. "
+        "gbXML에 없는 값은 지어내지 않았으므로 그만큼 빠져 있습니다.",
+        icon="⚠️",
+    )
 
 
 # ====================================================================
@@ -156,14 +244,14 @@ def render_bim_panel() -> None:
              "🏫 도담어린이집",
              "1,251㎡ · 2014년 · 어린이집",
              "KEPCO 검증 케이스. 일부 보강 완료 (바닥단열/태양열)"),
+            ("demo_daycare_full.gbxml",
+             "🔬 데모 gbXML (가상)",
+             "1,252㎡ · 어린이집 · 외피 6면",
+             "에너지 해석까지 도는 예시. 실제 건물 아님"),
             ("library_archi_sample.json",
              "📚 공공도서관",
              "3,500㎡ · 1998년 · 도서관",
              "노후 중대형 건물. 부분 보강 완료, 큰 잠재력"),
-            ("health_center_sample.json",
-             "🏥 보건지소",
-             "450㎡ · 1985년 · 보건소",
-             "최악 상태 소규모. 점수 상승 잠재력 극대"),
         ]
         for i, (fname, title, meta, desc) in enumerate(samples):
             with sample_cols[i]:
@@ -202,16 +290,51 @@ def render_bim_panel() -> None:
     sample_path = st.session_state.pop("_mode3_sample_path", None)
     sample_name = st.session_state.pop("_mode3_sample_name", None)
 
+    # 데모 gbXML은 세션에 붙여둔다 — 샘플 버튼은 rerun을 타서 pop되면 사라진다.
+    if sample_path and Path(sample_path).suffix.lower() in GBXML_SUFFIXES:
+        st.session_state["_mode3_gb_demo"] = (sample_path, sample_name)
+        sample_path = sample_name = None
+    if uploaded is not None:
+        st.session_state.pop("_mode3_gb_demo", None)   # 업로드가 데모를 이긴다
+    _gb_demo = st.session_state.get("_mode3_gb_demo")
+
+    # 업로드든 데모든 gbXML 원본을 여기서 하나로 모은다. 두 갈래로 두면 한쪽만 고쳐진다.
+    _gb_src = None      # (bytes, 표시이름)
+    if uploaded is not None and Path(uploaded.name).suffix.lower() in GBXML_SUFFIXES:
+        _gb_src = (uploaded.getvalue(), uploaded.name)
+    elif _gb_demo:
+        try:
+            _gb_src = (Path(_gb_demo[0]).read_bytes(), _gb_demo[1])
+        except OSError as _e:
+            st.error(f"데모 gbXML을 읽지 못했습니다 — {_e}")
+
     if uploaded is not None:
         input_key = ("upload", uploaded.name, uploaded.size, duration)
         source_for_diagnosis = "upload"
+    elif _gb_src:
+        input_key = ("gbdemo", _gb_demo[0], duration)
+        source_for_diagnosis = "gbdemo"
+    elif sample_path is not None:
+        input_key = ("sample", sample_name, duration)
+        source_for_diagnosis = "sample"
+    else:
+        input_key = None
+        source_for_diagnosis = None
+
+    if _gb_src:
         # gbXML은 지오메트리 export라 우리가 필요한 걸 다 담지 못한다.
-        # 무엇이 비었는지 **업로드 즉시** 알린다 — 안 그러면 조용히 0으로 진단된다.
-        if Path(uploaded.name).suffix.lower() in GBXML_SUFFIXES:
+        # 무엇이 비었는지 **즉시** 알린다 — 안 그러면 조용히 0으로 진단된다.
+        if _gb_demo:
+            st.info(
+                f"🔬 **데모 gbXML** ({_gb_src[1]}) — 실제 건물이 아니라 화면 예시용 "
+                "가상 모델입니다. 연면적만 도담과 비슷하게 맞췄고 형상·열관류율은 가정값입니다.",
+                icon="🔬",
+            )
+        if _gb_src:
             try:
                 from core.gbxml_parser import parse_gbxml
 
-                _peek = parse_gbxml(uploaded.getvalue())
+                _peek = parse_gbxml(_gb_src[0])
                 _g = _peek["_meta"]["gbxml"]
                 _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
                 st.success(f"✅ gbXML 파싱 — {_cnt}", icon="📐")
@@ -229,7 +352,7 @@ def render_bim_panel() -> None:
                     st.download_button(
                         "⬇️ EnergyPlus IDF 내려받기",
                         data=_idf["idf"].encode("utf-8"),
-                        file_name=Path(uploaded.name).stem + ".idf",
+                        file_name=Path(_gb_src[1]).stem + ".idf",
                         mime="text/plain",
                         width="stretch",
                     )
@@ -299,17 +422,7 @@ def render_bim_panel() -> None:
                             )
                         if _res.get("ok"):
                             st.success(f"✅ 해석 완료 — 기상: {_res.get('weather', '?')}")
-                            _m = _res.get("meters") or {}
-                            if _m:
-                                import pandas as pd
-
-                                st.dataframe(
-                                    pd.DataFrame([
-                                        {"미터": k, "연간 kWh": round(v["annual_kWh"], 1)}
-                                        for k, v in _m.items()
-                                    ]),
-                                    width="stretch", hide_index=True,
-                                )
+                            _render_eplus_result(_res, _peek)
                             _w = (_res.get("errors") or {}).get("warning_count", 0)
                             if _w:
                                 st.caption(f"EnergyPlus 경고 {_w}건 — 결과 해석 시 참고하세요.")
@@ -349,12 +462,6 @@ def render_bim_panel() -> None:
                     )
             except Exception as e:
                 st.error(f"gbXML을 읽지 못했습니다 — {type(e).__name__}: {e}")
-    elif sample_path is not None:
-        input_key = ("sample", sample_name, duration)
-        source_for_diagnosis = "sample"
-    else:
-        input_key = None
-        source_for_diagnosis = None
 
     cached_key = st.session_state.get("_mode3_input_key")
     cached_result = st.session_state.get("_mode3_result")
@@ -377,6 +484,9 @@ def render_bim_panel() -> None:
         try:
             if source_for_diagnosis == "upload":
                 diagnose_path = save_uploaded_to_temp(uploaded)
+            elif source_for_diagnosis == "gbdemo":
+                # 데모 gbXML도 업로드와 같은 경계를 지난다
+                diagnose_path = save_bytes_to_temp(_gb_src[0], _gb_src[1])
             else:
                 diagnose_path = sample_path
 

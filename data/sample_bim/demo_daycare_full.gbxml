@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  데모용 gbXML — EnergyPlus 연간 해석이 끝까지 도는 **온전한** 모델.
+
+  ⚠️ 실제 도담어린이집 Revit 모델이 아니다. 화면 예시를 실측 숫자로 보여주려고
+     만든 가상 모델이다. 연면적(1,252㎡)만 도담과 비슷하게 맞췄고 형상·열관류율은
+     가정값이다. 실물 gbXML을 확보하면 이 파일은 데모 자리에서 물러난다.
+
+  doam_sample.gbxml과 역할이 다르다:
+    · doam_sample.gbxml → 파서 검증용. 바닥 U-value가 **일부러 없다**
+      (없는 값을 지어내지 않는지 시험). 그래서 E+에서 부하가 0으로 나온다.
+    · 이 파일          → 화면 예시용. 빠진 값이 없어 해석이 제대로 돈다.
+
+  꼭짓점 순서: 바깥에서 봤을 때 좌상단 시작 · 반시계 (GlobalGeometryRules와 일치).
+  이 순서가 틀리면 E+가 면 법선을 반대로 잡아 조용히 틀린 결과를 낸다.
+-->
+<gbXML xmlns="http://www.gbxml.org/schema" temperatureUnit="C" lengthUnit="Meters"
+       areaUnit="SquareMeters" volumeUnit="CubicMeters" useSIUnitsForResults="true"
+       version="6.01">
+  <Campus id="cmps-1">
+    <Location>
+      <ZipcodeOrPostalCode>39660</ZipcodeOrPostalCode>
+      <Name>Gimcheon, Gyeongbuk</Name>
+    </Location>
+
+    <Building id="bldg-1" buildingType="DayCare">
+      <Area>1252.0</Area>
+      <Space id="sp-main" spaceType="DayCare">
+        <Area>1252.0</Area>
+        <Volume>4382.0</Volume>
+      </Space>
+    </Building>
+
+    <!-- 남측 외벽 (y=0) · 40 × 3.5 = 140㎡ · 창 45 + 문 4.2 차감 -->
+    <Surface id="wall-south" surfaceType="ExteriorWall" constructionIdRef="con-wall">
+      <AdjacentSpaceId spaceIdRef="sp-main"/>
+      <RectangularGeometry><Width>40.0</Width><Height>3.5</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+      <Opening id="win-south" openingType="FixedWindow" windowTypeIdRef="wt-glazing">
+        <RectangularGeometry><Width>30.0</Width><Height>1.5</Height></RectangularGeometry>
+        <PlanarGeometry>
+          <PolyLoop>
+            <CartesianPoint><Coordinate>5.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>2.5</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>5.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>1.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>35.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>1.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>35.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>2.5</Coordinate></CartesianPoint>
+          </PolyLoop>
+        </PlanarGeometry>
+      </Opening>
+      <Opening id="door-main" openingType="NonSlidingDoor" windowTypeIdRef="wt-door">
+        <RectangularGeometry><Width>2.0</Width><Height>2.1</Height></RectangularGeometry>
+        <PlanarGeometry>
+          <PolyLoop>
+            <CartesianPoint><Coordinate>19.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>2.1</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>19.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>21.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>21.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>2.1</Coordinate></CartesianPoint>
+          </PolyLoop>
+        </PlanarGeometry>
+      </Opening>
+    </Surface>
+
+    <!-- 북측 외벽 (y=31.3) · 바깥에서 보면 +x가 왼쪽이라 좌상단 = (40, 31.3, 3.5) -->
+    <Surface id="wall-north" surfaceType="ExteriorWall" constructionIdRef="con-wall">
+      <AdjacentSpaceId spaceIdRef="sp-main"/>
+      <RectangularGeometry><Width>40.0</Width><Height>3.5</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+      <Opening id="win-north" openingType="FixedWindow" windowTypeIdRef="wt-glazing">
+        <RectangularGeometry><Width>20.0</Width><Height>1.5</Height></RectangularGeometry>
+        <PlanarGeometry>
+          <PolyLoop>
+            <CartesianPoint><Coordinate>30.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>2.5</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>30.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>1.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>10.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>1.0</Coordinate></CartesianPoint>
+            <CartesianPoint><Coordinate>10.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>2.5</Coordinate></CartesianPoint>
+          </PolyLoop>
+        </PlanarGeometry>
+      </Opening>
+    </Surface>
+
+    <!-- 동측 외벽 (x=40) · 바깥에서 보면 좌상단 = (40, 0, 3.5) -->
+    <Surface id="wall-east" surfaceType="ExteriorWall" constructionIdRef="con-wall">
+      <AdjacentSpaceId spaceIdRef="sp-main"/>
+      <RectangularGeometry><Width>31.3</Width><Height>3.5</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+    </Surface>
+
+    <!-- 서측 외벽 (x=0) · 바깥에서 보면 좌상단 = (0, 31.3, 3.5) -->
+    <Surface id="wall-west" surfaceType="ExteriorWall" constructionIdRef="con-wall">
+      <AdjacentSpaceId spaceIdRef="sp-main"/>
+      <RectangularGeometry><Width>31.3</Width><Height>3.5</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+    </Surface>
+
+    <!-- 지붕 (z=3.5) · 위에서 봤을 때 반시계 → 법선이 +z(바깥)를 향한다 -->
+    <Surface id="roof-main" surfaceType="Roof" constructionIdRef="con-roof">
+      <AdjacentSpaceId spaceIdRef="sp-main"/>
+      <RectangularGeometry><Width>40.0</Width><Height>31.3</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>3.5</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+    </Surface>
+
+    <!-- 바닥 (z=0, 지면접지) · 아래에서 봤을 때 반시계 = 위에서 보면 시계 -->
+    <Surface id="floor-main" surfaceType="SlabOnGrade" constructionIdRef="con-floor">
+      <AdjacentSpaceId spaceIdRef="sp-main"/>
+      <RectangularGeometry><Width>40.0</Width><Height>31.3</Height></RectangularGeometry>
+      <PlanarGeometry>
+        <PolyLoop>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>0.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>31.3</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+          <CartesianPoint><Coordinate>40.0</Coordinate><Coordinate>0.0</Coordinate><Coordinate>0.0</Coordinate></CartesianPoint>
+        </PolyLoop>
+      </PlanarGeometry>
+    </Surface>
+  </Campus>
+
+  <!-- 열관류율 — 2014년 준공 어린이집을 상정한 **가정값**이다 (도담 실측 아님) -->
+  <Construction id="con-wall">
+    <U-value unit="WPerSquareMeterK">0.240</U-value>
+    <Name>Exterior Wall</Name>
+  </Construction>
+  <Construction id="con-roof">
+    <U-value unit="WPerSquareMeterK">0.150</U-value>
+    <Name>Roof</Name>
+  </Construction>
+  <Construction id="con-floor">
+    <U-value unit="WPerSquareMeterK">0.290</U-value>
+    <Name>Slab On Grade</Name>
+  </Construction>
+
+  <WindowType id="wt-glazing">
+    <U-value unit="WPerSquareMeterK">1.500</U-value>
+    <Name>Double Glazing</Name>
+  </WindowType>
+  <WindowType id="wt-door">
+    <U-value unit="WPerSquareMeterK">2.400</U-value>
+    <Name>Entrance Door</Name>
+  </WindowType>
+</gbXML>

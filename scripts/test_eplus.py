@@ -20,6 +20,7 @@ if hasattr(sys.stdout, "buffer"):
 import os  # noqa: E402
 
 from core import eplus_client as EC  # noqa: E402
+from core.idf_writer import EP_VERSION, write_idf  # noqa: E402
 
 fails = []
 
@@ -103,26 +104,55 @@ check("(100−59)/100 = 41.0%", imp and abs(imp["성능개선비율_pct"] - 41.0
 check("분모가 '개선 전'임을 명시", imp and "개선 전" in imp["분모"])
 check("20% 기준 충족 판정", imp and imp["충족"] is True)
 
-low = EC.improvement_ratio(before, {"meters": {"E": {"annual_kWh": 85.0}}})
+low = EC.improvement_ratio(before, {"meters": {"Electricity:Facility": {"annual_kWh": 85.0}}})
 check("15%면 미충족 (기준 20%)", low and low["충족"] is False, f'{low["성능개선비율_pct"]}%')
 
-check("여러 미터를 합산한다",
+check("여러 시설 미터를 합산한다",
       EC.improvement_ratio(
-          {"meters": {"A": {"annual_kWh": 60.0}, "B": {"annual_kWh": 40.0}}},
-          {"meters": {"A": {"annual_kWh": 30.0}, "B": {"annual_kWh": 30.0}}},
+          {"meters": {"DistrictHeatingWater:Facility": {"annual_kWh": 60.0},
+                      "DistrictCooling:Facility": {"annual_kWh": 40.0}}},
+          {"meters": {"DistrictHeatingWater:Facility": {"annual_kWh": 30.0},
+                      "DistrictCooling:Facility": {"annual_kWh": 30.0}}},
       )["성능개선비율_pct"] == 40.0)
+
+# 🔑 eplusout.csv엔 Output:Meter와 Output:Variable이 함께 들어온다. 다 더하면 냉방이
+#    'DistrictCooling:Facility'와 'IDEAL_*:...Cooling Energy'로 두 번 잡힌다 — 그러고 있었다.
+_dbl = {"meters": {
+    "DistrictCooling:Facility": {"annual_kWh": 100.0},
+    "IDEAL_Z1:Zone Ideal Loads Supply Air Total Cooling Energy [J](Monthly)":
+        {"annual_kWh": 100.0},
+}}
+_dbl_after = {"meters": {
+    "DistrictCooling:Facility": {"annual_kWh": 50.0},
+    "IDEAL_Z1:Zone Ideal Loads Supply Air Total Cooling Energy [J](Monthly)":
+        {"annual_kWh": 50.0},
+}}
+check("Output:Variable을 합계에 이중계산하지 않는다",
+      EC.improvement_ratio(_dbl, _dbl_after)["개선전_kWh"] == 100.0,
+      f'{EC.improvement_ratio(_dbl, _dbl_after)["개선전_kWh"]}')
+
+# 미터 이름은 E+ 버전을 탄다. idf_writer가 내보내는 Output:Meter와 어긋나면
+# 그 미터는 Warning만 내고 조용히 빠진다 — 실제로 난방이 통째로 없었다.
+check("FACILITY_METERS가 idf_writer의 Output:Meter와 일치",
+      all(f"Output:Meter, {m}," in write_idf(
+          {"walls": [], "roofs": [], "floors": [], "windows": [], "doors": []})["idf"]
+          for m in EC.FACILITY_METERS),
+      f'{EC.FACILITY_METERS}')
+check("없어진 옛 미터명을 쓰지 않는다 (25.1에서 DistrictHeating:Facility 삭제)",
+      "DistrictHeating:Facility" not in EC.FACILITY_METERS)
 
 print("\n④ 빈 결과에 0을 지어내지 않는다")
 check("미터 없으면 None (0%가 아니라)", EC.improvement_ratio({}, {}) is None)
+check("시설 미터가 하나도 없으면 None (변수만 있는 경우)",
+      EC.improvement_ratio({"meters": {"IDEAL_Z1:whatever": {"annual_kWh": 10.0}}},
+                           {"meters": {"IDEAL_Z1:whatever": {"annual_kWh": 5.0}}}) is None)
 check("개선전 0이면 None (0으로 나누기 방지)",
-      EC.improvement_ratio({"meters": {"A": {"annual_kWh": 0.0}}},
-                           {"meters": {"A": {"annual_kWh": 0.0}}}) is None)
+      EC.improvement_ratio({"meters": {"Electricity:Facility": {"annual_kWh": 0.0}}},
+                           {"meters": {"Electricity:Facility": {"annual_kWh": 0.0}}}) is None)
 
 print("\n⑤ 서비스 코드가 성립하는가 (Docker 없이 검증 가능한 범위)")
 import ast  # noqa: E402
 import re  # noqa: E402
-
-from core.idf_writer import EP_VERSION, write_idf  # noqa: E402
 
 svc = PROJECT_ROOT / "energyplus_service"
 check("Dockerfile 존재", (svc / "Dockerfile").exists())

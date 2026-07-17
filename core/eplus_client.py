@@ -15,6 +15,32 @@ from typing import Optional
 _TIMEOUT_HEALTH = 8
 _TIMEOUT_RUN = 620          # 서비스측 600초 + 여유
 
+# 시설 단위 미터 — 합계를 낼 때 이것만 센다.
+# 이름은 E+ 버전을 탄다: DistrictHeating:Facility는 25.1에서 DistrictHeatingWater:Facility로
+# 바뀌었고, 옛 이름을 요청하면 Warning만 내고 조용히 빠진다. core.idf_writer가 내보내는
+# Output:Meter 이름과 반드시 같이 움직여야 한다 (scripts/test_eplus.py가 검사).
+FACILITY_METERS = (
+    "DistrictHeatingWater:Facility",
+    "DistrictCooling:Facility",
+    "Electricity:Facility",
+)
+
+# 화면 표시용 이름. 원본 미터명은 사용자가 읽을 물건이 아니다
+# ("IDEAL_SP-MAIN:Zone Ideal Loads Supply Air Total Heating Energy [J](Monthly)").
+METER_LABELS = (
+    ("DistrictHeatingWater:Facility", "난방", "🔥"),
+    ("DistrictCooling:Facility", "냉방", "❄️"),
+    ("Electricity:Facility", "조명·기기 전력", "💡"),
+)
+
+
+def label_meter(name: str) -> Optional[tuple]:
+    """미터 원본명 → (표시명, 아이콘). 시설 미터가 아니면 None."""
+    for prefix, label, icon in METER_LABELS:
+        if name.startswith(prefix):
+            return label, icon
+    return None
+
 
 def service_url() -> Optional[str]:
     """
@@ -106,9 +132,18 @@ def improvement_ratio(before: dict, after: dict) -> Optional[dict]:
     ⚠️ 단 ZEB 인증은 ECO2라 이 결과로는 안 된다.
     """
     def _total_kwh(res: dict) -> Optional[float]:
+        # 🔑 다 더하면 안 된다. eplusout.csv에는 Output:Meter와 Output:Variable이 함께
+        #    들어 있어서, 냉방이 'DistrictCooling:Facility'와 'IDEAL_*:Zone Ideal Loads
+        #    Supply Air Total Cooling Energy'로 **두 번** 잡힌다. 실제로 그러고 있었다.
+        #    시설 단위 미터만 골라 센다.
         m = (res or {}).get("meters") or {}
-        vals = [v.get("annual_kWh") for v in m.values() if isinstance(v, dict)]
-        vals = [v for v in vals if isinstance(v, (int, float))]
+        vals = [
+            v["annual_kWh"]
+            for k, v in m.items()
+            if isinstance(v, dict)
+            and isinstance(v.get("annual_kWh"), (int, float))
+            and any(k.startswith(p) for p in FACILITY_METERS)
+        ]
         return sum(vals) if vals else None
 
     b, a = _total_kwh(before), _total_kwh(after)
