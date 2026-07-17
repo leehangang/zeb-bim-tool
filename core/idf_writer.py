@@ -15,7 +15,7 @@
 왜 우리가 직접 쓰는가 (eppy·openstudio를 안 씀)
 -----------------------------------------------
 · **eppy는 시뮬레이터가 아니다.** IDF 편집기이고, IDF를 다루려면 Energy+.idd가 필요한데
-  eppy 동봉 IDD는 최신이 V9_2_0(2019)이라 현행 E+ 26.1보다 7년 낡았다.
+  eppy 동봉 IDD는 최신이 V9_2_0(2019)이라 우리가 고정한 E+ 25.1(EP_VERSION)보다 6년 낡았다.
   우리는 IDF를 *편집*하는 게 아니라 *생성*하므로 텍스트 출력이면 충분하다.
 · openstudio wheel은 cp313까지라 우리(3.14)에 설치 불가. 게다가 그 gbXML 임포트가
   Construction을 조용히 누락시키는 알려진 결함이 있다.
@@ -131,8 +131,9 @@ def write_idf(
 !-  ZEB-ROI 자동 생성 IDF
 !-  출처: {bim.get('_meta', {}).get('source', 'unknown')} → core/idf_writer.py
 !-  ⚠️ 이 파일은 **자동 변환 결과**입니다. 그대로 신청서에 쓰지 마세요.
-!-     · 단일 존(Zone)으로 단순화 — gbXML Space 분할 미반영
-!-     · HVAC은 IdealLoads (실제 설비 미모델링) → 부하만 산출
+!-     · HVAC은 IdealLoads (실제 설비 미모델링) → **부하만** 나오고 소요량은 안 나옴
+!-       (소요량 = 부하 ÷ 설비효율. IdealLoads엔 효율이 없다.)
+!-     · 급탕·신재생·축열 미모델링 (Material:NoMass만 써서 E+가 열용량 없음을 경고한다)
 !-     · 재실·조명·기기 일정은 어린이집 표준 가정 (원문 근거 없음)
 !-     · 날씨 파일(.epw)은 별도 필요: {weather_hint}
 !-  GR 성능개선비율은 EnergyPlus가 센터 지정 프로그램이므로 인정 대상입니다

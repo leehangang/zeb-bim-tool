@@ -358,6 +358,17 @@ _b2_nou = parse_gbxml(_2F.replace('<U-value unit="WPerSquareMeterK">1.5</U-value
 check("존간 면 U 미상이면 skipped에 '존이 안 닫힙니다'를 남긴다",
       any("안 닫힙니다" in s for s in write_idf(_b2_nou)["skipped"]),
       f'{write_idf(_b2_nou)["skipped"]}')
+
+# 🔴 IDF 헤더는 사용자가 파일을 열었을 때 읽는 유일한 설명이다. 다중 존을 넣고도
+#    "단일 존으로 단순화"가 그대로 남아 있었다 — 한계를 적어둔 곳이 거짓말을 하면
+#    한계를 안 적은 것보다 나쁘다.
+_hdr = _r2f["idf"].split("Version,")[0]
+check("IDF 헤더가 '단일 존'이라고 거짓말하지 않는다",
+      "단일 존" not in _hdr and "Space 분할 미반영" not in _hdr)
+check("헤더가 실제 한계를 적는다 (부하만 나옴 · 소요량 아님)",
+      "부하만" in _hdr and "소요량" in _hdr)
+check("헤더에 적힌 존 수와 실제 존 수가 맞는다",
+      _r2f["idf"].count("\nZone,\n") == 2, f'{_r2f["idf"].count(chr(10) + "Zone," + chr(10))}')
 check("바닥 누락 경고는 접지 않고 본문에 띄운다 (조용한 실패라서)",
       '"존 면적이 0" in w' in _ui and "st.warning(" in _ui)
 
