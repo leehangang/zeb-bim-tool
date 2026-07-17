@@ -20,6 +20,7 @@ core/params.py — 버전드 파라미터 테이블 로더
     missing()             — status가 확인필요/미완성인 항목 목록 (값 고정 금지 대상)
 """
 
+import datetime as _dt
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
@@ -144,12 +145,31 @@ def zeb_cert_fee(exclusive_area_m2: float) -> int:
     return 0
 
 
-def zeb_fee_refund_rate(grade: str, is_mandatory: bool) -> float:
+def zeb_fee_refund_rate(grade: str, is_mandatory: bool,
+                        application_date: Optional[str] = None) -> float:
     """
     ZEB 인증 수수료 환불율.
-    ⚠️ '의무 대상이 아닌' 건물이 자율 인증한 경우에만 적용 (고시 제6조제3항제5호 나목).
+
+    조건 두 개를 모두 넘어야 0이 아니다:
+      ① '의무 대상이 아닌' 건물이 자율 인증 (고시 제6조제3항제5호 나목)
+      ② 신청일이 **2024-12-31 이전** — 부칙 <제2020-574호> 제2조(인증수수료에 관한 적용례):
+         "제6조제3항제5호나목의 개정규정은 2024.12.31일까지 제로에너지건축물 인증을
+          신청한 건에 한하여 적용한다."
+         현행 고시(제2024-893호, 시행 2025.1.1)의 부칙 제2조는 '일반적인 경과조치' 6개 호뿐이고
+         **수수료 적용례를 건드리지 않았다** → 저 기한은 살아 있다.
+
+    🔴 2026년 지금 신청하면 **0이다.** 예전엔 ②를 안 보고 30%를 편익에 넣고 있었다 —
+       도담 ROI를 78만원 부풀리는 방향이었다. 우리에게 유리한 쪽 오류가 더 위험하다.
+
+    Args:
+        application_date: 인증 신청일 'YYYY-MM-DD'. None이면 오늘로 본다.
     """
     if is_mandatory:
+        return 0.0
+
+    deadline = str(get("zeb_incentive", "수수료환불.적용기한", "2024-12-31"))
+    when = application_date or _dt.date.today().isoformat()
+    if str(when) > deadline:
         return 0.0
     return float(get("zeb_incentive", f"수수료환불.등급별환불율.{grade}", 0.0))
 

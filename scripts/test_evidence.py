@@ -476,13 +476,44 @@ else:
           "ISO 13790 과 DIN V 18599 을 기준으로" in _yaml)
     check("고시가 ECO2를 지정하지 않는다는 사실이 기록됨",
           "고시는 ECO2를 지정하지 않는다" in _yaml)
-    check("수수료 환불 적용례 쟁점(2024.12.31)이 params에 기록됨",
-          "확인필요_적용례쟁점" in _yaml and "2024.12.31" in _yaml)
-    # status: 값만 본다. 본문 산문에는 과거 경위로 '확인필요_원문미확보'가 언급된다.
+    # 🔴 2026-07-17: 쟁점을 확정했다. 부칙 <제2020-574호> 제2조가 2024.12.31 기한을 못박고,
+    #    현행 고시(2024-893) 부칙 제2조는 '일반적인 경과조치' 6개 호뿐 — 수수료를 안 건드렸다.
+    #    문제는 **분석을 params에 적어놓고도 코드가 그걸 안 따랐다는 것**이다.
+    #    zeb_fee_refund_rate()가 신청일을 안 봐서 오늘 신청해도 30%를 편익에 넣었다.
+    check("수수료 환불 적용기한(2024.12.31)이 params에 기록됨",
+          "2024.12.31" in _yaml and "적용기한" in _yaml)
+    check("환불 status가 '기한종료'로 확정됨 (쟁점 status 잔존 없음)",
+          "확인필요_적용례쟁점" not in _yaml)
+
     import re as _re
     _statuses = _re.findall(r"^\s*status:\s*(\S+)", _yaml, _re.M)
     check("보정계수 status가 원문대조로 승격됨 (원문미확보 status 잔존 없음)",
           "확인필요_원문미확보" not in _statuses, f"현재 status들: {sorted(set(_statuses))}")
+
+
+print("\n⑮ 수수료 환불 — 코드가 적용기한을 실제로 따르는가")
+from core import params as _PP  # noqa: E402
+
+# 우리에게 유리한 값(30%)이 기본이 되면 안 된다 → 기본은 0
+check("오늘(기한 이후) 신청하면 환불 0", _PP.zeb_fee_refund_rate("5", False) == 0.0)
+check("2025-01-01 신청도 0 (기한 다음날)",
+      _PP.zeb_fee_refund_rate("5", False, "2025-01-01") == 0.0)
+check("2024-12-31 신청이면 30% 살아남 (기한 당일)",
+      _PP.zeb_fee_refund_rate("5", False, "2024-12-31") == 0.3)
+check("의무 대상이면 기한 안이어도 0 (제6조제3항제5호 나목 = 의무 아닌 건물만)",
+      _PP.zeb_fee_refund_rate("5", True, "2024-01-01") == 0.0)
+check("기한은 코드에 박지 않고 params에서 읽는다",
+      "적용기한" in (_ROOT / "core" / "params.py").read_text(encoding="utf-8"))
+
+# 도담 ROI에 실제로 반영되는가 — params만 고치고 엔진이 안 따르면 의미 없다
+from core.roi_calculator import calculate_zeb_cert_fee  # noqa: E402
+
+_doam = calculate_zeb_cert_fee(1251.0, 5, is_mandatory=False)
+check("도담 수수료 390만원 (별표4 1천~3천㎡ 구간)", _doam["수수료"] == 3_900_000)
+check("도담 환불액 0원 — 예전엔 78만원을 편익에 넣고 있었다",
+      _doam["환불액"] == 0, f'{_doam["환불액"]:,}원')
+check("도담 순비용 = 수수료 전액", _doam["순비용"] == 3_900_000)
+    # status: 값만 본다. 본문 산문에는 과거 경위로 '확인필요_원문미확보'가 언급된다.
 
 print()
 if fails:
