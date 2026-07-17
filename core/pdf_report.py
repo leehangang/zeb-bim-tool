@@ -129,7 +129,7 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     today = datetime.date.today().strftime("%Y-%m-%d")
 
     header_band = Table([[
-        Paragraph("ZEB-ROI 그린리모델링 진단 리포트", title_white),
+        Paragraph("ZEB-ROI 종합 리포트", title_white),
         Paragraph(f"발행일<br/>{today}", subtitle_white),
     ]], colWidths=[120*mm, 54*mm])
     header_band.setStyle(TableStyle([
@@ -228,10 +228,15 @@ def generate_pdf_report(result: dict, source_name: str = "BIM") -> bytes:
     # ─────────────────────────────────────
     story.append(Paragraph("11개 GR 기술요소 현황", h2))
 
+    # 🔑 라벨은 core.bim_diagnoser의 단일 소스에서 가져온다.
+    #    예전엔 key.split("_")[1]로 키를 쪼개 써서 PDF에만 '바닥단열난방',
+    #    '신재생태양광'처럼 가운뎃점·괄호·공백이 없는 이름이 나왔다.
+    from core.bim_diagnoser import GR_ELEMENT_LABELS
+
+    _order = {k: (num, label) for num, k, label in GR_ELEMENT_LABELS}
     gr_rows = [["#", "기술요소", "상태", "적용비율", "비고"]]
     for key, info in result["gr_mapping"].items():
-        num = key.split("_")[0]
-        label = key.split("_", 1)[1]
+        num, label = _order.get(key, (key.split("_")[0], key.split("_", 1)[-1]))
         status = info.get("status", "?")
         ratio = info.get("적용비율")
         ratio_str = f"{ratio*100:.0f}%" if ratio is not None else "-"

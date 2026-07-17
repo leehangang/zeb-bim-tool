@@ -42,6 +42,16 @@ def find_double_icons(text: str, label: str = "?") -> List[str]:
     return out
 
 
+# dict를 f-string에 그대로 넣으면 "{'항목': ..., '만점': 3}"이 사용자 문서에 샌다.
+# 실제로 종합 리포트의 '미평가' 목록이 그랬다.
+_DICT_LEAK = re.compile(r"\{'[^}\n]{0,120}\}")
+
+
+def find_dict_leaks(text: str) -> List[str]:
+    """렌더된 문서에 파이썬 dict 원본이 새어 있으면 그 조각을 돌려준다."""
+    return _DICT_LEAK.findall(text or "")
+
+
 def scan_ui(root: pathlib.Path) -> List[str]:
     """modes/*.py + streamlit_app.py 전수 검사."""
     hits = []

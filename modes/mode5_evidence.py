@@ -226,11 +226,6 @@ def render_evidence_panel() -> None:
 
     # ── ① 파라미터 출처 ──────────────────────────────────────────
     with tab1:
-        st.markdown(
-            "제도 파라미터(요율·한도·단가)는 **코드에 하드코딩하지 않고** "
-            "`data/params/*.yaml`에 `source`·`effective_from`·`status`와 함께 둡니다. "
-            "엔진은 이 표를 **결정론적으로 조회**하며 LLM을 경유시키지 않습니다."
-        )
         rows = collect_provenance()
         if not rows:
             st.warning("파라미터를 읽지 못했습니다.")
@@ -265,10 +260,6 @@ def render_evidence_panel() -> None:
     #  화면에서 뺐다 — status는 ① 파라미터 출처의 배지로 이미 다 보인다.)
     with tab5:
         st.markdown("#### 업로드한 BIM과 질문은 어디로 가나")
-        st.markdown(
-            "실제 건물 도면을 올리기 전에 알아야 할 내용입니다. "
-            "**우리는 브라우저 안에서 도는 도구가 아닙니다** — 서버에서 계산합니다."
-        )
         st.error(
             "**업로드한 BIM 파일(gbXML·JSON)은 서버로 전송됩니다.** 이 앱은 Streamlit "
             "Community Cloud(해외 호스팅)에서 Python으로 실행되며, 파일 파싱·진단·ROI 계산이 "
@@ -302,17 +293,5 @@ def render_evidence_panel() -> None:
         ]), hide_index=True, width="stretch")
         st.caption(
             "**EnergyPlus를 안 누르면 Modal로는 아무것도 안 나갑니다.** 진단·ROI만 쓰실 거면 "
-            "데이터가 닿는 곳은 Streamlit 서버 한 곳입니다. IDF는 내려받아 로컬 EnergyPlus로 "
-            "돌리셔도 됩니다 — 그 경로는 저장소 밖으로 안 나갑니다."
-        )
-        st.caption(
-            "저장소에 계정·DB가 없어 **입력 데이터가 영구 보관되지는 않습니다.** "
-            "다만 '전송되지 않는다'와 '보관되지 않는다'는 다릅니다 — "
-            "**전송은 됩니다.** 그 사실을 숨기지 않으려고 이 탭을 둡니다."
-        )
-        st.info(
-            "**왜 이걸 밝히나** — 참고한 modelter.com은 정적 사이트라 \"딜 데이터는 브라우저를 "
-            "떠나지 않습니다\"라고 말할 수 있습니다. **우리는 정반대**인데 아무 말도 하지 않고 "
-            "있었습니다. 같은 문구를 흉내 내는 대신 우리 구조의 사실을 그대로 적습니다.",
-            icon="📐",
+            "데이터가 닿는 곳은 Streamlit 서버 한 곳입니다."
         )

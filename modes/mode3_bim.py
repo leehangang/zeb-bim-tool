@@ -440,6 +440,9 @@ def render_bim_panel() -> None:
                             )
                         if _res.get("ok"):
                             st.success(f"✅ 해석 완료 — 기상: {_res.get('weather', '?')}")
+                            # 리포트가 집어갈 수 있게 세션에 남긴다.
+                            # 안 남기면 화면엔 보이는데 내려받은 문서엔 없다.
+                            st.session_state["_mode3_eplus"] = _res
                             _render_eplus_result(_res, _peek)
                             _w = (_res.get("errors") or {}).get("warning_count", 0)
                             if _w:
@@ -1777,24 +1780,45 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
     import streamlit as st
     from pathlib import Path
 
-    report = result["report"]
     source_name = source_name or "bim.json"  # None 방어 (캐시 경로에서 None 가능)
     file_stem = Path(source_name).stem
 
-    # ── 표지 ────────────────────────────────────────────────────────
     # 빌드 식별자는 근거·출처의 것을 그대로 쓴다 — 같은 걸 두 벌 만들면 갈라진다.
     from modes.mode5_evidence import build_id
 
     _bid = build_id()
+
+    # ── 종합 리포트 조립 ────────────────────────────────────────────
+    # 🔴 예전엔 result["report"](GR 진단만)를 그대로 뿌렸다. 화면에서 ZEB 등급·비용·
+    #    민감도·에너지해석을 다 보여주고도, 내려받은 문서엔 GR 점수표뿐이었다.
+    #    화면과 산출물이 다른 이야기를 하고 있었다.
+    from core.full_report import build_full_report
+    from core.zeb_evaluator import evaluate_zeb
+
+    _zeb = None
+    try:
+        _zeb = evaluate_zeb(result.get("bim_data") or {},
+                            result.get("gr_mapping") or {},
+                            assume_full_reinforcement=True, assume_bems=True)
+    except Exception:
+        pass   # ZEB 평가가 실패해도 리포트 전체가 죽으면 안 된다
+
+    report = build_full_report(
+        result,
+        source_name=source_name,
+        zeb=_zeb,
+        eplus=st.session_state.get("_mode3_eplus"),
+        build=_bid,
+    )
     st.markdown(
         f"""
         <div style="border:1px solid #D8E1E7; border-radius:8px 8px 0 0;
                     border-bottom:none; padding:1.1rem 1.3rem 0.9rem;
                     background:#F3F6F8;">
           <div style="font-size:0.72rem; letter-spacing:0.1em; color:#2E6E8E;
-                      font-weight:700;">DIAGNOSIS REPORT</div>
+                      font-weight:700;">COMPREHENSIVE REPORT</div>
           <div style="font-size:1.25rem; font-weight:700; margin:0.15rem 0 0.5rem;">
-            그린리모델링 진단 리포트</div>
+            종합 리포트</div>
           <div style="font-size:0.8rem; color:#5A6C7A; line-height:1.7;">
             대상 <b>{html.escape(source_name)}</b> · 생성 {_bid['date']}
             · 엔진 <code>{_bid['commit']}</code>
@@ -1821,7 +1845,7 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
         st.download_button(
             label="📄 마크다운 다운로드 (.md)",
             data=report,
-            file_name=f"진단리포트_{file_stem}.md",
+            file_name=f"종합리포트_{file_stem}.md",
             mime="text/markdown",
             width="stretch",
             help="GitHub, Notion, Obsidian 등에서 바로 사용 가능",
@@ -1835,7 +1859,7 @@ def _render_full_report_tab(result: dict, source_name: str) -> None:
             st.download_button(
                 label="📕 PDF 리포트 다운로드 (.pdf)",
                 data=pdf_bytes,
-                file_name=f"진단리포트_{file_stem}.pdf",
+                file_name=f"종합리포트_{file_stem}.pdf",
                 mime="application/pdf",
                 width="stretch",
                 help="인쇄·이메일 첨부·결재용 (한글 폰트 자동 적용)",

@@ -533,6 +533,42 @@ _dup = scan_ui(_ROOT)
 check("화면 전체에 아이콘 중복 없음", not _dup,
       ("중복: " + ", ".join(_dup)) if _dup else "8곳 → 0곳")
 
+print("\n⑰ 종합 리포트 — 화면과 산출물이 같은 이야기를 하는가")
+# 예전 리포트는 GR 진단(점수표)만 담았다. 화면은 ZEB 등급·비용·최적화·민감도까지
+# 보여주는데 내려받은 문서엔 그게 없었다 — 화면과 산출물이 다른 말을 하고 있었다.
+from core.bim_diagnoser import diagnose_from_json, gr_label  # noqa: E402
+from core.full_report import build_full_report  # noqa: E402
+from core.ui_lint import find_dict_leaks  # noqa: E402
+
+_r = diagnose_from_json("data/sample_bim/doam_archi_sample.json", with_roi=True)
+_z = evaluate_zeb(_r["bim_data"], _r["gr_mapping"],
+                  assume_full_reinforcement=True, assume_bems=True)
+_md = build_full_report(_r, "x.json", zeb=_z, build={"date": "d", "commit": "c"})
+
+check("제목이 '종합 리포트'", _md.startswith("# 종합 리포트"))
+for _sec in ("ZEB 인증 평가", "그린리모델링 정량평가", "보강 계획", "경제성",
+             "EnergyPlus 에너지 해석", "민감도"):
+    check(f"섹션 있음 — {_sec}", _sec in _md)
+# 없는 섹션을 조용히 빼지 않고 왜 없는지 적는다
+check("E+ 미실행 시 '돌리지 않았습니다'를 적는다", "돌리지 않았습니다" in _md)
+
+# 🔴 라벨 단일 소스 — PDF가 key.split("_")로 키를 쪼개 써서 '바닥단열난방',
+#    '신재생태양광'처럼 가운뎃점·괄호가 없는 이름이 PDF에만 나왔다.
+check("gr_label이 사람 라벨을 준다", gr_label("4_바닥단열난방") == "바닥단열·난방")
+check("마크다운에 사람 라벨이 쓰인다",
+      "바닥단열·난방" in _md and "신재생(태양광)" in _md)
+_pdf_src = (_ROOT / "core" / "pdf_report.py").read_text(encoding="utf-8")
+check("PDF도 같은 단일 소스를 쓴다", "GR_ELEMENT_LABELS" in _pdf_src)
+check("PDF가 키를 쪼개 라벨을 만들지 않는다",
+      'label = key.split("_", 1)[1]' not in _pdf_src)
+
+# dict를 f-string에 그대로 넣으면 사용자 문서에 "{'항목': ...}"이 샌다 — 실제로 그랬다
+check("검사기가 dict 누출을 잡는다 (규칙 자체 시험)",
+      len(find_dict_leaks("- {'항목': '창호', '만점': 3}")) == 1)
+check("정상 문장은 통과", find_dict_leaks("- 창호·일사조절장치 3점") == [])
+_leaks = find_dict_leaks(_md)
+check("리포트에 dict 원본이 새지 않는다", not _leaks, str(_leaks)[:70])
+
 print()
 if fails:
     print(f"❌ 실패 {len(fails)}건: {fails}")
