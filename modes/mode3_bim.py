@@ -32,6 +32,8 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from core.fmt import signed_eok_from_eok
+
 
 # ====================================================================
 # 순수 진단 함수 (Streamlit 의존 X — test_bim에서 사용 가능)
@@ -1322,6 +1324,8 @@ def _render_sensitivity_tab(result: dict) -> None:
             payback_str = f"{payback:.1f}년" if (payback and payback < 99) else "∞"
             irr = sc["IRR"]
             irr_str = f"{irr*100:.1f}%" if irr is not None else "—"
+            # 손실에 '+'가 붙어 `+-0.48억`으로 나오던 자리. 부호는 core.fmt가 정한다.
+            npv_str = signed_eok_from_eok(sc["NPV_억"])
             st.markdown(
                 f"""
 <div style="background:{color}; padding:14px; border-radius:10px; min-height:240px;">
@@ -1330,7 +1334,7 @@ def _render_sensitivity_tab(result: dict) -> None:
 <div>보조율: <b>{sc['subsidy_pct']:.0f}%</b></div>
 <div>자부담: <b>{sc['자부담_억']:.2f}억</b></div>
 <div>할인회수: <b>{payback_str}</b></div>
-<div>NPV: <b>+{sc['NPV_억']:.2f}억</b> · IRR <b>{irr_str}</b></div>
+<div>NPV: <b>{npv_str}</b> · IRR <b>{irr_str}</b></div>
 <div>B-C: <b>{sc['BC_ratio']:.2f}배</b></div>
 <div style="font-size:0.85em; color:#555; margin-top:4px;">자산가치(수익환원): {sc['자산가치_수익환원_억']:.2f}억</div>
 </div>
@@ -1374,8 +1378,13 @@ def _render_sensitivity_tab(result: dict) -> None:
     # ─────────────────────────────────────
     st.markdown("#### 🎚️ 민감도 분석 (변수 ±N% 흔들기)")
 
+    # ⚠️ 70%는 '현재'가 아니라 **가정**이다. gbXML엔 소유 주체가 없다
+    #    (gbxml_parser가 directly_owned를 '사용자 입력 필요'로 명시한다).
+    #    보조율은 소유 주체가 정한다 — 서울·중앙·공공기관 50% / 그 외 지자체 70%.
+    #    예전엔 이 값을 "현재(70%)"라고 불러서, 홈이 도담을 50%라 하는 동안
+    #    같은 앱의 이 탭이 70%라고 우겼다. 스윕의 기준점일 뿐임을 화면에 적는다.
     baseline = {
-        "subsidy_rate": 0.7,  # 기본 70% 보조
+        "subsidy_rate": 0.7,
         "total_cost_won": total_cost,
         "annual_saving_won": annual_saving,
         "area_m2": area_m2,
@@ -1393,6 +1402,13 @@ def _render_sensitivity_tab(result: dict) -> None:
 
     with sub_tab1:
         st.caption("정부 보조금율이 변하면 ROI는 어떻게 변할까?")
+        st.info(
+            "**보조율은 gbXML로 알 수 없습니다 — 소유 주체가 정합니다.** "
+            "서울시·중앙행정기관·공공기관 소유는 **50%**, 그 외 지자체 소유는 **70%**입니다. "
+            "도면엔 그 정보가 없으니 아래 표는 **전 구간을 훑어 보여드립니다.** "
+            "'◀기준'은 계산 기준점(70%)일 뿐 이 건물의 확정 보조율이 아닙니다.",
+            icon="ℹ️",
+        )
         rows = sens["subsidy_table"]
         df = pd.DataFrame([{
             "보조율": r["보조금율_pct"] + (" ◀기준" if r["_is_baseline"] else ""),
@@ -1441,8 +1457,10 @@ def _render_sensitivity_tab(result: dict) -> None:
         cols2 = st.columns(2)
         with cols2[0]:
             st.metric("무보조 회수년", f"{bk['무보조_회수년']:.1f}년")
-            st.metric("50% 보조 회수년", f"{bk['50%보조_회수년']:.1f}년")
-            st.metric("현재(70%) 회수년", f"{bk['현재_회수년']:.1f}년")
+            st.metric("50% 보조 회수년", f"{bk['50%보조_회수년']:.1f}년",
+                      "서울·중앙·공공기관")
+            st.metric("70% 보조 회수년", f"{bk['현재_회수년']:.1f}년",
+                      "그 외 지자체")
         with cols2[1]:
             st.metric(
                 "회수 8년 달성 필요 보조율",

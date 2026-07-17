@@ -228,8 +228,15 @@ def render_evidence_panel() -> None:
     with tab1:
         rows = collect_provenance()
         if not rows:
-            st.warning("파라미터를 읽지 못했습니다.")
-            return
+            # return을 쓰면 안 된다 — 탭이 아니라 **패널 전체**를 빠져나가서
+            # ② 데이터 처리 탭이 통째로 빈 화면이 된다. 탭 머리는 이미 그려진 뒤라
+            # 사용자는 눌리는데 아무것도 없는 탭을 본다. 하필 그 탭에 BIM 파일이
+            # 해외 서버로 나가는 고지가 있다 — 실패가 고지를 숨기면 안 된다.
+            st.warning(
+                "파라미터를 읽지 못했습니다 — `data/params/*.yaml`을 확인하세요. "
+                "② 데이터 처리 탭은 정상입니다."
+            )
+            rows = []
 
         _SET_LABEL = {
             "zeb_incentive": "Track A · ZEB 인센티브",

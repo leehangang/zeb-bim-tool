@@ -12,6 +12,7 @@ scripts/test_evidence.py — 근거·출처 페이지 검증
 """
 
 import io
+import re
 import sys
 from pathlib import Path
 
@@ -568,6 +569,46 @@ check("검사기가 dict 누출을 잡는다 (규칙 자체 시험)",
 check("정상 문장은 통과", find_dict_leaks("- 창호·일사조절장치 3점") == [])
 _leaks = find_dict_leaks(_md)
 check("리포트에 dict 원본이 새지 않는다", not _leaks, str(_leaks)[:70])
+
+print("\n⑱ 숫자를 화면에 적는 법이 한 벌인가")
+# 기본 데모의 민감도 카드에 `NPV: +-0.48억`이 떠 있었다. 템플릿에 '+'를 박아둔 탓.
+# 홈은 같은 값을 제대로 찍었다 — 두 곳에서 각자 포맷하면 갈라진다.
+from core.fmt import signed_eok, signed_eok_from_eok
+
+check("손실에 '+'가 안 붙는다", signed_eok_from_eok(-0.483) == "−0.48억",
+      signed_eok_from_eok(-0.483))
+check("이득엔 '+'가 붙는다", signed_eok_from_eok(0.379) == "+0.38억")
+check("원 단위도 같은 규칙", signed_eok(-48_300_000) == "−0.48억")
+check("None은 —", signed_eok(None) == "—")
+# ASCII 하이픈은 투사하면 안 보인다 — 유니코드 빼기여야 한다
+check("음수 부호가 유니코드 빼기(−)", "−" in signed_eok_from_eok(-1.0)
+      and "-" not in signed_eok_from_eok(-1.0))
+
+_m3 = Path("modes/mode3_bim.py").read_text(encoding="utf-8")
+_home = Path("streamlit_app.py").read_text(encoding="utf-8")
+check("mode3가 NPV에 '+'를 박아두지 않는다",
+      "+{sc['NPV_억']" not in _m3 and '+{sc["NPV_억"]' not in _m3)
+check("mode3·홈이 같은 포맷터를 본다",
+      "signed_eok_from_eok(" in _m3 and "signed_eok(" in _home)
+
+print("\n⑲ 화면이 없는 곳을 가리키지 않는가")
+# 사이드바가 "근거·출처 → ④ 계산 경로·한계"를 가리켰는데 그 탭은 지워진 뒤였다.
+_ev = Path("modes/mode5_evidence.py").read_text(encoding="utf-8")
+_tabs = re.search(r'st\.tabs\(\[([^\]]*)\]', _ev)
+_tab_labels = _tabs.group(1) if _tabs else ""
+for _ref in re.findall(r"근거·출처 → (①|②|③|④|⑤)", _home):
+    check(f"사이드바가 가리키는 탭 {_ref}가 실재한다", _ref in _tab_labels,
+          f"실제 탭: {_tab_labels}")
+check("근거·출처 탭이 2개다", _tab_labels.count("①") + _tab_labels.count("②") == 2)
+
+print("\n⑳ 색인이 죽었을 때 '0건'이라고 말하지 않는가")
+_m1 = Path("modes/mode1_rag.py").read_text(encoding="utf-8")
+check("mode1이 문서 수를 조건부로 넣는다", "if ready and n_files" in _m1)
+check("홈도 조건부", "if _idx_n" in _home)
+# 고장을 기획으로 포장하던 문구
+check("'라이브 데모는 BIM에 집중' 문구가 없다",
+      "BIM 진단·ROI 엔진**에 집중" not in _m1)
+check("실패 원인(msg)을 실제로 보여준다", "{msg}" in _m1)
 
 print()
 if fails:

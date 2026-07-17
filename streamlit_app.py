@@ -20,6 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+from core.fmt import signed_eok
 from core.ui_theme import (
     apply_global_style, render_logo, render_footer, render_topbar,
     card_html, COLORS,
@@ -197,9 +198,10 @@ with st.sidebar:
                         f"</div>",
                         unsafe_allow_html=True,
                     )
-        # 확보 경위·미해결 쟁점 서사는 여기 두지 않는다 — 📐 근거·출처 ④에 있다.
         # 사이드바는 '무엇이 색인돼 있는가'만 답한다.
-        st.caption("확보 경위와 미해결 쟁점은 **📐 근거·출처 → ④ 계산 경로·한계**에 있습니다.")
+        # 2026-07-17: 예전엔 "④ 계산 경로·한계에 있습니다"라고 가리켰는데, 그 탭은
+        # 5개→2개로 줄이면서 지워졌다. 없는 곳을 가리키는 안내가 없느니만 못하다.
+        st.caption("각 숫자의 근거 조항은 **📐 근거·출처 → ① 파라미터 출처**에 있습니다.")
 
     st.markdown("---")
     st.caption(
@@ -405,10 +407,16 @@ def render_home():
     )
     c1, c2 = st.columns(2)
     with c1:
+        # 색인이 죽으면 n_files가 0으로 떨어진다(_index_summary가 예외를 삼킨다).
+        # 그대로 끼워 넣으면 "0건의 법령·고시·공고 원문에서 찾아 답변합니다"라는
+        # 자기모순 문장이 홈에 뜬다. 셀 수 있을 때만 숫자를 말한다.
+        _idx_n = _index_summary()["n_files"]
+        _n_txt = (f"<b>{_idx_n}건의 법령·고시·공고 원문</b>" if _idx_n
+                  else "<b>법령·고시·공고 원문</b>")
         st.markdown(card_html(
             "💬",
             "정책 Q&A (RAG)",
-            f"<b>{_index_summary()['n_files']}건의 법령·고시·공고 원문</b>(법률·시행령·고시·2026년 공고)에서 "
+            f"{_n_txt}(법률·시행령·고시·2026년 공고)에서 "
             "관련 대목을 찾아 <b>원문 그대로 인용</b>해 답변합니다. "
             "원문에 없으면 지어내지 않고 '자료에 없음'이라고 답해 <b>환각을 차단</b>합니다.",
         ), unsafe_allow_html=True)
@@ -496,7 +504,7 @@ def render_home():
     st.markdown("**⑤ 경제성 — 현금흐름 기반 (20년 · 할인율 4.5% · 에너지상승률 2.5%)**")
     g1, g2, g3 = st.columns(3)
     _npv = roi.get("NPV_원", 0)
-    g1.metric("NPV (순현재가치)", f"{'+' if _npv >= 0 else '−'}{abs(_npv)/1e8:.2f}억",
+    g1.metric("NPV (순현재가치)", signed_eok(_npv),
               "자부담 대비 순이득" if _npv >= 0 else "자부담 대비 손실")
     g2.metric("IRR (내부수익률)", f"{roi.get('IRR', 0)*100:.1f}%",
               f"할인율(4.5%)의 {roi.get('IRR', 0)/0.045:.1f}배")

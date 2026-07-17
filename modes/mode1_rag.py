@@ -116,6 +116,10 @@ def render_rag_panel() -> None:
     # 색인이 15건이 된 뒤에도 화면은 계속 12건이라고 말하고 있었다.
     n_files = _indexed_file_count()
 
+    # 색인이 깨졌으면 문서 수를 말하지 않는다. 예전엔 이 문장이 무조건 나가서
+    # 인덱스가 죽은 채로 "**0건의** 법령·고시·공고 원문을 색인하고"라고 떴다.
+    _n_txt = (f"<b>{n_files}건의 법령·고시·공고 원문</b>을 색인하고, "
+              if ready and n_files else "법령·고시·공고 <b>원문</b>을 색인하고, ")
     st.markdown(f"""
     <div style="margin-bottom:1.5rem;">
         <div style="font-size:0.85rem; color:#2E7D32; font-weight:600; letter-spacing:0.08em;">
@@ -124,23 +128,27 @@ def render_rag_panel() -> None:
         <h1 style="margin:0.2rem 0;">💬 정책 Q&A</h1>
         <div style="color:#757575;">
             ZEB 인증 · GR 지원사업 · 세제 · 케이스 적격 판정의 근거가 되는
-            <b>{n_files}건의 법령·고시·공고 원문</b>을 색인하고,
+            {_n_txt}
             질문과 관련된 대목을 찾아 <b>원문 그대로 인용</b>해 답변합니다.
             전체 목록은 사이드바 <b>📚 색인 원문</b>에 있습니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
     if not ready:
-        st.info(
-            "**정책 Q&A**는 그린리모델링 관련 법·고시·가이드라인 원문에서 "
-            "근거 조항을 찾아 인용하는 기능입니다. 현재 라이브 데모는 핵심인 "
-            "**BIM 진단·ROI 엔진**에 집중되어 있습니다."
+        # is_index_ready()가 원인을 이미 알아냈다(디렉터리 없음 / 청크 0개 /
+        # 로드 예외). 예전엔 그 msg를 버리고 "라이브 데모는 BIM에 집중되어
+        # 있습니다"라는 **고정 문구**를 띄웠다. 그건 제품 결정을 서술하는데,
+        # 코드엔 그런 결정이 없다 — 홈은 이 모드를 라이브 카드로 광고한다.
+        # 고장을 기획으로 포장하면 고칠 사람이 고장인 줄 모른다.
+        st.warning(f"**정책 Q&A를 지금 쓸 수 없습니다** — {msg}", icon="⚠️")
+        st.caption(
+            "색인을 만들려면 `python scripts/build_index.py`를 실행하세요. "
+            "의존성·API키·네트워크가 필요 없습니다(기본 `--provider hash`)."
         )
         st.markdown(
-            "**동작 방식** — ZEB 인증 판정 · GR 지원사업 판정 · 세제 · 케이스 적격 판정의 "
+            "**정상 동작 시** — ZEB 인증 판정 · GR 지원사업 판정 · 세제 · 케이스 적격 판정의 "
             "근거가 되는 법령·고시·공고 원문을 색인하고, 질문과 관련된 대목을 찾아 "
-            "**원문을 그대로 인용**해 답변합니다. 색인된 원문의 역할별 목록은 "
-            "사이드바 **📚 색인 원문**에서 볼 수 있습니다."
+            "**원문을 그대로 인용**해 답변합니다."
         )
         st.markdown("**이런 질문에 답합니다**")
         _ex = [
@@ -162,8 +170,13 @@ def render_rag_panel() -> None:
     # 옵션
     col1, col2 = st.columns([3, 1])
     with col1:
+        # key= 로 위젯에 직접 담는다. 예전엔 예시 클릭을 별도 세션키(_seed)에 뒀다가
+        # 렌더 때 pop 했는데, 그러면 **입력창은 빈 채로** 답만 뜨고, 그 다음 rerun
+        # (슬라이더를 만지기만 해도) seed가 이미 없으니 질문이 통째로 사라졌다.
+        # mode2가 같은 버그를 고치고 주석까지 남겼는데 여기만 안 따라왔다.
         question = st.text_input(
             "질문",
+            key="_mode1_question",
             placeholder="예: 녹색건축물의 용적률·높이 완화 기준은 얼마인가요?",
         )
     with col2:
@@ -183,12 +196,8 @@ def render_rag_panel() -> None:
         for i, ex in enumerate(examples):
             with cols[i % 2]:
                 if st.button(ex, key=f"ex_{i}", width="stretch"):
-                    st.session_state["_mode1_question_seed"] = ex
+                    st.session_state["_mode1_question"] = ex
                     st.rerun()
-
-    if "_mode1_question_seed" in st.session_state:
-        question = st.session_state.pop("_mode1_question_seed")
-        st.info(f"📝 선택된 질문: {question}")
 
     if not question:
         return
