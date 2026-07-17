@@ -114,8 +114,8 @@ EPLUS_SERVICE_URL = "https://<사용자>--zeb-energyplus-web.modal.run"
 등록되는 즉시 BIM 진단 화면의 "🔬 아직 못 돌립니다" 안내가 **실행 버튼으로 바뀝니다**
 (`core/eplus_client.py` → `modes/mode3_bim.py`).
 
-⚠️ `modal_app.py`는 **아직 배포된 적이 없습니다.** 첫 `modal deploy`에서 깨질 수 있고,
-그때는 출력이 원인을 알려줍니다.
+⚠️ **아직 안 재본 것** — 4층 이상·지하층, 큰 모델의 타임아웃(현재 E+ 600초 / Modal 900초),
+$1 크레딧이 몇 회 해석인지. 넣어보기 전엔 모릅니다 (첫 배포에서 IDF 버그 4개가 그렇게 드러났습니다).
 
 ### 그 밖의 대안 (같은 Dockerfile)
 - **Google Cloud Run** — 월 180,000 vCPU-초 무료 (결제계정 등록 필요)

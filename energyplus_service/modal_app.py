@@ -19,8 +19,14 @@ Dockerfile과의 관계
 `Dockerfile`(HF용)과 이 파일은 **같은 베이스 이미지 · 같은 app.py**를 쓴다.
 HF Docker가 무료로 풀리면 Dockerfile 경로로 돌아가면 된다. 둘 중 하나만 쓰면 된다.
 
-⚠️ 이 스크립트는 아직 Modal에 배포된 적이 없다 — 로컬 문법 검사만 통과했다.
-   첫 배포에서 깨질 수 있고, 그때는 `modal deploy` 출력이 원인을 알려준다.
+배포 상태 (2026-07-17)
+---------------------
+배포됐고 실제 해석이 완주했다 → https://leehangang--zeb-energyplus-web.modal.run
+`modal deploy` 34초, `/health` 200 (4.1초 — 콜드스타트 포함).
+첫 배포에서 IDF 버그 4개가 드러났다 (enum 필드의 autocalculate 2곳, People의
+Activity Level Schedule 누락, Version 불일치). 넣어보기 전엔 하나도 안 보였다.
+
+미검증: 4층 이상·지하층, 큰 모델의 타임아웃, $1 크레딧이 몇 회인지.
 
 배포
 ----
