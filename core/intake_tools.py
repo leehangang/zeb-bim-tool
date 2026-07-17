@@ -124,7 +124,10 @@ class IntakeSession:
     Streamlit session_state에 직접 보관 가능.
     """
 
-    def __init__(self, initial: Optional[dict] = None):
+    def __init__(self, initial: Optional[dict] = None, track: str = "public"):
+        # 🔑 공공/민간은 다른 사업이다. 트랙 없이 진행하면 민간 신청자에게
+        #    '신청기관명'을 묻고 공공 서식 초안을 내주게 된다.
+        self.track = track
         self.application = empty_application()
         if initial:
             self.application.update(initial)
@@ -164,7 +167,7 @@ class IntakeSession:
             "rejected": rejected,
         })
 
-        progress = calculate_progress(self.application)
+        progress = calculate_progress(self.application, self.track)
 
         return {
             "accepted": {
@@ -177,19 +180,20 @@ class IntakeSession:
                 "전체_pct": progress['overall_pct'],
                 "draft_가능": progress['is_ready_for_draft'],
             },
-            "다음_물어볼_항목": _suggest_next_questions(self.application, max_n=3),
+            "다음_물어볼_항목": _suggest_next_questions(
+                self.application, max_n=3, track=self.track),
         }
 
     def _generate_draft(self) -> dict:
         """신청서 초안 생성."""
-        progress = calculate_progress(self.application)
+        progress = calculate_progress(self.application, self.track)
         if not progress["is_ready_for_draft"]:
             return {
                 "error": "필수 항목이 아직 채워지지 않았습니다.",
                 "missing": progress["missing_required_labels"],
             }
 
-        draft_md = render_application_markdown(self.application)
+        draft_md = render_application_markdown(self.application, self.track)
         self.last_draft = draft_md
         return {
             "draft_markdown": draft_md,
@@ -201,7 +205,7 @@ class IntakeSession:
         }
 
     def get_progress(self) -> dict:
-        return calculate_progress(self.application)
+        return calculate_progress(self.application, self.track)
 
     def to_dict(self) -> dict:
         return dict(self.application)
@@ -211,21 +215,104 @@ class IntakeSession:
 # 마크다운 신청서 렌더
 # ====================================================================
 
-def render_application_markdown(app: dict) -> str:
-    """현재 신청서 dict → 마크다운 초안."""
-    lines = []
+def _required_documents(app: dict, track: str) -> list:
+    """제출해야 할 서류 — 입력값에 따라 달라진다.
 
-    lines.append("# 공공건축물 그린리모델링 사업 신청서 (초안)")
+    민간은 용도구분·건축주 구분이 서류를 바꾼다([붙임3] 원문):
+      · 비주거      → [별지8] 대출가능 사전의향서 (차주가 은행에 신청, 유효기간 6개월)
+      · 단독주택    → [별지7] 간이평가표
+      · 법인 건축주 → [별지2] 개인정보 동의서 **제출하지 않음**
+    공공은 소유현황·유형이 바꾼다(운영지침 제14조③④).
+    """
+    if track == "private":
+        docs = [
+            "[별지1] 민간건축물 그린리모델링 이자지원 사업 신청서 — 건축주·사업자",
+            "[별지3] 그린리모델링 사업계획서 — 사업자",
+            "[별지4] 공사비 산출근거 (원가계산서·내역서·수량산출서) — 사업자",
+            "[별지5] 건축물 부위별 현황 사진 (컬러) — 건축주·사업자",
+            "[별지6] 에너지 성능개선 비율 산출기준 및 제출서류 — 사업자",
+            "등기사항증명서 (미이전 시 부동산 매매계약서)",
+            "건축물대장 (공동주택이면 전유부)",
+            "사업 전·후 설계도서 — 사업자",
+            "계약서 또는 협약서 — **건축주·사업자 공동날인**, 사본이면 원본대조필",
+            "4대보험 사업장 가입자 명부 — 사업자 (전문인력 등재 확인)",
+        ]
+        if app.get("owner_type") != "사업자":
+            docs.insert(1, "[별지2] 개인정보 수집·이용·제공 동의서 — 건축주 "
+                           "(법인이면 제출 안 함)")
+            docs.append("건축주 신분증 (뒷자리 삭제 후 제출)")
+        else:
+            docs.append("사업자등록증 (건축주가 사업자인 경우)")
+
+        _u = app.get("usage_category")
+        if _u == "비주거":
+            docs.append("🔴 [별지8] 그린리모델링 자금 대출가능 사전의향서 — "
+                        "**비주거만 해당** · 차주가 은행에 신청 · 유효기간 발급일로부터 6개월")
+        elif _u == "주거(단독주택)":
+            docs.append("🔴 [별지7] 에너지 성능개선 비율 간이평가표 — **단독주택만 해당**")
+        elif _u == "주거(공동주택)":
+            docs.append("효율관리기자재 신고 확인서(창호/보일러/LED 등)·평면도·"
+                        "교체 내역서·현황 사진")
+        return docs
+
+    docs = [
+        "[별지 제1호서식] 공공건축물 그린리모델링 지원사업 신청서 — 관리시스템에서 작성 후 "
+        "**PDF로 추출해 등록**",
+        "사업비 산출내역 (신청서 [붙임]) — 홈페이지 작성 후 PDF 추출",
+        "개인정보 수집·이용·제공 동의서",
+    ]
+    if app.get("directly_owned") is False:
+        docs.append("🔴 [별지 제2호서식] 임차건물 관리대상 확인서 및 임대인 동의서 — "
+                    "**임차건축물이면 필수** (운영지침 제14조③)")
+    if app.get("project_type") == "군집형":
+        docs.append("🔴 [별지 제3호서식] 「군집형사업」 추진계획서 (운영지침 제14조④)")
+    docs.append("최근 5년 이내 정기안전점검 보고서 (안전점검 이력이 있는 경우)")
+    return docs
+
+
+def render_application_markdown(app: dict, track: str = "public") -> str:
+    """현재 신청서 dict → 마크다운 초안.
+
+    ⚠️ 예전엔 제목이 '공공건축물 …'으로 하드코딩돼 있어, 민간 신청자도
+       공공 서식 초안을 받았다. 두 사업은 근거·서식·제출 주체가 전부 다르다.
+    """
+    lines = []
+    is_private = track == "private"
+
+    if is_private:
+        lines.append("# 민간건축물 그린리모델링 이자지원 사업 신청서 (초안)")
+        lines.append("")
+        lines.append("> **근거**: 「녹색건축물 조성 지원법」 제25·26·27조 · "
+                     "2026년 민간건축물 그린리모델링 이자지원 사업 공고 [붙임3]  ")
+        lines.append("> **지원 방식**: 공사비 직접 보조가 아니라 **대출 이자 보전**"
+                     "(성능개선비율 20~30% 미만 4.5% / 30% 이상 5.5%)  ")
+        lines.append("> **제출 주체**: 건축주가 아니라 **그린리모델링 사업자**가 "
+                     "건축주 동의를 받아 센터에 제출  ")
+        lines.append("> **제출처**: 그린리모델링 창조센터장")
+    else:
+        lines.append("# 공공건축물 그린리모델링 지원사업 신청서 (초안)")
+        lines.append("")
+        lines.append("> **근거**: 「녹색건축물 조성 지원법」 제27조 · "
+                     "공공건축물 그린리모델링 지원사업 운영지침 (2026-04-21 개정)  ")
+        lines.append("> **지원 방식**: **국비로 공사비 직접 보조** "
+                     "(서울·중앙·공공 50% / 그 외 지자체 70%)  ")
+        lines.append("> **제출 주체**: 신청기관이 **관리시스템에서 직접** 작성 "
+                     "→ PDF 추출 후 등록 (운영지침 제14조②)  ")
+        lines.append("> **제출처**: 국토안전관리원 그린리모델링 창조센터")
     lines.append("")
     lines.append(f"*생성 시각: {datetime.now().strftime('%Y-%m-%d %H:%M')}*  ")
-    lines.append("*본 초안은 AI가 자동 생성한 것으로, "
-                 "그린리모델링 창조센터(1588-8788) 공식 양식에 맞춰 검토 필요.*")
+    lines.append("*본 초안은 자동 생성물입니다. 공식 양식은 "
+                 "그린리모델링 창조센터(greenremodeling.or.kr · 1588-8788)에서 받아 "
+                 "대조하세요.*")
     lines.append("")
 
     for sec in SECTIONS:
+        _keys = fields_by_section(sec, track)
+        if not _keys:
+            continue
         lines.append(f"## {sec}")
         lines.append("")
-        for fname in fields_by_section(sec):
+        for fname in _keys:
             spec = FIELDS[fname]
             value = app.get(fname)
             label = spec["label"]
@@ -251,7 +338,15 @@ def render_application_markdown(app: dict) -> str:
         lines.append("")
 
     lines.append("---")
-    lines.append("**범례**: `*` 표시는 필수 항목.")
+    lines.append("")
+    lines.append("## 함께 낼 서류")
+    lines.append("")
+    for d in _required_documents(app, track):
+        lines.append(f"- {d}")
+    lines.append("")
+    lines.append("---")
+    lines.append("**범례**: `*` 표시는 필수 항목. 🔴 는 입력하신 조건 때문에 "
+                 "**추가로 필요해진** 서류입니다.")
     return "\n".join(lines)
 
 
@@ -259,18 +354,21 @@ def render_application_markdown(app: dict) -> str:
 # 다음 질문 추천
 # ====================================================================
 
-def _suggest_next_questions(app: dict, max_n: int = 3) -> list:
+def _suggest_next_questions(app: dict, max_n: int = 3,
+                            track: Optional[str] = None) -> list:
     """
     Claude가 다음 턴에 물어볼 항목 추천 (필수 → 선택, 섹션 순서대로).
 
     Returns:
         [{field, label, help}, ...] (max_n 개)
     """
+    # 🔑 트랙 없이 추천하면 공공 항목('신청기관 유형')과 민간 항목('사업자명')이
+    #    섞여 나온다 — 실제로 그랬다.
     from core.intake_schema import all_required_fields, all_optional_fields
 
     out = []
     # 1) 필수 먼저
-    for fname in all_required_fields():
+    for fname in all_required_fields(track):
         if app.get(fname) in (None, "") or (
             isinstance(app.get(fname), list) and not app[fname]
         ):
@@ -287,7 +385,7 @@ def _suggest_next_questions(app: dict, max_n: int = 3) -> list:
                 return out
 
     # 2) 선택 항목도 일부 추천
-    for fname in all_optional_fields():
+    for fname in all_optional_fields(track):
         if app.get(fname) in (None, ""):
             spec = FIELDS[fname]
             item = {"field": fname, "label": spec["label"], "_optional": True}

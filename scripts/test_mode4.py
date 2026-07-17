@@ -97,28 +97,46 @@ def test_progress_calculation():
         empty_application, calculate_progress, all_required_fields, FIELDS,
     )
 
-    # 빈 신청서
-    p = calculate_progress(empty_application())
-    assert p["required_filled"] == 0
-    assert p["overall_pct"] == 0
-    assert p["is_ready_for_draft"] is False
-    print(f"  [PASS] 빈 신청서: 0%")
+    # 🔑 공공/민간은 별개 사업이라 진행률도 트랙별로 센다.
+    #    트랙 없이 세면 민간 사용자가 공공 필드까지 요구받아 영원히 100%에 못 닿는다.
+    for track in ("public", "private"):
+        p = calculate_progress(empty_application(), track)
+        assert p["required_filled"] == 0, track
+        assert p["overall_pct"] == 0, track
+        assert p["is_ready_for_draft"] is False, track
+        print(f"  [PASS] 빈 신청서 ({track}): 0%")
 
-    # 모든 필수 채움
-    full = {k: FIELDS[k].get("example", "샘플")
-            for k in all_required_fields()}
-    p = calculate_progress(full)
-    assert p["required_pct"] == 100.0
-    assert p["is_ready_for_draft"] is True
-    print(f"  [PASS] 모든 필수 채움: draft 가능")
+        full = {k: FIELDS[k].get("example", "샘플")
+                for k in all_required_fields(track)}
+        p = calculate_progress(full, track)
+        assert p["required_pct"] == 100.0, f"{track}: {p['missing_required_labels']}"
+        assert p["is_ready_for_draft"] is True, track
+        print(f"  [PASS] 모든 필수 채움 ({track}): draft 가능 "
+              f"— 필수 {p['required_total']}개")
 
-    # 부분 채움
+    # 부분 채움 — 공공
     partial = {"organization_name": "테스트", "total_area_m2": 1000}
-    p = calculate_progress(partial)
+    p = calculate_progress(partial, "public")
     assert 0 < p["required_pct"] < 100
     assert p["is_ready_for_draft"] is False
     assert "신청기관명" not in p["missing_required_labels"]
-    print(f"  [PASS] 부분 채움: {p['required_pct']}%")
+    print(f"  [PASS] 부분 채움(공공): {p['required_pct']}%")
+
+    # 🔴 트랙이 실제로 가르는가 — 이게 이번 개정의 핵심이다
+    pub_req = set(all_required_fields("public"))
+    priv_req = set(all_required_fields("private"))
+    assert "organization_name" in pub_req and "organization_name" not in priv_req, \
+        "민간에 '신청기관명'을 요구하면 안 된다"
+    assert "gr_company_name" in priv_req and "gr_company_name" not in pub_req, \
+        "공공에 '그린리모델링 사업자명'을 요구하면 안 된다"
+    assert "project_stage" in priv_req, "민간은 시공 전/중 단계가 필수 (완료 후 신청 불가)"
+    assert "pre_consulting_done" in pub_req, "공공은 사전컨설팅이 전제조건 (운영지침 제14조①)"
+    # 공공 필드만 다 채워도 민간 초안은 못 나온다 — 뭉개면 이게 통과해버린다
+    pub_full = {k: FIELDS[k].get("example", "샘플") for k in pub_req}
+    assert calculate_progress(pub_full, "private")["is_ready_for_draft"] is False, \
+        "공공 답변으로 민간 신청서가 완성되면 안 된다"
+    print(f"  [PASS] 트랙 분리 — 공공 필수 {len(pub_req)} / 민간 필수 {len(priv_req)} "
+          f"· 겹침 {len(pub_req & priv_req)}")
 
 
 def test_tool_schema():
@@ -155,7 +173,7 @@ def test_intake_session_flow():
     print("=" * 70)
     from core.intake_tools import IntakeSession
 
-    session = IntakeSession()
+    session = IntakeSession(track="public")
     dispatch = session.make_dispatcher()
 
     # 1차 업데이트 (일부 잘못된 값 포함)
@@ -174,15 +192,37 @@ def test_intake_session_flow():
     assert "missing" in r2
     print(f"  [PASS] 필수 부족 시 generate_draft 거부 + 빠진 항목 안내")
 
-    # 모든 필수 채우기
+    # 모든 필수 채우기 (공공 트랙 것만)
     from core.intake_schema import all_required_fields, FIELDS
-    fill = {k: FIELDS[k]["example"] for k in all_required_fields()}
+    fill = {k: FIELDS[k]["example"] for k in all_required_fields("public")}
     dispatch("update_application", fill)
 
     r3 = dispatch("generate_draft", {})
     assert "draft_markdown" in r3
-    assert "공공건축물 그린리모델링 사업 신청서" in r3["draft_markdown"]
-    print(f"  [PASS] 필수 모두 채우면 draft 생성 ({len(r3['draft_markdown'])} chars)")
+    _md = r3["draft_markdown"]
+    assert "공공건축물 그린리모델링 지원사업 신청서" in _md, _md[:80]
+    # 🔑 초안이 트랙을 따르는가 — 예전엔 제목이 하드코딩이라 민간도 공공 서식을 받았다
+    assert "국비로 공사비 직접 보조" in _md, "공공 초안에 지원방식이 없다"
+    assert "이자 보전" not in _md, "공공 초안에 민간 지원방식이 섞였다"
+    assert "[별지 제1호서식]" in _md, "공공 구비서류가 없다"
+    print(f"  [PASS] 공공 draft 생성 ({len(_md)} chars) — 제목·근거·서류가 공공")
+
+    # 민간 트랙 — 같은 세션 코드로 완전히 다른 초안이 나와야 한다
+    priv = IntakeSession(track="private")
+    pd = priv.make_dispatcher()
+    pd("update_application",
+       {k: FIELDS[k]["example"] for k in all_required_fields("private")})
+    r4 = pd("generate_draft", {})
+    assert "draft_markdown" in r4, r4
+    _pm = r4["draft_markdown"]
+    assert "민간건축물 그린리모델링 이자지원 사업 신청서" in _pm, _pm[:80]
+    assert "대출 이자 보전" in _pm, "민간 초안에 지원방식이 없다"
+    assert "국비로 공사비 직접 보조" not in _pm, "민간 초안에 공공 지원방식이 섞였다"
+    assert "신청기관명" not in _pm, "민간 초안에 공공 전용 항목이 들어갔다"
+    assert "그린리모델링 사업자" in _pm, "민간의 제출 주체가 안 적혔다"
+    # 용도구분이 서류를 바꾼다 — example이 '비주거'라 [별지8]이 붙어야 한다
+    assert "[별지8]" in _pm, "비주거인데 대출가능 사전의향서가 안 붙었다"
+    print(f"  [PASS] 민간 draft 생성 ({len(_pm)} chars) — 제목·근거·서류가 민간")
 
 
 def test_session_rejects_unknown_fields():

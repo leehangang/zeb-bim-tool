@@ -96,6 +96,17 @@ def _render_current_state_for_prompt(session, progress: dict) -> str:
     """시스템 프롬프트용 현재 상태 요약."""
     from core.intake_schema import FIELDS
     lines = []
+    from core.intake_schema import TRACK_LABEL
+    _t = getattr(session, "track", "public")
+    lines.append(f"- **신청 사업: {TRACK_LABEL.get(_t, _t)}**")
+    if _t == "private":
+        lines.append("  (민간 = 대출 이자 보전. 신청 주체는 **그린리모델링 사업자**이고 "
+                     "건축주 동의가 필요하다. 공사 완료 후엔 신청 불가. "
+                     "'신청기관명' 같은 공공 항목은 묻지 말 것.)")
+    else:
+        lines.append("  (공공 = 국비로 공사비 직접 보조. 신청 주체는 **기관**이다. "
+                     "당해연도 사전컨설팅이 전제조건. "
+                     "'건축주'·'사업자' 같은 민간 항목은 묻지 말 것.)")
     lines.append(
         f"- 필수 항목 진행: {progress['required_filled']}/"
         f"{progress['required_total']} ({progress['required_pct']}%)"
@@ -138,10 +149,9 @@ def _render_current_state_for_prompt(session, progress: dict) -> str:
 def render_intake_panel() -> None:
     """Mode 4 Streamlit 패널."""
     import streamlit as st
+    from core.intake_schema import TRACK_PRIVATE, TRACK_PUBLIC
     from core.intake_tools import IntakeSession, render_application_markdown
     from core.error_messages import friendly_error
-
-    from core.ui_theme import concept_divider
 
     st.markdown("""
     <div style="margin-bottom:1rem;">
@@ -150,23 +160,64 @@ def render_intake_panel() -> None:
         </div>
         <h1 style="margin:0.2rem 0;">📋 사업 신청 인테이크</h1>
         <div style="color:#757575;">
-            공공건축물 그린리모델링 사업 신청에 필요한 정보를 대화로 수집하고
-            신청서 초안을 자동 생성합니다. 근거: 그린리모델링 가이드라인.
+            대화로 정보를 모아 <b>신청서 초안</b>과 <b>내야 할 서류 목록</b>을 만듭니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 그린리모델링 사업 신청 안내 (ZEB 평가는 BIM 모드에서 다룸)
-    st.markdown(
-        concept_divider(
-            gr_text="이 인테이크는 <b>그린리모델링 사업 신청서</b>를 작성합니다 (기관·대상·사업비·기간 등).",
-        ),
-        unsafe_allow_html=True,
+    # ── 트랙 선택 ───────────────────────────────────────────────────
+    # 🔑 공공과 민간은 근거·지원방식·신청주체·서식이 전부 다른 **별개 사업**이다.
+    #    예전엔 한 화면에 뭉개서, 민간 신청자도 '신청기관명'을 요구받고
+    #    '공공건축물 …' 제목의 초안을 받았다.
+    _TRACKS = {
+        "🏛 공공건축물 (공사비 직접 보조)": TRACK_PUBLIC,
+        "🏠 민간건축물 (대출 이자 보전)": TRACK_PRIVATE,
+    }
+    _pick = st.radio(
+        "어느 사업으로 신청하시나요?",
+        list(_TRACKS),
+        horizontal=True,
+        key="_mode4_track_pick",
     )
+    track = _TRACKS[_pick]
 
-    # 세션 초기화
-    if "_mode4_session" not in st.session_state:
-        st.session_state["_mode4_session"] = IntakeSession()
+    _boxes = st.columns(2)
+    with _boxes[0]:
+        with st.container(border=True):
+            st.markdown("**🏛 공공건축물 지원사업**")
+            st.caption(
+                "**국비로 공사비를 직접 보조**합니다 (서울·중앙·공공 50% / 그 외 지자체 70%).\n\n"
+                "· 대상: 사용승인 **10년 이상** 경과한 공공건축물\n"
+                "· 신청: 기관이 **관리시스템에서 직접** 작성 → PDF 추출·등록\n"
+                "· 🔴 **당해연도 사전컨설팅**을 받은 건물만 신청 가능 (운영지침 제14조①)\n"
+                "· 유형: 종합형(시그니처/일반) · 맞춤형 · 군집형"
+            )
+    with _boxes[1]:
+        with st.container(border=True):
+            st.markdown("**🏠 민간건축물 이자지원사업**")
+            st.caption(
+                "공사비를 주는 게 아니라 **대출 이자를 보전**합니다 "
+                "(성능개선 20~30% 미만 **4.5%** / 30% 이상 **5.5%**).\n\n"
+                "· 대상: **2016-01-01 이전** 사용승인 단독주택 또는 비주거\n"
+                "· 신청: 건축주가 아니라 **그린리모델링 사업자**가 동의를 받아 제출\n"
+                "· 🔴 **공사 완료 후에는 신청 불가** (시공 전·중만)\n"
+                "· 비주거는 은행 **대출가능 사전의향서**([별지8])가 필요"
+            )
+    st.caption(
+        "두 사업 모두 국토안전관리원 **그린리모델링 창조센터**가 운영하고 "
+        "「녹색건축물 조성 지원법」이 근거입니다. 성능개선비율은 센터 **지정 프로그램**"
+        "(ECO2 · ECO2-OD · GR-E · Energy Studio · EnergyPlus · IES-VE)으로 산출합니다."
+    )
+    st.divider()
+
+    # 세션 초기화 — 트랙이 바뀌면 새로 만든다.
+    # 안 그러면 공공에서 답한 '신청기관명'이 민간 신청서에 남는다.
+    if (st.session_state.get("_mode4_session") is None
+            or st.session_state.get("_mode4_track") != track):
+        st.session_state["_mode4_session"] = IntakeSession(track=track)
+        st.session_state["_mode4_track"] = track
+        st.session_state["_mode4_history"] = []
+        st.session_state["_mode4_last_draft"] = None
     if "_mode4_history" not in st.session_state:
         st.session_state["_mode4_history"] = []
     if "_mode4_last_draft" not in st.session_state:
@@ -318,7 +369,7 @@ def _render_state_tab(session) -> None:
     for sec in SECTIONS:
         st.markdown(f"### {sec}")
         rows = []
-        for fname in fields_by_section(sec):
+        for fname in fields_by_section(sec, getattr(session, 'track', None)):
             spec = FIELDS[fname]
             value = session.application.get(fname)
             is_filled = value not in (None, "") and not (
