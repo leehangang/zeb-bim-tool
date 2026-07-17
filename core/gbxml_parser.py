@@ -55,6 +55,11 @@ _SURFACE_MAP = {
     "EmbeddedColumn": (None, None),
 }
 
+# 외피는 아니지만 **존을 닫는 데 필요한** 면. 열관류율 판정에선 빼고 IDF에만 쓴다.
+# (Shade·Air·기둥은 여기 없다 — 존 경계가 아니다. Ceiling은 위 _SURFACE_MAP이
+#  이미 roofs로 가져가므로 여기 오지 않는다.)
+_INTERIOR_TYPES = ("InteriorWall", "InteriorFloor")
+
 # openingType → 창 / 문
 _OPENING_WINDOW = {
     "FixedWindow", "OperableWindow", "FixedSkylight", "OperableSkylight",
@@ -187,6 +192,8 @@ def parse_gbxml(source) -> dict:
         "_meta": {"source": "gbXML", "gbxml": {}},
         "walls": [], "windows": [], "doors": [], "roofs": [], "floors": [],
         "pv_panels": [], "spaces": [],
+        # 외피 아님 — 열관류율 판정에 쓰면 안 된다. IDF에서 존을 닫는 용도다.
+        "interior_surfaces": [],
     }
     skipped = {}
 
@@ -248,6 +255,28 @@ def parse_gbxml(source) -> dict:
         if bucket is None:
             if stype:
                 skipped[stype] = skipped.get(stype, 0) + 1
+            # 🔑 내부 면은 **외피가 아니지만 지오메트리로는 필요하다.**
+            #    빼버리면 2층은 바닥이, 1층은 천장이 없는 뚫린 존이 된다. 그런데 E+는
+            #    그걸 fatal도 severe도 없이 계산해낸다 — 2026-07-17 2층 시험에서
+            #    확인했다(전력이 단층과 동일, 2층 면적 0). 아무도 안 알려준다.
+            #    → 열관류율 판정 대상에선 계속 빼되(bim["walls"] 등에 안 넣는다),
+            #      IDF 존을 닫는 데 쓰도록 따로 담는다. 목적이 다르면 목록도 다르다.
+            if stype in _INTERIOR_TYPES:
+                _spaces = [
+                    a.get("spaceIdRef")
+                    for a in surf.findall("g:AdjacentSpaceId", _NS)
+                    if a.get("spaceIdRef")
+                ]
+                _v = _vertices(surf)
+                if len(_spaces) == 2 and _v:
+                    bim["interior_surfaces"].append({
+                        "id": surf.get("id") or f"IS{len(bim['interior_surfaces'])+1}",
+                        "area": round(_geometry_area(surf), 2),
+                        "u_value": u_by_id.get(surf.get("constructionIdRef")),
+                        "vertices": _v,
+                        "surface_type": stype,
+                        "spaces": _spaces,   # [법선이 향하는 쪽, 반대쪽] — gbXML 규약
+                    })
             continue
 
         area = _geometry_area(surf)

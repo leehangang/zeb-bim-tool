@@ -73,6 +73,13 @@ _IDF_SURFACE = {
     "ExposedFloor":     ("Floor",   "Outdoors",   "NoSun",        "WindExposed"),
 }
 
+# 존간 면 — Outside Boundary Condition = Zone. E+가 반대쪽 면을 자동으로 만들어준다.
+# 없으면 존이 안 닫히는데, E+는 그걸 fatal도 severe도 없이 계산한다 (2026-07-17 확인).
+_IDF_INTERIOR = {
+    "InteriorWall":  "Wall",
+    "InteriorFloor": "Floor",
+}
+
 
 def _material_r(u_value: float, kind: str) -> float:
     """U-value(W/㎡·K) → Material:NoMass의 Thermal Resistance(㎡·K/W)."""
@@ -187,6 +194,14 @@ RunPeriod,
         for i, kind, _ in surfaces
         if kind == "floor" and (i.get("vertices") or []) and i.get("u_value") is not None
     }
+    # 존간 바닥도 바닥이다. 2층의 바닥은 1·2층이 공유하는 InteriorFloor다 —
+    # 이걸 안 세면 다층 건물마다 오탐 경고가 뜬다.
+    for _i in (bim.get("interior_surfaces") or []):
+        if (_i.get("surface_type") != "InteriorFloor"
+                or not (_i.get("vertices") or []) or _i.get("u_value") is None):
+            continue
+        for _z in (_i.get("spaces") or []):
+            _floor_zones.add(_safe(_z))
     out.append("!-  ===== 존 (gbXML Space = 존) =====\n")
     _stype = {_safe(s["id"]): s.get("spaceType") for s in (bim.get("spaces") or [])}
     for z in zones:
@@ -208,7 +223,13 @@ RunPeriod,
     # ── 재료·구성 (U-value → Material:NoMass) ───────────────────────
     out.append("!-  ===== 구성 (U-value에서 역산) =====\n")
     seen = set()
-    for item, kind, _ in surfaces:
+    # 내부 면도 구성이 필요하다 (존을 닫는 데 쓴다). 표면열저항은 양쪽 다 실내라
+    # 벽 기준(0.13+0.13)을 쓰는 게 맞지만, 여기선 kind로 근사한다 —
+    # 존간 면의 열류는 냉난방 총량에 지배적이지 않다.
+    for item, kind, _ in surfaces + [
+        (i, "wall" if i["surface_type"] == "InteriorWall" else "floor", i["surface_type"])
+        for i in (bim.get("interior_surfaces") or [])
+    ]:
         u = item.get("u_value")
         cname = f"CON_{item['id']}"
         if u is None:
@@ -274,6 +295,42 @@ RunPeriod,
             f"    {sun},                   !- Sun Exposure\n"
             f"    {wind},                  !- Wind Exposure\n"
             f"    autocalculate,           !- View Factor to Ground\n"
+            f"    {len(pts)},              !- Number of Vertices\n"
+            f"{_fmt_vertices(pts)};\n\n"
+        )
+
+    # ── 존간 면 ─────────────────────────────────────────────────────
+    # 이게 없으면 다층 건물의 2층은 바닥이, 1층은 천장이 없다. E+는 그 상태로도
+    # fatal 없이 계산하고, 존 면적이 0이라 부하가 조용히 빠진다 → 반드시 넣는다.
+    _inter = [i for i in (bim.get("interior_surfaces") or []) if len(i.get("spaces") or []) == 2]
+    if _inter:
+        out.append("!-  ===== 존간 면 (외피 아님 — 존을 닫는 용도) =====\n")
+    for item in _inter:
+        pts = item.get("vertices") or []
+        u = item.get("u_value")
+        stype = _IDF_INTERIOR.get(item["surface_type"])
+        z_a, z_b = _safe(item["spaces"][0]), _safe(item["spaces"][1])
+        if not pts or u is None or stype is None:
+            skipped.append(
+                f"{item['id']}: 존간 면인데 "
+                + ("좌표 없음" if not pts else "U-value 미상" if u is None else "타입 미지원")
+                + f" → IDF 제외 (존 {z_a}·{z_b}가 안 닫힙니다)"
+            )
+            continue
+        if z_a == z_b:
+            continue
+        out.append(
+            f"BuildingSurface:Detailed,\n"
+            f"    {item['id']},            !- Name\n"
+            f"    {stype},                 !- Surface Type\n"
+            f"    CON_{item['id']},        !- Construction Name\n"
+            f"    {z_a},                   !- Zone Name\n"
+            f"    ,                        !- Space Name\n"
+            f"    Zone,                    !- Outside Boundary Condition\n"
+            f"    {z_b},                   !- Outside Boundary Condition Object (반대편 존)\n"
+            f"    NoSun,                   !- Sun Exposure\n"
+            f"    NoWind,                  !- Wind Exposure\n"
+            f"    ,                        !- View Factor to Ground\n"
             f"    {len(pts)},              !- Number of Vertices\n"
             f"{_fmt_vertices(pts)};\n\n"
         )

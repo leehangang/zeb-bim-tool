@@ -303,6 +303,61 @@ check("정상 gbXML엔 blockers가 없다 (오탐 금지)",
 _full = PROJECT_ROOT / "data" / "sample_bim" / "demo_daycare_full.gbxml"
 check("데모 gbXML에도 blockers가 없다",
       parse_gbxml(str(_full))["_meta"]["gbxml"]["blockers"] == [])
+
+# ── 다층: 존간 면이 없으면 존이 안 닫힌다 ──────────────────────────────
+# 2026-07-17 2층 시험: InteriorFloor를 버리자 2층에 바닥이 없어졌는데 E+는 fatal도
+# severe도 없이 계산했다. 전력이 단층과 똑같이 나왔다(2층 면적 0). 아무도 안 알려준다.
+_2F = """<gbXML xmlns="http://www.gbxml.org/schema" version="6.01">
+  <Campus id="c"><Building id="b" buildingType="DayCare"><Area>200</Area>
+    <Space id="sp-1f"><Area>100</Area></Space><Space id="sp-2f"><Area>100</Area></Space>
+  </Building>
+  <Surface id="mid" surfaceType="InteriorFloor" constructionIdRef="cm">
+    <AdjacentSpaceId spaceIdRef="sp-2f"/><AdjacentSpaceId spaceIdRef="sp-1f"/>
+    <RectangularGeometry><Width>10</Width><Height>10</Height></RectangularGeometry>
+    <PlanarGeometry><PolyLoop>
+      <CartesianPoint><Coordinate>0</Coordinate><Coordinate>0</Coordinate><Coordinate>3</Coordinate></CartesianPoint>
+      <CartesianPoint><Coordinate>0</Coordinate><Coordinate>10</Coordinate><Coordinate>3</Coordinate></CartesianPoint>
+      <CartesianPoint><Coordinate>10</Coordinate><Coordinate>10</Coordinate><Coordinate>3</Coordinate></CartesianPoint>
+      <CartesianPoint><Coordinate>10</Coordinate><Coordinate>0</Coordinate><Coordinate>3</Coordinate></CartesianPoint>
+    </PolyLoop></PlanarGeometry>
+  </Surface>
+  <Surface id="slab" surfaceType="SlabOnGrade" constructionIdRef="cf">
+    <AdjacentSpaceId spaceIdRef="sp-1f"/>
+    <RectangularGeometry><Width>10</Width><Height>10</Height></RectangularGeometry>
+    <PlanarGeometry><PolyLoop>
+      <CartesianPoint><Coordinate>0</Coordinate><Coordinate>0</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+      <CartesianPoint><Coordinate>0</Coordinate><Coordinate>10</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+      <CartesianPoint><Coordinate>10</Coordinate><Coordinate>10</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+      <CartesianPoint><Coordinate>10</Coordinate><Coordinate>0</Coordinate><Coordinate>0</Coordinate></CartesianPoint>
+    </PolyLoop></PlanarGeometry>
+  </Surface>
+  </Campus>
+  <Construction id="cm"><U-value unit="WPerSquareMeterK">1.5</U-value></Construction>
+  <Construction id="cf"><U-value unit="WPerSquareMeterK">0.29</U-value></Construction>
+</gbXML>"""
+_b2 = parse_gbxml(_2F)
+check("InteriorFloor를 버리지 않고 interior_surfaces에 담는다",
+      len(_b2["interior_surfaces"]) == 1, f'{len(_b2["interior_surfaces"])}개')
+check("존간 면은 양쪽 존을 다 기억한다 (한쪽만 알면 못 닫는다)",
+      sorted(_b2["interior_surfaces"][0]["spaces"]) == ["sp-1f", "sp-2f"])
+# 🔴 이게 제일 중요하다 — 내벽·층간바닥이 외피 목록에 섞이면 열관류율 판정이 조용히 틀린다
+check("내부 면이 외피 목록(walls/roofs/floors)을 오염시키지 않는다",
+      not any(x["id"] == "mid" for x in _b2["walls"] + _b2["roofs"] + _b2["floors"]),
+      f'floors={[x["id"] for x in _b2["floors"]]}')
+
+_r2f = write_idf(_b2)
+check("IDF가 존간 면을 Outside Boundary Condition=Zone으로 내보낸다",
+      "Zone,                    !- Outside Boundary Condition" in _r2f["idf"])
+check("존간 면이 반대편 존을 가리킨다", "sp-1f,                   !- Outside" in _r2f["idf"]
+      or "sp-2f,                   !- Outside" in _r2f["idf"])
+check("존간 바닥이 있으면 '바닥 없음' 오탐이 안 난다",
+      not any("존 면적이 0" in w for w in _r2f["warnings"]), f'{_r2f["warnings"]}')
+
+# 존간 면의 U를 모르면 존이 안 닫힌다 — 조용히 빠뜨리지 말고 이유를 남긴다
+_b2_nou = parse_gbxml(_2F.replace('<U-value unit="WPerSquareMeterK">1.5</U-value>', ""))
+check("존간 면 U 미상이면 skipped에 '존이 안 닫힙니다'를 남긴다",
+      any("안 닫힙니다" in s for s in write_idf(_b2_nou)["skipped"]),
+      f'{write_idf(_b2_nou)["skipped"]}')
 check("바닥 누락 경고는 접지 않고 본문에 띄운다 (조용한 실패라서)",
       '"존 면적이 0" in w' in _ui and "st.warning(" in _ui)
 
