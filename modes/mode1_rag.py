@@ -1,7 +1,9 @@
 """
 modes/mode1_rag.py — 정책 Q&A (RAG) UI
 =======================================
-ChromaDB에 인덱싱된 7개 PDF에서 검색 + Claude 답변.
+ChromaDB에 인덱싱된 법령·고시·공고 원문에서 검색 + Claude 답변.
+(문서 수를 여기 적지 않는다 — "7개"라고 박아뒀다가 19건이 되도록 낡아 있었다.
+ 화면은 core.doc_registry가 살아있는 색인에서 뽑아 쓴다.)
 
 처리 흐름:
     사용자 질문
@@ -19,8 +21,11 @@ ChromaDB에 인덱싱된 7개 PDF에서 검색 + Claude 답변.
     먼저 `python scripts/build_index.py` 실행해서 ChromaDB 인덱스 생성 필요.
 """
 
+import html
 import os
 from typing import Optional
+
+from core.legal_format import format_legal
 
 
 # ====================================================================
@@ -197,9 +202,10 @@ def render_rag_panel() -> None:
         st.error(friendly_error(e))
         return
 
-    # 답변 표시
+    # 답변 표시 — 테두리로 묶는다. 글만 흘러가면 어디까지가 답인지 안 보인다.
     st.subheader("답변")
-    st.markdown(result["answer"])
+    with st.container(border=True):
+        st.markdown(result["answer"])
 
     # 출처
     if result["sources"]:
@@ -210,4 +216,12 @@ def render_rag_panel() -> None:
                 f"{i}. {src['file']} (p.{src['page']}) — "
                 f"유사도 {1-src['distance']:.2f}"
             ):
-                st.text(src["snippet"])
+                # 조·항·호마다 줄을 나눈다. 날짜(<신설 2014. 5. 28.>)를 봉인한 뒤에만
+                # 호 번호를 끊는다 — 안 그러면 날짜가 세 줄로 찢어진다.
+                # 공백 외엔 한 글자도 안 건드린다 (core/legal_format.py 계약).
+                _snip = format_legal(src["snippet"])
+                st.markdown(
+                    f'<div style="white-space:pre-wrap; font-size:0.9rem; '
+                    f'line-height:1.7; padding:0.2rem 0;">{html.escape(_snip)}</div>',
+                    unsafe_allow_html=True,
+                )

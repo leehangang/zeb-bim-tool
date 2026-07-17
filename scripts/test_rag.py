@@ -590,6 +590,64 @@ def test_doc_registry():
     print("  [PASS] 화면에 문서 수 하드코딩 없음 (색인에서 파생)")
 
 
+def test_legal_format_lossless():
+    """법령 스니펫 줄바꿈이 원문을 훼손하지 않는가.
+
+    조문엔 날짜가 섞여 있다 — "<신설 2014. 5. 28., 2016. 1. 19.>".
+    호 번호(1. 2.)로 끊으면 이 날짜가 세 줄로 찢어진다. 조문을 인용하는 화면에서
+    원문 훼손은 오탈자보다 나쁘다 → **공백 외 무손실**을 계약으로 못 박는다.
+    """
+    print("\n⑮ 법령 스니펫 줄바꿈 — 원문을 훼손하지 않는가")
+    from core.legal_format import format_legal, is_lossless
+
+    cases = [
+        "법제처 4 국가법령정보센터 제로에너지건축물 인증에 관한 규칙 한다. "
+        "1. 「건축법」 제11조에 따른 건축허가의 신청 2. 「건축법」 제14조에 따른 건축신고 "
+        "3. 「건축법」 제29조에 따른 건축협의의 신청 ③ 운영기관의 장은 제2항에",
+        "적어야 한다.<신설 2014. 5. 28., 2016. 1. 19., 2019. 4. 30.> "
+        "제17조(제로에너지건축물 인증) ① 국토교통부장관은 에너지성능이 높은 건축물을",
+        "제6조(인증 수수료) ① 규칙 제13조제1항에 따른 인증 수수료는 별표 4와 같다 "
+        "② 규칙 제13조제2항에 따라 재평가를 신청하는 건축주등은 제1항에 따른 수수료의 100분의",
+        "",
+        "짧은 문장.",
+    ]
+    for c in cases:
+        assert is_lossless(c, format_legal(c)), f"글자가 바뀌었다: {c[:40]}"
+    print(f"  [PASS] 공백 외 무손실 — 픽스처 {len(cases)}건")
+
+    d = format_legal(cases[1])
+    assert "2014. 5. 28., 2016. 1. 19., 2019. 4. 30." in d, f"날짜가 쪼개졌다: {d!r}"
+    print("  [PASS] 날짜를 쪼개지 않는다 (<신설 2014. 5. 28., …>)")
+
+    assert format_legal(cases[0]).count("\n") >= 3, "호 번호에서 안 끊겼다"
+    assert "\n②" in format_legal(cases[2]), "항(②)에서 안 끊겼다"
+    assert "\n\n제17조(" in d, "조(제17조()에서 안 끊겼다"
+    print("  [PASS] 조·항·호에서 줄을 나눈다")
+
+    # '…하여야 한다.'의 '다.'를 목 마커로 오인하면 문장이 끊긴다 → 목은 안 건드린다
+    assert "한\n다." not in format_legal(cases[1])
+    print("  [PASS] '한다.'를 목 마커로 오인하지 않는다")
+
+    # 🔑 진짜 검증 — 실제 색인 원문에 대해 무손실인가
+    from core.rag_retriever import KeywordRetriever
+
+    r = KeywordRetriever()
+    hits = []
+    for q in ("제로에너지건축물 인증 신청", "인증 수수료", "그린리모델링 성능개선비율",
+              "에너지자립률 등급", "취득세 감면"):
+        hits += r.retrieve(q, top_k=5)
+    bad = [h for h in hits if not is_lossless(h["text"], format_legal(h["text"]))]
+    assert not bad, f"실제 원문이 훼손됨: {[h['file'] for h in bad][:3]}"
+    print(f"  [PASS] 실제 색인 원문 {len(hits)}개 전부 무손실")
+
+    # 만들어놓고 화면이 안 쓰면 없는 것과 같다
+    ui = (PROJECT_ROOT / "modes" / "mode1_rag.py").read_text(encoding="utf-8")
+    assert "format_legal(src[" in ui, "화면이 format_legal을 안 쓴다"
+    assert "html.escape(" in ui, "원문의 꺾쇠(<신설 …>)를 HTML로 흘리면 안 된다"
+    assert "st.container(border=True)" in ui, "답변이 테두리 박스에 안 들어갔다"
+    print("  [PASS] 화면이 실제로 적용 (escape + 답변 박스 포함)")
+
+
 if __name__ == "__main__":
     try:
         test_chunk_text()
@@ -604,6 +662,7 @@ if __name__ == "__main__":
         test_zip_refresh_on_change()
         test_retrieval_quality()
         test_doc_registry()
+        test_legal_format_lossless()
         print("\n" + "=" * 70)
         print("모든 RAG 테스트 통과 ✅")
         print("=" * 70)
