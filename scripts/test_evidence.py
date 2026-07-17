@@ -515,6 +515,24 @@ check("도담 환불액 0원 — 예전엔 78만원을 편익에 넣고 있었�
 check("도담 순비용 = 수수료 전액", _doam["순비용"] == 3_900_000)
     # status: 값만 본다. 본문 산문에는 과거 경위로 '확인필요_원문미확보'가 언급된다.
 
+print("\n⑯ 알림 아이콘이 두 번 그려지지 않는가")
+# st.info/success/warning/error는 icon= 인자로 왼쪽에 배지를 그린다. 본문까지 같은
+# 이모지로 시작하면 화면에 아이콘이 **두 개** 나온다 — 실제로 8곳이 그랬고,
+# 사용자가 화면을 보고 잡아줬다. 눈으로 놓치는 건 기계가 잡게 한다.
+from core.ui_lint import find_double_icons, scan_ui  # noqa: E402
+
+# 🔑 검사기 자체를 먼저 시험한다 — 아무것도 못 잡는 검사기는 통과해도 의미가 없다
+_BAD = 'st.success("🔬 EnergyPlus 연결됨", icon="🔬")'
+_OK_NO_EMOJI = 'st.success("EnergyPlus 연결됨", icon="🔬")'
+_OK_NO_ICON = 'st.success("🔬 EnergyPlus 연결됨")'
+check("검사기가 중복을 잡는다 (icon= + 본문 이모지)", len(find_double_icons(_BAD)) == 1)
+check("본문에 이모지가 없으면 통과", find_double_icons(_OK_NO_EMOJI) == [])
+check("icon= 인자가 없으면 본문 이모지는 정상", find_double_icons(_OK_NO_ICON) == [])
+
+_dup = scan_ui(_ROOT)
+check("화면 전체에 아이콘 중복 없음", not _dup,
+      ("중복: " + ", ".join(_dup)) if _dup else "8곳 → 0곳")
+
 print()
 if fails:
     print(f"❌ 실패 {len(fails)}건: {fails}")

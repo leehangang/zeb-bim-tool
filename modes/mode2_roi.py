@@ -107,24 +107,23 @@ def render_roi_panel() -> None:
     )
 
     # 무엇이 나오는지 — 두 박스 아래. "ROI"만 적어두면 뭘 주는지 알 수 없다.
-    st.markdown("**나오는 수치**")
-    _c = st.columns(4)
-    _outs = [
-        ("💵 Max Cost", "총 공사비", "조달청 단가DB × 보강 물량 + 간접공사비"),
-        ("🏛 보조금 · 자부담", "실제 낼 돈", "소유 주체별 보조율 50% / 70%"),
-        ("📈 NPV · IRR · B/C", "투자 가치", "20년 현금흐름 · 할인율 4.5%"),
-        ("⏱ 회수기간", "몇 년에 본전", "단순 회수 + 할인 회수"),
-    ]
-    for _col, (_t, _sub, _how) in zip(_c, _outs):
-        with _col:
-            st.markdown(f"**{_t}**<br><span style='font-size:0.82rem;'>{_sub}</span>",
-                        unsafe_allow_html=True)
-            st.caption(_how)
-    st.caption(
-        "여기에 **취득세 감면 · 용적률 완화 · 인증 수수료 환불**을 목표 등급에 따라 더합니다. "
-        "숫자는 전부 엔진이 계산합니다 — LLM은 문장에서 조건만 읽습니다."
-    )
-    st.divider()
+    with st.container(border=True):
+        st.markdown("**나오는 수치**")
+        _c = st.columns(4)
+        _outs = [
+            ("💵 Max Cost", "총 공사비", "조달청 단가DB × 보강 물량 + 간접공사비"),
+            ("🏛 보조금 · 자부담", "실제 낼 돈", "소유 주체별 보조율 50% / 70%"),
+            ("📈 NPV · IRR · B/C", "투자 가치", "20년 현금흐름 · 할인율 4.5%"),
+            ("⏱ 회수기간", "몇 년에 본전", "단순 회수 + 할인 회수"),
+        ]
+        for _col, (_t, _sub, _how) in zip(_c, _outs):
+            with _col:
+                st.markdown(f"**{_t}**<br><span style='font-size:0.82rem;'>{_sub}</span>",
+                            unsafe_allow_html=True)
+                st.caption(_how)
+        st.caption(
+            "여기에 **취득세 감면 · 용적률 완화 · 인증 수수료 환불**을 목표 등급에 따라 더합니다."
+        )
 
     # 세션 상태 — 대화 히스토리 (단순 1턴씩 처리, 멀티턴 미지원)
     if "_mode2_history" not in st.session_state:

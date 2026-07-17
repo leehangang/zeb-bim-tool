@@ -26,6 +26,7 @@ Revit gbXML(권장) 또는 Dynamo JSON 업로드 → 진단 + ROI + 최적화 + 
     - _render_optimization_tab():    탭3 렌더 (내부)
 """
 
+import html
 import json
 import tempfile
 from pathlib import Path
@@ -331,7 +332,7 @@ def render_bim_panel() -> None:
         # 무엇이 비었는지 **즉시** 알린다 — 안 그러면 조용히 0으로 진단된다.
         if _gb_demo:
             st.info(
-                f"🔬 **데모 gbXML** ({_gb_src[1]}) — 실제 건물이 아니라 화면 예시용 "
+                f"**데모 gbXML** ({_gb_src[1]}) — 실제 건물이 아니라 화면 예시용 "
                 "가상 모델입니다. 연면적만 도담과 비슷하게 맞췄고 형상·열관류율은 가정값입니다.",
                 icon="🔬",
             )
@@ -342,14 +343,14 @@ def render_bim_panel() -> None:
                 _peek = parse_gbxml(_gb_src[0])
                 _g = _peek["_meta"]["gbxml"]
                 _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
-                st.success(f"✅ gbXML 파싱 — {_cnt}", icon="📐")
+                st.success(f"gbXML 파싱 — {_cnt}", icon="✅")
 
                 # 🔴 파싱이 됐다고 쓸 수 있는 건 아니다. 실제 도담 export는 1,251㎡ 건물에서
                 #    해석 공간이 15㎡뿐이었는데 화면엔 "walls 6개"만 떠서 멀쩡해 보였다.
                 #    이건 '값 몇 개 없음'이 아니라 '이 파일을 쓰면 안 됨'이다.
                 if _g.get("blockers"):
                     st.error(
-                        "🚫 **이 gbXML로는 진단할 수 없습니다** — Revit 해석 모델이 "
+                        "**이 gbXML로는 진단할 수 없습니다** — Revit 해석 모델이 "
                         "제대로 만들어지지 않았습니다.\n\n"
                         + "\n".join(f"- {b}" for b in _g["blockers"])
                         + "\n\n아래 결과는 **건물 전체가 아닙니다.** 참고용으로만 보세요.",
@@ -410,7 +411,7 @@ def render_bim_panel() -> None:
                 _h = _ep_health()
                 if not _h["configured"]:
                     st.info(
-                        "🔬 **에너지 해석은 아직 이 사이트에서 못 돌립니다.** "
+                        "**에너지 해석은 아직 이 사이트에서 못 돌립니다.** "
                         "EnergyPlus는 Streamlit 무료 티어에서 실행이 막혀 있어"
                         "(apt 저장소에 패키지 없음 · CPU 하한 0.078코어) 별도 서비스가 필요합니다. "
                         "위 IDF를 내려받아 **로컬 EnergyPlus(무료)** 로 돌리시면 됩니다. "
@@ -424,7 +425,7 @@ def render_bim_panel() -> None:
                         icon="⚠️",
                     )
                 else:
-                    st.success(f"🔬 EnergyPlus 서비스 연결됨 — {_h['energyplus']}", icon="🔬")
+                    st.success(f"EnergyPlus 서비스 연결됨 — {_h['energyplus']}", icon="🔬")
                     _epw = st.file_uploader(
                         "기상파일 (.epw) — 없으면 서버 기본값",
                         type=["epw"], key="_epw_up",
@@ -582,14 +583,18 @@ def render_bim_panel() -> None:
         "앞의 **두 탭은 서로 다른 제도의 판정**이고, 뒤의 **세 탭은 두 트랙이 공유하는 경제성**입니다."
     )
 
-    # 파일명: 현재 업로드 또는 샘플 또는 캐시 키에서 추출
+    # 파일명: 현재 업로드 또는 데모 gbXML 또는 샘플 또는 캐시 키에서 추출
+    # ⚠️ gbdemo 분기를 빠뜨려 데모 gbXML을 눌러도 리포트 표지에 'bim.json'이 떴다.
+    #    cached_key[1]이 데모에선 전체 경로라 파일명으로 못 쓴다 → Path().name으로 뽑는다.
     if uploaded is not None:
         source_name = uploaded.name
+    elif _gb_src:
+        source_name = _gb_src[1]
     elif sample_name:
         source_name = sample_name
     elif cached_key:
-        # cached_key 구조: ("upload"|"sample", name, ...)
-        source_name = cached_key[1] if len(cached_key) > 1 else "bim.json"
+        # cached_key 구조: ("upload"|"gbdemo"|"sample", name_or_path, ...)
+        source_name = Path(str(cached_key[1])).name if len(cached_key) > 1 else "bim.json"
     else:
         source_name = "bim.json"
 
@@ -805,7 +810,7 @@ def _render_diagnosis_tab(result: dict) -> None:
     if unscored:
         scorable = score.get("_채점가능최대", 100)
         st.warning(
-            f"⚠️ **채점 가능 최대 {scorable}/100점** — 아래 {len(unscored)}개 항목은 "
+            f"**채점 가능 최대 {scorable}/100점** — 아래 {len(unscored)}개 항목은 "
             "**0점이 아니라 '미평가'** 입니다. BIM이나 사업 신청 정보에 없어서 점수를 "
             "매기지 못했을 뿐, 실제로는 받을 수 있는 점수입니다. "
             "선정은 **고득점 순 경쟁**이라 이 차이가 결과를 바꿉니다.",
@@ -1475,7 +1480,7 @@ def _render_zeb_tab(result: dict) -> None:
     )
 
     st.warning(
-        "⚠️ **이 등급은 '설계 검토용 추정'입니다 — 공식 인증 결과가 아닙니다.** "
+        "**이 등급은 '설계 검토용 추정'입니다 — 공식 인증 결과가 아닙니다.** "
         "ZEB 공식 등급·자립률은 **ECO2**(월간·ISO 13790, 지역 기후 내장)로만 산정합니다. "
         "우리 엔진은 용도별 원단위 × 요소별 절감률의 간이 추정이고, EnergyPlus 계열"
         "(eppy·시간별 기후)로 바꾸더라도 **계산 엔진이 달라 ECO2와 값이 일치하지 않습니다.** "
@@ -1763,16 +1768,51 @@ def _render_zeb_tab(result: dict) -> None:
 
 
 def _render_full_report_tab(result: dict, source_name: str) -> None:
-    """탭4: 마크다운 전체 리포트 + 다운로드 (마크다운/PDF 2종)."""
+    """탭4: 전체 리포트 + 다운로드 (마크다운/PDF 2종).
+
+    예전엔 st.markdown(report) 한 줄로 긴 마크다운을 통째로 흘려보냈다.
+    문서가 어디서 시작해 어디서 끝나는지 안 보이고, 화면의 다른 글과 구별이 안 됐다.
+    표지(무엇을·언제·무엇으로) → 본문 박스 → 내려받기 순으로 세운다.
+    """
     import streamlit as st
     from pathlib import Path
 
     report = result["report"]
-    st.markdown(report)
-
-    st.divider()
     source_name = source_name or "bim.json"  # None 방어 (캐시 경로에서 None 가능)
     file_stem = Path(source_name).stem
+
+    # ── 표지 ────────────────────────────────────────────────────────
+    # 빌드 식별자는 근거·출처의 것을 그대로 쓴다 — 같은 걸 두 벌 만들면 갈라진다.
+    from modes.mode5_evidence import build_id
+
+    _bid = build_id()
+    st.markdown(
+        f"""
+        <div style="border:1px solid #D8E1E7; border-radius:8px 8px 0 0;
+                    border-bottom:none; padding:1.1rem 1.3rem 0.9rem;
+                    background:#F3F6F8;">
+          <div style="font-size:0.72rem; letter-spacing:0.1em; color:#2E6E8E;
+                      font-weight:700;">DIAGNOSIS REPORT</div>
+          <div style="font-size:1.25rem; font-weight:700; margin:0.15rem 0 0.5rem;">
+            그린리모델링 진단 리포트</div>
+          <div style="font-size:0.8rem; color:#5A6C7A; line-height:1.7;">
+            대상 <b>{html.escape(source_name)}</b> · 생성 {_bid['date']}
+            · 엔진 <code>{_bid['commit']}</code>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── 본문 ────────────────────────────────────────────────────────
+    with st.container(border=True):
+        st.markdown(report)
+
+    st.caption(
+        "이 리포트는 **자동 산출 결과**입니다. 실제 사업 신청 시 그린리모델링 창조센터"
+        "(1588-8788) 공식 컨설팅이 필요합니다."
+    )
+    st.divider()
 
     # 다운로드 버튼 2개 (마크다운 / PDF)
     col1, col2 = st.columns(2)

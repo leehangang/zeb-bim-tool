@@ -270,7 +270,7 @@ def render_evidence_panel() -> None:
             "**우리는 브라우저 안에서 도는 도구가 아닙니다** — 서버에서 계산합니다."
         )
         st.error(
-            "🔴 **업로드한 BIM 파일(gbXML·JSON)은 서버로 전송됩니다.** 이 앱은 Streamlit "
+            "**업로드한 BIM 파일(gbXML·JSON)은 서버로 전송됩니다.** 이 앱은 Streamlit "
             "Community Cloud(해외 호스팅)에서 Python으로 실행되며, 파일 파싱·진단·ROI 계산이 "
             "**전부 그 서버에서** 일어납니다. 브라우저에서 처리되는 것이 아닙니다.\n\n"
             "**EnergyPlus 실행을 누르면 두 번째 해외 서버로 또 나갑니다.** E+는 Streamlit "

@@ -2,17 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "app",
+      "name": "zeb-local",
       "runtimeExecutable": ".venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "streamlit", "run", "streamlit_app.py",
-                      "--server.port", "8555", "--server.headless", "true"],
-      "port": 8555
-    },
-    {
-      "name": "deck",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "7799", "--directory", "presentation_design"],
-      "port": 7799
+                      "--server.port", "8599", "--server.headless", "true"],
+      "port": 8599
     }
   ]
 }
