@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>ZEB-ROI · 4개 모드 워크플로우</title>
+<style>
+/*
+  투사용 덱. 단일 테마로 확정한다 — 발표장 스크린은 뷰어 테마를 따라가지 않는다.
+  색이 곧 범례다: 실선=정상, 점선=우회, 호박=경고 후 진행, 적색=멈춤, 초록=통과.
+  회색조는 accent(초록) 쪽으로 기울여 놓았다.
+*/
+:root{
+  --paper:#FBFAF8; --panel:#FFFFFF; --ink:#16211D; --ink-2:#3E4B46;
+  /* 투사 대비 — 이전 #8A9490은 3.0:1로 뒷자리에서 회색 얼룩이 됐다. 4.6:1로 올린다. */
+  --ink-3:#5E6B66;
+  --line:#DDE1DD; --accent:#175E4C; --accent-soft:#E6F0EC;
+  --stop:#9E2F17; --stop-soft:#FAEBE6; --warn:#8A5A11; --warn-soft:#FBF2E2;
+  --pub:#0E5F73; --pri:#6E3357;
+  --f-body:"Pretendard Variable","Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+  --f-mono:"Cascadia Code","Consolas","D2Coding",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+/*
+  한글은 기본이 '아무 글자에서나 끊기'다 — 브라우저가 CJK를 그렇게 다룬다.
+  그대로 두면 "고/친", "3/개", "멀쩡/해"처럼 낱말이 반으로 갈린다.
+  keep-all이 어절(띄어쓰기) 단위로 끊게 만든다. 이게 한글 조판의 기본값이어야 한다.
+*/
+body{background:#DDE0DC;font-family:var(--f-body);color:var(--ink);
+  -webkit-font-smoothing:antialiased;padding:24px 0;
+  word-break:keep-all;overflow-wrap:break-word}
+.deck{display:flex;flex-direction:column;align-items:center;gap:22px}
+
+.slide{width:1280px;height:720px;background:var(--paper);position:relative;
+  padding:46px 58px 40px;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 2px 18px rgba(0,0,0,.13)}
+.slide::after{content:attr(data-n);position:absolute;right:26px;bottom:15px;
+  font:700 12px/1 var(--f-mono);color:var(--ink-3);letter-spacing:.06em}
+
+/* ── type ── */
+.eyebrow{font:700 13px/1 var(--f-mono);letter-spacing:.15em;color:var(--accent);
+  text-transform:uppercase;margin-bottom:9px}
+h1{font-size:46px;font-weight:800;letter-spacing:-.02em;line-height:1.12;text-wrap:balance}
+h2{font-size:35px;font-weight:800;letter-spacing:-.02em;line-height:1.15;text-wrap:balance}
+/* ch 단위를 쓰면 한글에서 절반 폭으로 끊긴다("…막히 / 는 지점"). px로 고정한다. */
+.sub{font-size:16.5px;color:var(--ink-2);line-height:1.6;margin-top:11px;max-width:1010px}
+.sub b{color:var(--ink);font-weight:700}
+code,.m{font-family:var(--f-mono);font-size:.87em;background:#EDF0ED;
+  padding:1px 5px;border-radius:3px;color:var(--ink-2)}
+
+/* ── flow chain ── */
+.chain{display:flex;align-items:stretch;flex-wrap:nowrap}
+.box{background:var(--panel);border:1.5px solid var(--ink);border-radius:7px;
+  padding:12px 13px;flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.box .t{font-size:15px;font-weight:700;line-height:1.3}
+.box .d{font-size:12.5px;color:var(--ink-2);line-height:1.42;flex:1}
+.box .f{font:600 11px/1.4 var(--f-mono);color:var(--ink-3);word-break:break-all}
+/* 강조는 테두리로만. 초록 '채움'은 이 덱에서 오직 '통과'를 뜻한다. */
+.box.hi{border-width:3px;border-color:var(--accent)}
+.box.hi .t{color:var(--accent)}
+.box.alt{border-style:dashed;border-color:var(--ink-3);background:#F4F5F3}
+.box.alt .t{color:var(--ink-2)}
+.arw{display:flex;align-items:center;justify-content:center;padding:0 10px;
+  font-size:18px;color:var(--ink-3);flex:0 0 auto}
+
+/* ── branch rail ── */
+.branch{display:flex;gap:14px}
+.rail{flex:0 0 3px;background:var(--line);border-radius:2px}
+.branch-body{flex:1;display:flex;flex-direction:column;gap:11px}
+.cond{display:flex;align-items:stretch;gap:12px}
+.cond .lbl{flex:0 0 204px;font-size:13.5px;font-weight:700;color:var(--ink);
+  display:flex;align-items:center;line-height:1.35}
+.cond .lbl::before{content:"";width:15px;height:1.5px;background:var(--line);
+  margin-right:10px;flex:0 0 15px}
+.cond .out{flex:1;border-radius:6px;padding:10px 13px;font-size:13.5px;line-height:1.45;
+  display:flex;align-items:center}
+.out.stop{background:var(--stop-soft);border-left:4px solid var(--stop);color:#7A2411}
+.out.alt{background:#F0F2EF;border-left:4px solid var(--ink-3);color:var(--ink-2)}
+.out.ok{background:var(--accent-soft);border-left:4px solid var(--accent);color:#0E4436}
+.out.warn{background:var(--warn-soft);border-left:4px solid var(--warn);color:#6E470B}
+.out b{font-weight:800}
+
+/* ── note ── */
+.note{background:var(--panel);border:1px solid var(--line);
+  border-left:4px solid var(--accent);border-radius:6px;padding:13px 16px;
+  font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.note.w{border-left-color:var(--warn)}
+.note b{color:var(--ink);font-weight:800}
+
+/* ── legend ──
+   규칙: **그 장에 실제로 쓰인 색만 싣는다.** 모든 장을 똑같이 맞추면 통일돼 보이지만,
+   안 쓰인 색의 칩이 곧 거짓말이 된다(2장엔 '멈춤'이 하나도 없다). 범례는 장식이 아니라
+   그 장을 읽는 열쇠다. 흐름도가 없는 장(7장)엔 범례를 두지 않는다. */
+.legend{display:flex;gap:20px;margin-top:auto;padding-top:14px;
+  border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-2);
+  align-items:center;flex-wrap:wrap}
+.legend i{display:inline-block;width:24px;height:12px;border-radius:3px;
+  margin-right:7px;vertical-align:-1px;border:1.5px solid var(--ink);background:var(--panel)}
+/* 점선 칩은 '점선 박스'(2장 ⑥)에만 쓴다. 분기 막대는 실선 회색이므로 칩도 실선이어야
+   한다 — 칩 모양이 실물과 다르면 범례가 아니라 수수께끼가 된다. */
+.legend i.alt{border-color:var(--ink-3);border-style:dashed;background:#F4F5F3}
+.legend i.byp{border-color:var(--ink-3);background:#F0F2EF}
+.legend i.warn{border-color:var(--warn);background:var(--warn-soft)}
+.legend i.stop{border-color:var(--stop);background:var(--stop-soft)}
+.legend i.ok{border-color:var(--accent);background:var(--accent-soft)}
+.legend span{display:flex;align-items:center}
+.legend .end{margin-left:auto;color:var(--ink-3);font-size:12px}
+/* 흐름도가 없는 마무리 장 — 범례 없이 출처만 */
+.footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);
+  display:flex;font-size:12.5px;color:var(--ink-2)}
+.footer .end{margin-left:auto;color:var(--ink-3)}
+
+/* ── cover cards ── */
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:32px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:19px 18px;display:flex;flex-direction:column;gap:9px}
+.card .ic{font-size:25px;line-height:1}
+.card .n{font-size:17.5px;font-weight:800;letter-spacing:-.01em}
+.card .io{font:600 11.5px/1.65 var(--f-mono);color:var(--ink-3)}
+.card .io b{color:var(--accent);font-weight:700}
+.card p{font-size:13px;color:var(--ink-2);line-height:1.5}
+
+/* ── two columns ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:17px 19px}
+.col.pub{border-top:4px solid var(--pub)}
+.col.pri{border-top:4px solid var(--pri)}
+.col h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.col .meta{font:600 12px/1.4 var(--f-mono);color:var(--ink-3);margin-bottom:12px}
+.col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.col li{font-size:13.5px;color:var(--ink-2);line-height:1.45;padding-left:14px;position:relative}
+.col li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;
+  border-radius:50%;background:var(--line)}
+.col li b{color:var(--ink);font-weight:700}
+.col.pub li::before{background:var(--pub)}
+.col.pri li::before{background:var(--pri)}
+
+/* ── principles ── */
+/* space-between으로 채우려다 카드 사이가 90px씩 벌어져 세 원칙이 따로 놀았다.
+   묶어놓고 위아래 여백을 고르게 주는 편이 낫다 — 여백을 없애는 게 목적이 아니다. */
+.prin{display:flex;flex-direction:column;gap:20px;margin-top:24px;
+  flex:1;justify-content:center}
+.prin .p{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:18px 20px;display:flex;gap:17px;align-items:flex-start}
+.prin .num{font:800 16px/1 var(--f-mono);color:var(--accent);flex:0 0 auto;
+  background:var(--accent-soft);width:32px;height:32px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center}
+.prin .tx h4{font-size:17px;font-weight:800;margin-bottom:5px;letter-spacing:-.01em}
+.prin .tx p{font-size:13.5px;color:var(--ink-2);line-height:1.6}
+.prin .tx p b{color:var(--ink);font-weight:700}
+
+/* ── cover ── */
+.cover{justify-content:center;background:var(--ink);color:var(--paper)}
+.cover h1{font-size:58px;color:#fff}
+.cover .sub{color:#BAC6C1}
+.cover .sub b{color:#fff}
+.cover .eyebrow{color:#6FCFB2}
+.cover .card{background:#1F2C27;border-color:#33423C}
+.cover .card .n{color:#fff}
+.cover .card p{color:#BAC6C1}
+.cover .card .io{color:#93A29C}
+.cover .card .io b{color:#6FCFB2}
+.cover::after{color:#93A29C}
+
+.stack{display:flex;flex-direction:column;gap:20px;margin-top:22px;flex:1}
+.stack .branch{flex:1}
+.stack .branch-body{justify-content:space-evenly}
+
+@media print{
+  body{background:#fff;padding:0}
+  .deck{gap:0}
+  .slide{box-shadow:none;page-break-after:always;break-after:page}
+}
+@page{size:1280px 720px;margin:0}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- 1 ───────────────────────────────────────────── -->
+<section class="slide cover" data-n="01">
+  <div class="eyebrow">ZEB-ROI · Green Remodeling Decision Platform</div>
+  <h1>무엇을 넣으면<br>무엇이 나오는가</h1>
+  <p class="sub">4개 모드가 각각 다른 입력을 받아 다른 결정을 돕습니다. 이 문서는
+     <b>정상 경로</b>와 <b>막히는 지점</b>을 함께 그립니다 — 안 되는 경우를 안 적으면
+     발표에서 그것만 물어봅니다.</p>
+  <div class="grid4">
+    <div class="card">
+      <div class="ic">🏢</div><div class="n">BIM 진단 + ROI</div>
+      <div class="io">IN <b>gbXML</b><br>OUT <b>ZEB등급 · GR점수 · NPV</b></div>
+      <p>도면에서 뽑은 3D 모델로 등급·보강비용·경제성을 한 번에.</p>
+    </div>
+    <div class="card">
+      <div class="ic">💬</div><div class="n">정책 Q&amp;A</div>
+      <div class="io">IN <b>질문 한 줄</b><br>OUT <b>답변 + 원문 출처</b></div>
+      <p>법령·고시·공고 원문을 찾아 조항째로 보여줍니다.</p>
+    </div>
+    <div class="card">
+      <div class="ic">💰</div><div class="n">ROI 시뮬레이션</div>
+      <div class="io">IN <b>문장 하나</b><br>OUT <b>보조금 · NPV · 회수기간</b></div>
+      <p>도면 없이 조건만으로 경제성을 먼저 가늠합니다.</p>
+    </div>
+    <div class="card">
+      <div class="ic">📋</div><div class="n">사업 신청 인테이크</div>
+      <div class="io">IN <b>대화</b><br>OUT <b>신청서 초안 .md</b></div>
+      <p>공공·민간을 갈라 각 서식에 맞는 초안을 만듭니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 ───────────────────────────────────────────── -->
+<section class="slide" data-n="02">
+  <div class="eyebrow">Mode 1 · BIM 진단 + ROI</div>
+  <h2>gbXML 한 개가 5개 탭이 되기까지</h2>
+  <p class="sub">Revit·ArchiCAD에서 내보낸 <code>.gbxml</code>을 올리면 서버가 파싱 → 검사 →
+     IDF 변환까지 자동으로 갑니다. <b>에너지 해석만 버튼을 눌러야 나갑니다.</b></p>
+
+  <div class="stack">
+    <div class="chain">
+      <div class="box"><div class="t">① 업로드</div>
+        <div class="d">gbXML 또는 데모 4종</div><div class="f">mode3_bim.py</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">② 파싱</div>
+        <div class="d">존 · 외피 · U값 · 창</div><div class="f">gbxml_parser.py</div></div>
+      <div class="arw">→</div>
+      <div class="box hi"><div class="t">③ 문지기</div>
+        <div class="d">쓸 수 있는 모델인가</div><div class="f">blockers</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">④ 진단</div>
+        <div class="d">ZEB등급 · GR점수 · 비용</div><div class="f">zeb_engine · roi</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">⑤ IDF 변환</div>
+        <div class="d">존별 표면 · 가정 5개</div><div class="f">idf_writer.py</div></div>
+      <div class="arw">→</div>
+      <div class="box alt"><div class="t">⑥ E+ 해석</div>
+        <div class="d">버튼을 눌러야 나감</div><div class="f">Modal · E+ 25.1</div></div>
+    </div>
+
+    <div class="note">
+      <b>③ 문지기가 왜 있나 —</b> 실제 도담어린이집 Revit export를 넣었더니 해석 공간이
+      <b>15㎡(전체의 1.2%)</b>뿐이고 99%가 차양 377개로 빠졌습니다. 그런데 화면엔 "walls 6개"라고만
+      떠서 멀쩡해 보였습니다. <b>세어만 놓고 판단을 안 하면 사용자는 쓰레기를 받아들고 모릅니다.</b>
+    </div>
+
+    <div class="two">
+      <div class="col">
+        <h3>화면에 나오는 5개 탭</h3>
+        <div class="meta">ZEB 등급 → GR 진단 → 보강·비용 → 최적화 → 민감도</div>
+        <ul>
+          <li><b>ZEB 등급</b> — 자립률·1차에너지·등급 (고시 기준, 우리 엔진)</li>
+          <li><b>GR 진단</b> — 12개 요소 점수 + 미평가 항목과 그 사유</li>
+          <li><b>보강·비용</b> — 우선순위 · Max Cost · 점수당 비용</li>
+          <li><b>최적화 · 민감도</b> — NPV·IRR·B/C · 가정이 흔들릴 때</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>종합 리포트로 묶어서 내려받기</h3>
+        <div class="meta">full_report.py → .md / .pdf</div>
+        <ul>
+          <li>6개 섹션이 <b>화면 흐름 그대로</b></li>
+          <li>숫자를 다시 계산하지 않음 — 엔진 결과를 문장으로 옮기기만</li>
+          <li><b>없는 섹션을 조용히 빼지 않음</b> — E+를 안 돌렸으면 그렇게 적음</li>
+          <li>PDF·마크다운이 <b>같은 라벨 표를 봄</b> — 두 벌이면 갈라짐</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i></i>정상 경로</span>
+    <span><i class="alt"></i>조건부 — 버튼을 눌러야 나감</span>
+    <span class="end">숫자는 전부 엔진이 계산 · LLM 없음 · 막히는 지점은 다음 장</span>
+  </div>
+</section>
+
+<!-- 3 ───────────────────────────────────────────── -->
+<section class="slide" data-n="03">
+  <div class="eyebrow">Mode 1 · 분기</div>
+  <h2>안 될 때 어디로 가는가</h2>
+  <p class="sub">에너지 해석은 <b>실패해도 조용합니다.</b> EnergyPlus는 존이 안 닫혀도 정상
+     종료합니다. 그래서 우리가 직접 막고, 직접 경고합니다.</p>
+
+  <div class="branch" style="margin-top:22px">
+    <div class="rail"></div>
+    <div class="branch-body">
+      <div class="cond"><div class="lbl">차양 &gt; 외피</div>
+        <div class="out stop"><span><b>막힘.</b> 해석 모델이 안 만들어진 것 — Revit에서 Energy
+          Settings를 잡고 다시 내보내야 합니다. 진단으로 못 넘어갑니다.</span></div></div>
+      <div class="cond"><div class="lbl">해석 공간 &lt; 50㎡</div>
+        <div class="out stop"><span><b>막힘.</b> 건물이 아니라 조각입니다. 계산해봐야 틀립니다.</span></div></div>
+      <div class="cond"><div class="lbl">좌표가 Boston</div>
+        <div class="out stop"><span><b>막힘.</b> <code>42.3584 / −71.0598</code> = Revit 기본 위치를
+          안 고친 것. 기상 데이터가 통째로 남의 나라가 됩니다.</span></div></div>
+      <div class="cond"><div class="lbl">U값이 비어 있음</div>
+        <div class="out warn"><span><b>경고 후 진행.</b> 무엇이 안 채워졌는지 화면에 드러냅니다 —
+          조용히 0으로 두면 진단이 조용히 틀립니다.</span></div></div>
+      <div class="cond"><div class="lbl">바닥 없는 존</div>
+        <div class="out warn"><span><b>경고 후 진행.</b> E+는 이걸 <code>ok:True</code>로 통과시킵니다.
+          Fatal 0, Severe 0. <b>우리 경고가 유일하게 잡습니다.</b></span></div></div>
+      <div class="cond"><div class="lbl">E+ 버튼 안 누름</div>
+        <div class="out alt"><span><b>그대로 진행.</b> 등급·비용·NPV는 E+ 없이도 나옵니다.
+          리포트엔 "돌리지 않았습니다"라고 적힙니다.</span></div></div>
+      <div class="cond"><div class="lbl">Modal 다운 · 타임아웃</div>
+        <div class="out alt"><span><b>IDF 다운로드로 물러섬.</b> 받아서 로컬 EnergyPlus로 직접 돌릴 수
+          있게. 조용히 실패하지 않습니다.</span></div></div>
+      <div class="cond"><div class="lbl">전부 통과</div>
+        <div class="out ok"><span><b>Modal에서 실제 EnergyPlus 25.1.0 실행</b> —
+          <code>energyplus -w 추풍령.epw -d out/ in.idf</code> → 난방·냉방·전력 미터</span></div></div>
+    </div>
+  </div>
+
+  <div class="note w" style="margin-top:18px">
+    <b>정직한 한계 —</b> 지금 나오는 건 <b>부하(요구량)</b>이지 소요량이 아닙니다. IdealLoads로
+    돌려 기기 효율이 안 들어갑니다. 공고 각주가 요구량을 허용하긴 하지만, <b>같은 각주가 요구하는
+    용도프로필(별표2)·기상데이터(별표6)를 우리는 둘 다 못 지킵니다.</b> 그래서 화면에 '요건미충족'을 붙여둡니다.
+  </div>
+
+  <div class="legend">
+    <span><i class="stop"></i>여기서 멈춤</span>
+    <span><i class="warn"></i>경고 후 진행</span>
+    <span><i class="byp"></i>우회</span>
+    <span><i class="ok"></i>통과</span>
+    <span class="end">막는 판단 3개 · 경고 2개 · 우회 2개</span>
+  </div>
+</section>
+
+<!-- 4 ───────────────────────────────────────────── -->
+<section class="slide" data-n="04">
+  <div class="eyebrow">Mode 2 · 정책 Q&amp;A</div>
+  <h2>답변마다 원문 조항이 따라붙습니다</h2>
+  <p class="sub">법령·고시·공고 원문을 미리 잘라 넣어두고, 질문이 오면 <b>키워드로 찾아</b> 그 조각만
+     Claude에게 줍니다. 없는 얘기를 지어내지 못하게 하는 구조입니다.</p>
+
+  <div class="stack">
+    <div class="chain">
+      <div class="box"><div class="t">① 질문</div>
+        <div class="d">직접 입력 또는 예시 6개</div><div class="f">mode1_rag.py</div></div>
+      <div class="arw">→</div>
+      <div class="box hi"><div class="t">② 인덱스 확인</div>
+        <div class="d">원문이 준비돼 있나</div><div class="f">is_index_ready()</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">③ 검색</div>
+        <div class="d">TF-IDF · 한글 2-gram · top 3~10</div><div class="f">KeywordRetriever</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">④ 답변 생성</div>
+        <div class="d">찾은 조각만 근거로</div><div class="f">Claude Haiku 4.5</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">⑤ 출력</div>
+        <div class="d">답변 박스 + 조항별 줄바꿈</div><div class="f">format_legal()</div></div>
+    </div>
+
+    <div class="branch">
+      <div class="rail"></div>
+      <div class="branch-body">
+        <div class="cond"><div class="lbl">인덱스가 없음</div>
+          <div class="out alt"><span><b>입력창이 아예 안 뜹니다.</b> 대신 안내 페이지 + 예시 질문 목록.
+            클라우드 무료 티어에서 인덱스를 못 올릴 때의 모습입니다.</span></div></div>
+        <div class="cond"><div class="lbl">매칭된 조각 0건</div>
+          <div class="out warn"><span>Claude는 <b>그래도 호출됩니다.</b> 컨텍스트가 비었다고 알려주고,
+            시스템 규칙에 따라 <b>"자료에 명시되지 않았습니다"</b>라고 답합니다. 출처 섹션은 사라집니다.</span></div></div>
+        <div class="cond"><div class="lbl">API 키 없음</div>
+          <div class="out stop"><span><b>🔑 카드로 안내.</b> 무엇을 어디에 넣어야 하는지까지.</span></div></div>
+        <div class="cond"><div class="lbl">한도 초과 · 503</div>
+          <div class="out stop"><span>에러 종류별로 <b>한국어 안내 카드</b>가 다릅니다 — 크레딧 부족,
+            요청 한도, 서버 과부하, 타임아웃을 구분해서 알려줍니다.</span></div></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>왜 벡터 검색이 아니라 키워드인가 —</b> 임베딩 모델을 올리면 무료 티어(~1GB)에서 앱이 뜨지
+      않습니다. 그래서 원문 조각을 저장해두고 <b>TF-IDF로 찾습니다.</b> 의존성 0 · API키 0 · 네트워크 0.
+      검색 품질을 조금 내주고 <b>실제로 뜨는 사이트</b>를 얻었습니다.
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i></i>정상 경로</span>
+    <span><i class="byp"></i>조건부 · 우회</span>
+    <span><i class="warn"></i>경고 후 진행</span>
+    <span><i class="stop"></i>여기서 멈춤</span>
+    <span class="end">답변은 LLM이 · 근거는 원문이</span>
+  </div>
+</section>
+
+<!-- 5 ───────────────────────────────────────────── -->
+<section class="slide" data-n="05">
+  <div class="eyebrow">Mode 3 · ROI 시뮬레이션</div>
+  <h2>LLM은 조건만 읽고, 계산은 엔진이 합니다</h2>
+  <p class="sub">도면이 없어도 <b>문장 하나로</b> 경제성을 가늠합니다. "연면적 1,251㎡ 어린이집,
+     2014년 준공, ZEB 5등급 목표" 같은 한 줄이면 됩니다.</p>
+
+  <div class="stack">
+    <div class="chain">
+      <div class="box"><div class="t">① 문장</div>
+        <div class="d">자유 입력 · 예시 6개</div><div class="f">mode2_roi.py</div></div>
+      <div class="arw">→</div>
+      <div class="box hi"><div class="t">② 조건 추출</div>
+        <div class="d">면적·용도·연도·등급을 <b>읽기만</b></div><div class="f">Claude → tool_use</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">③ 엔진 계산</div>
+        <div class="d">조달청 단가DB · 요율표 조회</div><div class="f">roi_calculator.py</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">④ 문장으로</div>
+        <div class="d">엔진 결과를 한국어로 옮김</div><div class="f">Claude</div></div>
+      <div class="arw">→</div>
+      <div class="box"><div class="t">⑤ 출력</div>
+        <div class="d">보조금 · NPV · IRR · 회수기간</div><div class="f">_render_history()</div></div>
+    </div>
+
+    <div class="branch">
+      <div class="rail"></div>
+      <div class="branch-body">
+        <div class="cond"><div class="lbl">연면적이 없음</div>
+          <div class="out alt"><span>엔진이 <b>계산을 거부</b>하고 되묻습니다 — 추측해서 넣지 않습니다.</span></div></div>
+        <div class="cond"><div class="lbl">자부담·절감액이 0</div>
+          <div class="out warn"><span><b>NPV·IRR·B/C가 통째로 안 나옵니다.</b> 없는 걸 0으로 채우지 않습니다.</span></div></div>
+        <div class="cond"><div class="lbl">부호 변화 없음</div>
+          <div class="out warn"><span><b>IRR = 없음.</b> 수학적으로 정의되지 않으면 안 적습니다.</span></div></div>
+        <div class="cond"><div class="lbl">엔진이 예외</div>
+          <div class="out alt"><span>에러를 <b>LLM에게 돌려주고</b> 다시 시도하게 합니다 (최대 5회).</span></div></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>제도 파라미터는 코드에 안 박습니다.</b> 보조율·한도·단가는 전부 YAML에 두고 엔진이
+      <b>결정론적으로 조회</b>합니다. LLM을 경유시키지 않습니다 — 같은 질문에 같은 숫자가 나와야 하고,
+      근거를 조항까지 되짚을 수 있어야 하니까요.
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i></i>정상 경로</span>
+    <span><i class="byp"></i>조건부 · 우회</span>
+    <span><i class="warn"></i>경고 후 진행</span>
+    <span class="end">LLM이 지어낸 숫자는 한 개도 없음</span>
+  </div>
+</section>
+
+<!-- 6 ───────────────────────────────────────────── -->
+<section class="slide" data-n="06">
+  <div class="eyebrow">Mode 4 · 사업 신청 인테이크</div>
+  <h2>공공과 민간은 다른 사업입니다</h2>
+  <p class="sub">근거 법령도, 지원 방식도, 서식도, 내는 사람도 다릅니다. 그래서
+     <b>맨 처음에 갈라놓고</b> 시작합니다 — 트랙을 바꾸면 세션을 새로 만듭니다.</p>
+
+  <div class="stack">
+    <div class="two">
+      <div class="col pub">
+        <h3>🏛 공공건축물</h3>
+        <div class="meta">필드 25개 · 필수 16개 · 녹색건축물법 제27조</div>
+        <ul>
+          <li><b>국비로 공사비 직접 보조</b> — 50% (지자체) / 70% (중앙·공공기관)</li>
+          <li><b>신청기관이 직접</b> 관리시스템에 작성 → PDF</li>
+          <li>전용 항목 — 신청기관명 · 기관유형 · 사업유형 · <b>사전컨설팅 이수</b></li>
+          <li>조건부 서류 — 임차건물이면 <b>[별지2]</b>, 군집형이면 <b>[별지3]</b></li>
+        </ul>
+      </div>
+      <div class="col pri">
+        <h3>🏠 민간건축물</h3>
+        <div class="meta">필드 30개 · 필수 22개 · 녹색건축물법 제25·26·27조</div>
+        <ul>
+          <li><b>대출 이자를 보전</b> — 4.5% / 5.5%</li>
+          <li><b>그린리모델링 사업자가</b> 건축주 동의를 받아 제출</li>
+          <li>전용 항목 — 사업자 · 건축주 · <b>시공 단계</b> · 성능개선비율 · 대출 방식</li>
+          <li>조건부 서류 — 비주거 <b>[별지8]</b> · 단독주택 <b>[별지7]</b> · 개인이면 신분증</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="branch">
+      <div class="rail"></div>
+      <div class="branch-body">
+        <div class="cond"><div class="lbl">대화로 항목 채우기</div>
+          <div class="out ok"><span>문장에서 값을 뽑아 검증 후 저장 → <b>진행률·빠진 항목</b>을 즉시 갱신.
+            <b>값을 추측하지 않습니다</b> — 모르면 되묻습니다.</span></div></div>
+        <div class="cond"><div class="lbl">범위를 벗어난 값</div>
+          <div class="out warn"><span>거부하고 이유를 돌려줍니다 (준공연도 1900~2030, 이메일에 @ 등).</span></div></div>
+        <div class="cond"><div class="lbl">필수가 덜 찼음</div>
+          <div class="out alt"><span><b>초안 생성이 거부됩니다.</b> 미리보기는 볼 수 있지만 다운로드 버튼은
+            안 뜨고, 뭐가 빠졌는지 목록으로 보여줍니다.</span></div></div>
+        <div class="cond"><div class="lbl">필수를 다 채움</div>
+          <div class="out ok"><span><b>트랙에 맞는 초안 .md 다운로드</b> — 제목·근거·지원방식·제출주체·구비서류가
+            전부 그 사업 것으로.</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="byp"></i>조건부 · 우회</span>
+    <span><i class="warn"></i>경고 후 진행</span>
+    <span><i class="ok"></i>통과</span>
+    <span class="end">트랙이 다르면 서식·근거·서류가 전부 다름</span>
+  </div>
+</section>
+
+<!-- 7 ───────────────────────────────────────────── -->
+<section class="slide" data-n="07">
+  <div class="eyebrow">4개 모드가 공유하는 것</div>
+  <h2>설계 원칙 세 가지</h2>
+  <p class="sub">모드는 넷이지만 규칙은 하나입니다. 이 규칙이 곧 이 도구를 믿을 수 있는 이유입니다.</p>
+
+  <div class="prin">
+    <div class="p"><div class="num">01</div><div class="tx">
+      <h4>숫자는 엔진이 계산합니다. LLM은 문장에서 조건만 읽습니다.</h4>
+      <p>보조율·한도·단가 같은 제도 파라미터는 <b>코드에 하드코딩하지 않고</b> YAML에 두고 결정론적으로
+        조회합니다. 같은 질문엔 같은 숫자가 나오고, 모든 숫자는 <b>조항까지 되짚을 수 있습니다.</b>
+        LLM이 지어낸 숫자는 한 개도 없습니다.</p></div></div>
+    <div class="p"><div class="num">02</div><div class="tx">
+      <h4>실패를 조용히 넘기지 않습니다.</h4>
+      <p>EnergyPlus는 존이 안 닫혀도 <code>ok:True</code>를 돌려줍니다. 없는 미터를 요청해도 경고만 남기고
+        빠집니다. <b>도구가 침묵하는 자리마다 우리가 직접 말하게 만들었습니다</b> — 문지기 3개, U값 경고,
+        바닥 없는 존 경고, Modal 실패 시 IDF 다운로드.</p></div></div>
+    <div class="p"><div class="num">03</div><div class="tx">
+      <h4>못 하는 건 못 한다고 적습니다.</h4>
+      <p>E+ 결과는 <b>요구량이지 소요량이 아니고</b>, 용도프로필·기상데이터는 고시 기준을 못 지킵니다.
+        리포트는 <b>없는 섹션을 조용히 빼지 않고</b> 왜 없는지 적습니다. 한계를 적은 자리는
+        <b>고친 뒤에 가장 먼저 거짓말이 되므로</b> 계속 갱신합니다.</p></div></div>
+  </div>
+
+  <div class="footer">
+    <span>ZEB-ROI · 그린리모델링 의사결정 플랫폼</span>
+    <span class="end">성균관대 졸업설계 · 삼성E&amp;A 환경에너지탐구대회 · zeb-bim-tool.streamlit.app</span>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
