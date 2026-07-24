@@ -338,8 +338,8 @@ def render_home():
         <div class="eyebrow">ZERO ENERGY BUILDING · GREEN REMODELING</div>
         <h1>BIM 한 번으로 <span class="accent">제로에너지건축물(ZEB)</span> 등급을 평가하고<br>그린리모델링 전 과정을 설계합니다</h1>
         <p class="lede">
-            Revit BIM 모델을 업로드하면 건물의 <b>ZEB 인증 등급</b>을 자동 평가하고,
-            그 등급에 도달하기 위한 <b>그린리모델링</b> 보강 우선순위 · 비용(Max Cost) ·
+            Revit BIM 모델을 업로드하면 건물의 <b>ZEB·에너지효율등급</b>을 평가하고,
+            <b>그린리모델링</b>의 보강 우선순위 · 비용(Max Cost) ·
             보조금 · 회수기간까지 한 자리에서 산출합니다.
         </p>
     </div>
