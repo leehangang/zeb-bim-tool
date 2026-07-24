@@ -361,80 +361,80 @@ def render_bim_panel() -> None:
 
                 # EnergyPlus — GR 성능개선비율의 '센터 지정 프로그램' 경로.
                 # E+는 Streamlit 무료 티어에서 못 돈다(CPU 0.078코어 하한·apt 부재).
-                # 서비스 URL이 있으면 거기서 돌리고, 없으면 IDF를 내려줘 로컬 실행으로 물러선다.
+                # 서비스가 있으면 '바로 실행'(방법 A), 없으면 'IDF 받아 로컬 실행'(방법 B).
+                # 예전엔 내려받기·실행·업로더·경고가 한 줄로 뒤섞여 두 길이 안 보였다.
                 from core.eplus_client import health as _ep_health
                 from core.eplus_client import run_idf as _ep_run
                 from core.idf_writer import write_idf
 
                 _idf = write_idf(_peek)
-                _c1, _c2 = st.columns([1, 2])
-                with _c1:
-                    st.download_button(
-                        "⬇️ EnergyPlus IDF 내려받기",
-                        data=_idf["idf"].encode("utf-8"),
-                        file_name=Path(_gb_src[1]).stem + ".idf",
-                        mime="text/plain",
-                        width="stretch",
+                _h = _ep_health()
+                _idf_bytes = _idf["idf"].encode("utf-8")
+                _idf_name = Path(_gb_src[1]).stem + ".idf"
+
+                st.markdown("#### 🔬 에너지 해석 (EnergyPlus)")
+                st.caption(
+                    f"외피 {_idf['stats']['surfaces']}/{_idf['stats']['surfaces_total']}면 · "
+                    f"존 {len(_peek.get('spaces') or []) or 1}개 반영 · IDF로 변환 완료. "
+                    # 닫는 ** 바로 앞에 '가 오면 CommonMark상 굵게가 안 닫힌다 — 따옴표를 뺀다.
+                    "EnergyPlus는 GR 성능개선비율의 **센터 지정 프로그램**입니다"
+                    "(2026 민간 GR 공고 p.3 각주) — 개선 전·후 비교가 인정 대상이 됩니다. "
+                    "ZEB 인증은 ECO2라 별개입니다."
+                )
+
+                # 값이 틀리는 조용한 실패(바닥 누락 → 존 면적 0)는 접지 않고 본문에 띄운다.
+                _zero = [w for w in _idf["warnings"] if "존 면적이 0" in w]
+                if _zero:
+                    st.warning(
+                        "**해석은 돌아가지만 값이 틀립니다.**\n\n"
+                        + "\n".join(f"- {w}" for w in _zero),
+                        icon="⚠️",
                     )
-                with _c2:
-                    st.caption(
-                        f"외피 {_idf['stats']['surfaces']}/{_idf['stats']['surfaces_total']}면 · "
-                        f"존 {len(_peek.get('spaces') or []) or 1}개 반영. "
-                        "**EnergyPlus는 GR 센터 지정 프로그램**입니다"
-                        "(2026 민간 GR 공고 p.3 각주) — 개선 전·후를 비교하면 성능개선비율이 "
-                        "**인정 대상**이 됩니다. ZEB 인증은 ECO2라 별개입니다.\n\n"
-                        "⚠️ 자동 변환이라 그대로 신청서에 쓰면 안 됩니다 — IdealLoads·표준 일정 "
-                        "가정이 들어 있습니다."
-                    )
+
+                # IDF 상세(빠진 면·가정)는 접어 둔다 — 두 실행 경로를 깔끔히 보이게.
+                _rest = [w for w in _idf["warnings"] if w not in _zero]
                 if _idf["skipped"]:
                     with st.expander(f"⚠️ IDF에서 빠진 면 {len(_idf['skipped'])}건 — 왜 빠졌나"):
                         for _s in _idf["skipped"]:
                             st.markdown(f"- {_s}")
+                if _rest:
+                    with st.expander(
+                        f"⚠️ IDF 생성 시 둔 가정 {len(_rest)}건 (IdealLoads·표준 일정 등)"
+                    ):
+                        for _w in _rest:
+                            st.markdown(f"- {_w}")
 
-                # write_idf의 경고를 그동안 화면에 안 그렸다. 만들어놓고 아무도 못 보면
-                # 없는 것과 같다 — 오히려 "경고했다"고 착각하게 만들어 더 나쁘다.
-                # 바닥 누락(존 면적 0 → 부하 전부 0)은 해석이 '성공'해도 값이 틀리는
-                # 조용한 실패라, 접히지 않게 본문에 띄운다.
-                if _idf["warnings"]:
-                    _zero = [w for w in _idf["warnings"] if "존 면적이 0" in w]
-                    _rest = [w for w in _idf["warnings"] if w not in _zero]
-                    if _zero:
-                        st.warning(
-                            "**해석은 돌아가지만 값이 틀립니다.**\n\n"
-                            + "\n".join(f"- {w}" for w in _zero),
-                            icon="⚠️",
+                # ── 실행 경로 — 딱 두 가지로 나눈다 ──────────────────────
+                if _h.get("configured") and _h.get("ok"):
+                    _go = False
+                    # 방법 A (권장): 서버에서 바로 실행
+                    with st.container(border=True):
+                        st.markdown("**방법 A — 여기서 바로 실행**　·　권장 ✅")
+                        st.caption(
+                            f"서버의 {_h['energyplus']} 로 즉시 해석합니다. 설치 필요 없습니다."
                         )
-                    if _rest:
-                        with st.expander(f"⚠️ IDF 생성 시 둔 가정 {len(_rest)}건"):
-                            for _w in _rest:
-                                st.markdown(f"- {_w}")
+                        _epw = st.file_uploader(
+                            "기상파일 (.epw) — 선택 (비우면 서버 기본값: 추풍령)",
+                            type=["epw"], key="_epw_up",
+                            help="도담(김천) 최근접 관측소는 추풍령 471350입니다. "
+                                 "climate.onebuilding.org에서 받을 수 있습니다.",
+                        )
+                        _go = st.button(
+                            "🔬 EnergyPlus 실행 (연간 해석)", type="primary", width="stretch"
+                        )
+                    # 방법 B (고급): IDF 받아 직접 — 접어 둔다
+                    with st.expander("방법 B — IDF 파일 받아 직접 실행 (고급)"):
+                        st.caption(
+                            "로컬에 EnergyPlus가 설치돼 있으면 이 IDF를 받아 직접 돌릴 수 있습니다. "
+                            "방법 A와 **같은 IDF**라 결과도 같습니다."
+                        )
+                        st.download_button(
+                            "⬇️ EnergyPlus IDF 내려받기",
+                            data=_idf_bytes, file_name=_idf_name,
+                            mime="text/plain", width="stretch", key="_dl_idf_b",
+                        )
 
-                # ── 서비스에서 바로 실행 ──────────────────────────────
-                _h = _ep_health()
-                if not _h["configured"]:
-                    st.info(
-                        "**에너지 해석은 아직 이 사이트에서 못 돌립니다.** "
-                        "EnergyPlus는 Streamlit 무료 티어에서 실행이 막혀 있어"
-                        "(apt 저장소에 패키지 없음 · CPU 하한 0.078코어) 별도 서비스가 필요합니다. "
-                        "위 IDF를 내려받아 **로컬 EnergyPlus(무료)** 로 돌리시면 됩니다. "
-                        "서비스를 띄우는 방법은 `energyplus_service/README.md`에 있습니다.",
-                        icon="🔬",
-                    )
-                elif not _h["ok"]:
-                    st.warning(
-                        f"EnergyPlus 서비스에 연결하지 못했습니다 — {_h['error']}\n\n"
-                        "IDF를 내려받아 로컬에서 실행하시면 됩니다.",
-                        icon="⚠️",
-                    )
-                else:
-                    st.success(f"EnergyPlus 서비스 연결됨 — {_h['energyplus']}", icon="🔬")
-                    _epw = st.file_uploader(
-                        "기상파일 (.epw) — 없으면 서버 기본값",
-                        type=["epw"], key="_epw_up",
-                        help="도담(김천) 최근접 관측소는 추풍령 471350입니다. "
-                             "climate.onebuilding.org에서 받을 수 있습니다.",
-                    )
-                    if st.button("🔬 EnergyPlus 실행 (연간 해석)", type="primary"):
+                    if _go:
                         with st.spinner("EnergyPlus 연간 해석 중… 수 분 걸릴 수 있습니다"):
                             _res = _ep_run(
                                 _idf["idf"],
@@ -461,6 +461,29 @@ def render_bim_panel() -> None:
                             if _e.get("raw_tail"):
                                 with st.expander("eplusout.err 원문"):
                                     st.code(_e["raw_tail"][-2000:])
+                else:
+                    # 서버 실행 불가 → IDF 내려받아 로컬 실행이 유일한 경로
+                    if not _h.get("configured"):
+                        st.info(
+                            "**이 사이트에선 아직 서버에서 바로 못 돌립니다.** "
+                            "EnergyPlus는 Streamlit 무료 티어에서 실행이 막혀 있어 별도 서비스가 "
+                            "필요합니다. 아래 IDF를 받아 **로컬 EnergyPlus(무료)** 로 돌리세요. "
+                            "서비스 띄우는 법은 `energyplus_service/README.md`에 있습니다.",
+                            icon="🔬",
+                        )
+                    else:
+                        st.warning(
+                            f"EnergyPlus 서비스에 연결하지 못했습니다 — {_h.get('error', '')}. "
+                            "아래 IDF를 받아 로컬에서 실행하세요.",
+                            icon="⚠️",
+                        )
+                    with st.container(border=True):
+                        st.markdown("**IDF 내려받아 로컬 EnergyPlus로 실행**")
+                        st.download_button(
+                            "⬇️ EnergyPlus IDF 내려받기",
+                            data=_idf_bytes, file_name=_idf_name,
+                            mime="text/plain", width="stretch", key="_dl_idf_a",
+                        )
                 _no_u = [
                     x["id"]
                     for k in ("walls", "roofs", "floors")
@@ -1604,6 +1627,23 @@ def _render_zeb_tab(result: dict) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    # 자립률이 0%인데 태양열이 있으면, 왜 0%인지 밝힌다.
+    # 안 밝히면 "0%"가 "신재생 전무"로 읽힌다 — 도담은 태양열 27㎡가 실재한다.
+    # (엔진의 0%는 옳다: 자립률 분자는 태양광 전력생산이고 이 건물엔 태양광이 없다.
+    #  태양열을 5.4kW PV로 잘못 넣었던 과거엔 ~5%가 나왔는데, 그건 전력 과대계상이었다.)
+    _st_area = sum(p.get("area_m2", p.get("area", 0))
+                   for p in (bim.get("solar_thermal_panels") or []))
+    _pv_kw = sum(p.get("capacity_kw", 0) for p in (bim.get("pv_panels") or []))
+    if autonomy < 0.05 and _st_area > 0 and _pv_kw == 0:
+        st.caption(
+            f"ℹ️ **자립률이 0%인 이유** — 자립률 분자는 태양광 전력생산(1차E ×2.75)입니다. "
+            f"이 건물은 태양광이 없어 0%입니다. 태양열 {_st_area:.0f}㎡(급탕)는 신재생이지만 "
+            f"전력을 생산하지 않아 이 값에 들어가지 않습니다. 고시상 태양열 급탕 열생산도 "
+            f"자립률에 **소폭** 기여하나(전력이 아닌 열 1차E), 그 생산량 산정에는 집열효율·"
+            f"일사 모델이 필요해 현재 엔진은 반영하지 않습니다(보수적 0). "
+            f"그래서 등급은 제2호(1차에너지소요량)로 산정됩니다."
+        )
 
     # ─────────────────────────────────────
     # 현재 → 보강 후 예상 등급 (자동 추정 모드)

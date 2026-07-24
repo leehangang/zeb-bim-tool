@@ -168,12 +168,15 @@ def render_rag_panel() -> None:
     st.divider()
 
     # 옵션
+    # 예시 클릭은 별도 seed 키에 담고, **위젯 생성 전에** 위젯 키로 옮긴다.
+    # 위젯의 key(_mode1_question)를 위젯이 생성된 *뒤* 버튼에서 직접 쓰면
+    # Streamlit이 "위젯 생성 후 수정 불가" 예외를 던진다 — 그게 예시 버튼 오류였다.
+    # 위젯이 만들어지기 전에 세팅하면 그건 '초기값'이라 허용된다.
+    if "_mode1_seed" in st.session_state:
+        st.session_state["_mode1_question"] = st.session_state.pop("_mode1_seed")
+
     col1, col2 = st.columns([3, 1])
     with col1:
-        # key= 로 위젯에 직접 담는다. 예전엔 예시 클릭을 별도 세션키(_seed)에 뒀다가
-        # 렌더 때 pop 했는데, 그러면 **입력창은 빈 채로** 답만 뜨고, 그 다음 rerun
-        # (슬라이더를 만지기만 해도) seed가 이미 없으니 질문이 통째로 사라졌다.
-        # mode2가 같은 버그를 고치고 주석까지 남겼는데 여기만 안 따라왔다.
         question = st.text_input(
             "질문",
             key="_mode1_question",
@@ -196,7 +199,8 @@ def render_rag_panel() -> None:
         for i, ex in enumerate(examples):
             with cols[i % 2]:
                 if st.button(ex, key=f"ex_{i}", width="stretch"):
-                    st.session_state["_mode1_question"] = ex
+                    # 위젯 키가 아니라 seed 키에 담는다 (위 주석 참고).
+                    st.session_state["_mode1_seed"] = ex
                     st.rerun()
 
     if not question:
