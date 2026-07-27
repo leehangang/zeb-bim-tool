@@ -87,15 +87,26 @@
   letter-spacing: 0.6px; color: var(--g2); }
 .cols4 .qa p { font-size: 14.5px; color: var(--g1); margin-top: 7px; line-height: 1.65; }
 .cols4 .qa p + em { margin-top: 18px; }
+/* '못 하는 것'은 선 하나로 떼어 놓고 톤을 낮춘다 — 자랑이 아니라 고지라서 */
+.cols4 .qa .lim { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--g3); }
+.cols4 .qa .lim em, .cols4 .qa .lim p { color: var(--g2); }
 
 /* ── 15 — 검증 케이스: 왼쪽 제원, 오른쪽 발견 세 줄 ─────────── */
-.case2 { display: flex; margin-top: 32px; height: 330px; }
+.case2 { display: flex; margin-top: 30px; height: 452px; }
+/* 사진과 BIM 모델을 나란히 — 세 번째 발견('사진으로는 태양광, BIM으로는 태양열')이
+   글로만 있으면 안 믿긴다. 두 장을 붙여 놓으면 그 문장이 눈으로 증명된다.
+   사진 원본이 350×235라 크게 쓰면 뭉개진다. 작게 쓰는 게 맞다. */
+.case2 .shots2 { display: flex; gap: 12px; margin-top: 20px; }
+.case2 .shots2 figure { flex: 1; min-width: 0; }
+.case2 .shots2 img { width: 100%; height: 104px; object-fit: cover; display: block;
+  border: 1px solid var(--g3); }
+.case2 .shots2 figcaption { font-size: 11.5px; color: var(--g2); margin-top: 7px; }
 .case2 .sp { width: 372px; flex: none; padding-right: 48px; }
 .case2 .sp k { font-size: 12px; font-weight: 500; letter-spacing: 1.6px; color: var(--g2); }
 .case2 .sp h3 { font-size: 25px; font-weight: 800; margin-top: 11px; letter-spacing: -0.03em;
   line-height: 1.3; }
-.case2 .sp .kv { margin-top: 20px; }
-.case2 .sp .kv div { display: flex; font-size: 14.5px; padding: 9px 0;
+.case2 .sp .kv { margin-top: 22px; }
+.case2 .sp .kv div { display: flex; font-size: 14.5px; padding: 8px 0;
   border-top: 1px solid var(--g3); }
 .case2 .sp .kv span:first-child { width: 92px; flex: none; color: var(--g2); }
 .case2 .sp .kv span:last-child { flex: 1; color: var(--g1); }
@@ -117,7 +128,7 @@
 .slide.dark .say u { color: #7FD8AE; }
 
 /* 07b — 차별점: 카드 없이 세로 구분선만 */
-.cols3 { display: flex; margin-top: 42px; }
+.cols3 { display: flex; margin-top: 52px; }
 .cols3 > div { flex: 1; padding: 0 34px; border-left: 1px solid var(--g3); }
 .cols3 > div:first-child { padding-left: 0; border-left: 0; }
 .cols3 .no { font-size: 46px; font-weight: 700; color: var(--g3); letter-spacing: -0.04em;
@@ -129,14 +140,14 @@
   color: var(--green); margin-top: 14px; }
 
 /* 비교 — 배경 톤만 다르게, 테두리 없음 */
-.vs { margin-top: 34px; background: #E5EDE8; border-radius: 2px; padding: 26px 34px;
+.vs { margin-top: 46px; background: #E5EDE8; border-radius: 2px; padding: 26px 34px;
   display: flex; gap: 46px; }
 .vs .lb { font-size: 12px; font-weight: 500; letter-spacing: 1.4px; color: var(--g2);
   width: 128px; flex: none; padding-top: 3px; }
 .vs .it { flex: 1; }
 .vs .it b { font-size: 16px; font-weight: 700; }
-.vs .it span { display: block; font-size: 14.5px; color: var(--g1); margin-top: 7px;
-  line-height: 1.6; }
+.vs .it span { display: block; font-size: 14.5px; color: var(--g1); margin-top: 9px;
+  line-height: 1.75; }
 
 /* 13b — 좌우 2단, 가운데 선 하나 */
 .duo { display: flex; margin-top: 42px; }
@@ -153,7 +164,7 @@
   width: 5px; height: 1.5px; background: var(--g3); }
 
 /* 3원칙 — 카드 없이 위쪽 짧은 선만 */
-.tri { display: flex; gap: 44px; margin-top: 46px; }
+.tri { display: flex; gap: 44px; margin-top: 56px; }
 .tri > div { flex: 1; padding-top: 16px; border-top: 2px solid var(--green); }
 .tri b { display: block; font-size: 16px; font-weight: 700; }
 .tri span { display: block; font-size: 14.5px; color: var(--g1); margin-top: 8px;
@@ -231,3 +242,47 @@
 .stat3 .dt b { color: var(--ink); font-weight: 700; }
 .stat3 .cm { margin-top: 20px; font-size: 14.5px; font-weight: 700; color: var(--green);
   letter-spacing: -0.02em; }
+
+/* ── 16 — 표 대신 그림으로 ────────────────────────────────────
+   숫자 넷을 표로 늘어놓으니 '얼마나' 좋아졌는지가 안 읽혔다.
+   성능개선비율 41.2%는 (168.5−99.1)÷168.5 그 자체라 따로 둘 줄이 아니었다.
+   1차에너지 막대에 변화율로 붙이면 두 값의 관계가 눈에 보인다. */
+.ba2 { margin-top: 54px; }
+.ba2 .m { display: flex; align-items: center; padding: 36px 0;
+  border-top: 1px solid var(--g3); }
+.ba2 .m:last-child { border-bottom: 1px solid var(--g3); }
+.ba2 .nm { width: 208px; flex: none; }
+.ba2 .nm b { display: block; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.ba2 .nm span { display: block; font-size: 12.5px; color: var(--g2); margin-top: 5px; }
+.ba2 .bars2 { flex: 1; }
+.ba2 .r { display: flex; align-items: center; gap: 16px; }
+.ba2 .r + .r { margin-top: 10px; }
+.ba2 .r k { width: 74px; flex: none; font-size: 12.5px; color: var(--g2); }
+.ba2 .r .tr { flex: 1; height: 22px; background: #E3EBE6; border-radius: 3px; }
+.ba2 .r .fl { height: 100%; border-radius: 3px; background: var(--chev); }
+.ba2 .r.aft .fl { background: var(--green); }
+.ba2 .r v { width: 92px; flex: none; text-align: right; font-size: 19px; font-weight: 700;
+  letter-spacing: -0.02em; color: var(--g2); }
+.ba2 .r.aft v { color: var(--green); font-size: 22px; }
+.ba2 .dt2 { width: 206px; flex: none; text-align: right; padding-left: 24px; }
+.ba2 .dt2 b { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
+.ba2 .dt2 span { display: block; font-size: 12px; color: var(--g2); margin-top: 6px;
+  line-height: 1.5; }
+
+/* ZEB 등급은 숫자가 아니라 칸이다 — 사다리로 그린다 */
+.lad { display: flex; flex: 1; }
+.lad div { flex: 1; text-align: center; padding: 9px 0; font-size: 12.5px; color: var(--g2);
+  border-left: 1px solid var(--g3); }
+.lad div:first-child { border-left: 0; }
+.lad div.now { background: #E3EBE6; color: var(--g1); font-weight: 700; }
+.lad div.aft { background: var(--green); color: #fff; font-weight: 700; }
+
+/* ── 17 — 막대가 옆 숫자와 다른 것을 재고 있었다 ───────────────
+   막대는 자부담 비율, 숫자는 회수기간이라 둘이 어긋나 보였다.
+   막대를 회수기간으로 바꾸고 10년 자리에 선을 그으면, 어느 보조율에서
+   그 선을 넘는지가 한눈에 보인다. */
+.bars .b .mark { position: absolute; top: -6px; bottom: -6px; width: 0;
+  border-left: 1.5px dashed var(--chev); }
+.marklb { position: relative; height: 18px; margin-left: 190px; margin-right: 150px; }
+.marklb span { position: absolute; transform: translateX(-50%); font-size: 11.5px;
+  font-weight: 700; color: var(--g1); white-space: nowrap; }

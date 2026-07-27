@@ -103,7 +103,8 @@
 .bars .b { display: flex; align-items: center; padding: 20px 0; }
 .bars .b k { width: 190px; flex: none; font-size: 16px; font-weight: 500; color: var(--g2); }
 .bars .b .track { flex: 1; height: 34px; background: #DEE8E3; border-radius: 4px;
-  position: relative; overflow: hidden; }
+  position: relative; }
+.bars .b .track .fill { overflow: hidden; }
 .bars .b .fill { position: absolute; inset: 0 auto 0 0; background: var(--green);
   border-radius: 4px; }
 /* 마지막 줄은 '되풀어 계산한 값'이라 성격이 달라 색으로 구분한다 */
@@ -113,15 +114,15 @@
 
 
 /* 18 로드맵 */
-.road { display: flex; gap: 0; margin-top: 48px; }
+.road { display: flex; gap: 0; margin-top: 58px; }
 .road .ph { flex: 1; padding: 0 26px; border-left: 1px solid var(--g3); }
 .road .ph:first-child { padding-left: 0; border-left: 0; }
 .road .ph k { font-size: 11.5px; font-weight: 700; letter-spacing: 1.6px; color: var(--green); }
-.road .ph b { display: block; font-size: 19px; font-weight: 700; margin-top: 12px;
-  line-height: 1.35; letter-spacing: -0.02em; }
-.road .ph ul { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--g3);
+.road .ph b { display: block; font-size: 23px; font-weight: 800; margin-top: 14px;
+  line-height: 1.32; letter-spacing: -0.03em; }
+.road .ph ul { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--g3);
   list-style: none; }
-.road .ph li { font-size: 14px; line-height: 1.9; color: var(--g1); }
+.road .ph li { font-size: 15px; line-height: 2.15; color: var(--g1); }
 .road .ph.now b { color: var(--green); }
 .close { position: absolute; left: 64px; right: 64px; bottom: 64px;
   display: flex; align-items: flex-end; justify-content: space-between; }
