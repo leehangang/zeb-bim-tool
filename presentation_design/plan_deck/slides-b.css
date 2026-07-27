@@ -12,7 +12,7 @@
 .zoom { flex: 1; position: relative; overflow: hidden; border: 1px solid var(--g3);
   border-radius: 9px; background: #fff; }
 .zoom img { position: absolute; display: block; }
-.zoom::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 46px;
+.zoom::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 88px;
   z-index: 1; background: linear-gradient(to right, rgba(255,255,255,0), #fff); }
 .zoom::before { content: ""; position: absolute; left: 0; right: 0; bottom: 30px; height: 26px;
   z-index: 1; background: linear-gradient(to bottom, rgba(255,255,255,0), #fff); }
@@ -99,7 +99,7 @@
 .slide.dark .ft { color: #6F9184; }
 
 /* 17 막대 */
-.bars { margin-top: 30px; }
+.bars { margin-top: 48px; }
 .bars .b { display: flex; align-items: center; padding: 20px 0; }
 .bars .b k { width: 190px; flex: none; font-size: 16px; font-weight: 500; color: var(--g2); }
 .bars .b .track { flex: 1; height: 34px; background: #DEE8E3; border-radius: 4px;
@@ -145,7 +145,7 @@
   background: linear-gradient(to bottom, rgba(255,255,255,0), #fff); }
 .view img { width: 100%; display: block; }
 /* 확대한 자리를 전체 캡처에 표시 — '여기를 보라' */
-.mk { position: absolute; border: 2px solid var(--green); border-radius: 3px;
+.mk { position: absolute; outline: 2px solid var(--green); border-radius: 3px;
   background: rgba(15,74,59,0.10); }
 .mk b { position: absolute; left: -21px; top: -10px; width: 18px; height: 18px;
   border-radius: 50%; background: var(--green); color: #fff; font-size: 11px;
