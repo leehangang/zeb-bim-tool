@@ -192,14 +192,14 @@ OUT.append('''
     </div>
     <div class="finds">
       <div class="find">
-        <div class="big">12.5배</div>
-        <div class="tx"><b>서측 외벽 6개에 단열재가 없었습니다</b>
-          <i>열관류율 3.0 W/㎡·K — 중부2지역 기준 0.24의 12.5배. 벽체 574개를 재료 정보로 분류해 찾아냈습니다.</i></div>
+        <div class="big">56%</div>
+        <div class="tx"><b>외벽 절반 이상에 단열재가 없었습니다</b>
+          <i>외벽 1,571.25㎡ 중 887.5㎡가 단열 미적용. 나머지 683.75㎡만 압출보온판 150T로 0.156 W/㎡·K입니다.</i></div>
       </div>
       <div class="find">
-        <div class="big">96.8%</div>
-        <div class="tx"><b>외피 열손실이 세 곳에 몰려 있었습니다</b>
-          <i>최하층 바닥 50.7% · 외벽 28.5% · 창호 19.2% — 어디부터 고칠지가 여기서 정해집니다.</i></div>
+        <div class="big">2.4배</div>
+        <div class="tx"><b>창은 아직 일반 단창이었습니다</b>
+          <i>열관류율 3.6 W/㎡·K. 중부2지역 기준 1.5의 2.4배. 지붕 600㎡와 강철문 13개도 단열이 없었습니다.</i></div>
       </div>
       <div class="find">
         <div class="big">태양열</div>
