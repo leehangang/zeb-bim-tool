@@ -1,0 +1,169 @@
+/* 09~18 부품. 캡처 장은 써냅스 7장 문법 — 전체 캡처 + 부분 확대 + 검은 라벨.
+   캡처 안 UI 글자는 슬라이드 크기에서 안 읽히는 게 정상이라, 설명은 전부 바깥에 둔다. */
+
+/* ── 09~12 캡처 장 ───────────────────────── */
+.shots { display: flex; gap: 26px; margin-top: 26px; height: 336px; }
+.shot { width: 520px; flex: none; border: 1px solid var(--g3); border-radius: 10px;
+  overflow: hidden; background: #fff; position: relative; }
+.shot img { width: 520px; display: block; }
+.shot .tag { flex: none; background: var(--ink); color: #fff; font-size: 11.5px;
+  font-weight: 500; padding: 6px 11px; letter-spacing: -0.01em; }
+.zooms { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.zoom { flex: 1; position: relative; overflow: hidden; border: 1px solid var(--g3);
+  border-radius: 9px; background: #fff; }
+.zoom img { position: absolute; display: block; }
+.zoom::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 46px;
+  z-index: 1; background: linear-gradient(to right, rgba(255,255,255,0), #fff); }
+.zoom::before { content: ""; position: absolute; left: 0; right: 0; bottom: 30px; height: 26px;
+  z-index: 1; background: linear-gradient(to bottom, rgba(255,255,255,0), #fff); }
+.zoom .lb { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; height: 30px;
+  display: flex; align-items: center; background: var(--ink); color: #fff;
+  font-size: 12px; font-weight: 700; padding: 0 12px; }
+
+/* ── 13 좌우 역할 ────────────────────────── */
+.roles { display: flex; gap: 26px; margin-top: 28px; height: 250px; }
+.role { flex: 1; background: var(--card); border: 1px solid var(--g3); border-radius: 10px;
+  padding: 22px 26px; }
+.role.code { border-left: 4px solid var(--green); }
+.role.ai { border-left: 4px solid var(--g3); }
+.role k { font-size: 11.5px; font-weight: 500; letter-spacing: 1.4px; color: var(--g2); }
+.role b { display: block; font-size: 20px; font-weight: 700; margin-top: 9px;
+  letter-spacing: -0.02em; }
+.role ul { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--g3);
+  list-style: none; }
+.role li { font-size: 15px; line-height: 2; color: var(--g1); }
+.rules { display: flex; gap: 14px; margin-top: 24px; }
+.rules div { flex: 1; background: var(--card); border: 1px solid var(--g3);
+  border-radius: 9px; padding: 14px 18px; font-size: 14.5px; color: var(--g1); }
+.rules div b { display: block; color: var(--green); font-weight: 700; margin-bottom: 5px;
+  font-size: 15px; }
+
+/* ── 14 상태 표 ──────────────────────────── */
+.tbl { margin-top: 30px; }
+.tbl .hrow, .tbl .row { display: flex; align-items: center; }
+.tbl .hrow { font-size: 12px; font-weight: 500; letter-spacing: 1.2px; color: var(--g2);
+  padding-bottom: 12px; border-bottom: 1px solid var(--g3); }
+.tbl .row { padding: 37px 0; border-bottom: 1px solid var(--g3); font-size: 15.5px; }
+.tbl .c1 { width: 132px; flex: none; }
+.tbl .c2 { width: 250px; flex: none; font-weight: 700; }
+.tbl .c3 { width: 300px; flex: none; color: var(--g1); }
+.tbl .c4 { flex: 1; color: var(--g1); }
+.pill { display: inline-block; border-radius: 999px; padding: 6px 15px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em; }
+.pill.ok { background: var(--green); color: #fff; }
+.pill.dead { background: #D5DCD8; color: #4A544E; text-decoration: line-through; }
+.pill.tbd { background: #fff; color: var(--green); border: 1.5px solid var(--green); }
+
+/* ── 15 검증 케이스 ──────────────────────── */
+.case { display: flex; gap: 26px; margin-top: 26px; height: 300px; }
+.spec { width: 400px; flex: none; background: var(--card); border: 1px solid var(--g3);
+  border-radius: 10px; padding: 22px 26px; }
+.spec k { font-size: 11.5px; font-weight: 500; letter-spacing: 1.4px; color: var(--g2); }
+.spec b { display: block; font-size: 20px; font-weight: 700; margin-top: 8px;
+  letter-spacing: -0.02em; line-height: 1.35; }
+.spec .kv { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--g3); }
+.spec .kv div { display: flex; font-size: 14.5px; line-height: 2.1; }
+.spec .kv span:first-child { width: 104px; flex: none; color: var(--g2); }
+.finds { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.find { flex: 1; background: var(--card); border: 1px solid var(--g3); border-radius: 10px;
+  padding: 16px 22px; display: flex; align-items: center; gap: 22px; }
+.find .big { font-size: 30px; font-weight: 700; color: var(--green); letter-spacing: -0.02em;
+  width: 132px; flex: none; }
+.find .tx b { display: block; font-size: 15px; font-weight: 700; }
+.find .tx i { display: block; font-style: normal; font-size: 13.5px; color: var(--g1);
+  margin-top: 5px; line-height: 1.5; }
+
+/* ── 16 Before / After ───────────────────── */
+.ba { margin-top: 24px; }
+.ba .hd2 { display: flex; font-size: 12px; font-weight: 500; letter-spacing: 1.2px;
+  color: var(--g2); padding-bottom: 10px; }
+.ba .hd2 .l { width: 300px; flex: none; }
+.ba .hd2 .m { flex: 1; text-align: center; }
+.ba .hd2 .r { width: 300px; flex: none; text-align: right; }
+.ba .row { display: flex; align-items: center; padding: 19px 0;
+  border-top: 1px solid var(--g3); }
+.ba .l { width: 300px; flex: none; font-size: 26px; font-weight: 700; color: var(--g2);
+  letter-spacing: -0.02em; }
+.ba .m { flex: 1; text-align: center; }
+.ba .m b { display: block; font-size: 15px; font-weight: 700; }
+.ba .m i { display: block; font-style: normal; font-size: 12.5px; color: var(--g2);
+  margin-top: 3px; }
+.ba .r { width: 300px; flex: none; font-size: 26px; font-weight: 700; color: var(--green);
+  text-align: right; letter-spacing: -0.02em; }
+
+/* ── 다크 슬라이드 (17 · 18) ─────────────── */
+.slide.dark { background: #0D2A21; color: #EAF2ED; }
+.slide.dark .hd, .slide.dark .sub, .slide.dark .note { color: #7FA091; }
+.slide.dark .rule, .slide.dark .ft { border-color: #244A3D; }
+.slide.dark .rule { background: #244A3D; }
+.slide.dark .ft { color: #6F9184; }
+
+/* 17 막대 */
+.bars { margin-top: 30px; }
+.bars .b { display: flex; align-items: center; padding: 20px 0; }
+.bars .b k { width: 190px; flex: none; font-size: 16px; font-weight: 500; color: var(--g2); }
+.bars .b .track { flex: 1; height: 34px; background: #DEE8E3; border-radius: 4px;
+  position: relative; overflow: hidden; }
+.bars .b .fill { position: absolute; inset: 0 auto 0 0; background: var(--green);
+  border-radius: 4px; }
+/* 마지막 줄은 '되풀어 계산한 값'이라 성격이 달라 색으로 구분한다 */
+.bars .b .fill.hot { background: var(--chev); }
+.bars .b v { width: 150px; flex: none; text-align: right; font-size: 24px; font-weight: 700;
+  letter-spacing: -0.02em; }
+
+
+/* 18 로드맵 */
+.road { display: flex; gap: 0; margin-top: 48px; }
+.road .ph { flex: 1; padding: 0 26px; border-left: 1px solid var(--g3); }
+.road .ph:first-child { padding-left: 0; border-left: 0; }
+.road .ph k { font-size: 11.5px; font-weight: 700; letter-spacing: 1.6px; color: var(--green); }
+.road .ph b { display: block; font-size: 19px; font-weight: 700; margin-top: 12px;
+  line-height: 1.35; letter-spacing: -0.02em; }
+.road .ph ul { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--g3);
+  list-style: none; }
+.road .ph li { font-size: 14px; line-height: 1.9; color: var(--g1); }
+.road .ph.now b { color: var(--green); }
+.close { position: absolute; left: 64px; right: 64px; bottom: 64px;
+  display: flex; align-items: flex-end; justify-content: space-between; }
+.close .big { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.5; }
+.close .url { font-size: 16px; color: var(--g1); text-align: right; line-height: 1.5; }
+
+/* ── 캡처를 브라우저 창에 담는다 (09~12 개선) ────────────────
+   그냥 둥근 사각형에 넣으면 이게 웹서비스인지 그림인지 안 읽힌다.
+   주소창에 실제 주소를 넣으면 '설치 없이 주소만으로'가 화면으로 증명된다. */
+.shots { height: 336px; }
+.shot  { flex: 1; width: auto; padding: 0; display: flex; flex-direction: column; }
+.zooms { width: 660px; flex: none; }          /* 확대 상자 폭 고정 — 크롭 계산이 이 값 기준 */
+.chrome { height: 24px; flex: none; background: #E7EDE9; border-bottom: 1px solid var(--g3);
+  display: flex; align-items: center; gap: 5px; padding: 0 9px; }
+.chrome i { width: 7px; height: 7px; border-radius: 50%; background: #C3CFC8; flex: none; }
+.chrome span { margin-left: 7px; background: #fff; border-radius: 999px; padding: 2px 10px;
+  font-size: 9.5px; color: var(--g1); letter-spacing: -0.01em; }
+.view { position: relative; flex: 1; overflow: hidden; }
+.view::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #fff); }
+.view img { width: 100%; display: block; }
+/* 확대한 자리를 전체 캡처에 표시 — '여기를 보라' */
+.mk { position: absolute; border: 2px solid var(--green); border-radius: 3px;
+  background: rgba(15,74,59,0.10); }
+.mk b { position: absolute; left: -21px; top: -10px; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--green); color: #fff; font-size: 11px;
+  font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.zoom .lb b { display: inline-block; width: 15px; height: 15px; border-radius: 50%;
+  background: #fff; color: var(--green); font-size: 10px; text-align: center;
+  line-height: 15px; margin-right: 6px; }
+
+/* ── 마지막 · 감사합니다 ─────────────────────
+   표지와 같은 구성 요소(눈썹 / 큰 글자 / 한 줄 소개 / 연락처)를 가운데로 모아
+   덱의 처음과 끝이 마주 보게 한다. */
+#s19 { padding: 0; }
+.thanks { height: 720px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; }
+.thanks .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: 3.4px; color: var(--g2); }
+.thanks h1 { font-size: 74px; font-weight: 800; letter-spacing: -0.05em; margin-top: 26px;
+  line-height: 1; color: var(--green); }
+.thanks .tag { font-size: 18px; font-weight: 500; color: var(--g1); margin-top: 32px;
+  line-height: 1.65; letter-spacing: -0.02em; }
+.thanks .meta { margin-top: 46px; padding-top: 26px; border-top: 1px solid var(--g3);
+  font-size: 15px; color: var(--g1); line-height: 1.95; min-width: 460px; }
+.thanks .meta b { font-weight: 700; color: var(--ink); }

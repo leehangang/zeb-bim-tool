@@ -58,3 +58,17 @@ data/chroma_db.zip.bak
 
 # Claude Code — 개인 권한 설정 (커밋 금지). launch.json은 팀 공유라 추적.
 .claude/settings.local.json
+
+# =====================================================
+# 발표 자료 — 원본 영상·PPT는 용량이 커서 올리지 않는다
+#   presentation_design 전체가 652MB인데 그 대부분이 홍보영상 mp4다.
+#   기획서는 '만드는 소스'(HTML·CSS·JS·글꼴·캡처)와 결과 PDF만 올린다.
+# =====================================================
+presentation_design/*.mp4
+presentation_design/*.pptx
+presentation_design/*.pdf
+presentation_design/pptx_png/
+presentation_design/plan_slides/
+presentation_design/slides/
+presentation_design/plan_deck/node_modules/
+presentation_design/plan_deck/out/qa/

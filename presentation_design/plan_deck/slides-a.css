@@ -1,0 +1,22 @@
+/* 01 표지 전용. 나머지 장의 부품은 slides-b.css(캡처·표·다크)와
+   slides-c.css(카드 없는 본문 레이아웃)에 있다.
+
+   표지만 가운데 덩어리 하나로 두니 위아래가 각각 30%씩 비었다.
+   다른 장과 같은 격자에 맞춘다 — 위 42px 눈썹+가로선, 아래 연락처, 가운데는 늘어난다. */
+
+#s01 { padding: 42px 64px 44px; }
+.cover { height: 100%; display: flex; flex-direction: column; }
+.cover .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: 3.2px; color: var(--g2); }
+.cover .mid { flex: 1; display: flex; align-items: center; }
+.cover .left { flex: 1; }
+.cover h1 { font-size: 104px; font-weight: 800; letter-spacing: -0.05em; margin-top: 0;
+  line-height: 1; color: var(--green); }
+.cover .tag { font-size: 22px; font-weight: 500; color: var(--ink); margin-top: 34px;
+  line-height: 1.6; letter-spacing: -0.025em; }
+.cover .meta { flex: none; padding-top: 24px; border-top: 1px solid var(--g3);
+  font-size: 14.5px; color: var(--g1); line-height: 1.95; }
+.cover .meta b { font-weight: 700; color: var(--ink); }
+/* 그림은 세로로 늘지 않는다. 가운데 띠의 높이가 바뀌어도 크기를 그대로 두려고 못 박는다. */
+.cover .art { width: 470px; flex: none; align-self: stretch; position: relative; }
+.cover .art svg { position: absolute; left: 0; top: 50%; width: 470px; height: 520px;
+  transform: translateY(-50%); }

@@ -1,0 +1,17 @@
+# Radiant Threshold
+
+**A visual philosophy of the measured ascent toward balance.**
+
+---
+
+Radiant Threshold treats equilibrium not as a static endpoint but as a *crossing* — the precise, observable moment when a rising system meets the line it was always reaching for. The movement borrows the language of the scientific plate: the ruled baseline, the indexed horizontal strata, the patient accumulation of fine marks that, viewed from a distance, resolve into a single inevitable gesture. Nothing is decorated. Everything is *recorded*. The work should feel less designed than *observed* — as though a careful hand sat with the subject for a very long time and transcribed exactly what rose before it.
+
+Space is governed by ascent. The composition reads from a heavy, grounded baseline toward a luminous upper register, and the eye is carried along a slow curve that accelerates, then quiets as it nears its threshold. Negative space is not emptiness but *air* — the room a measured thing needs to climb. The lower field is dense, particulate, weighted with repetition; the upper field is rarefied, almost silent, reserved for the one radiant event the whole plate exists to frame. This vertical hierarchy — accumulation below, radiance above — is the spine of the movement and must be honored with painstaking restraint.
+
+Color is a closed system, calibrated rather than chosen. A deep, mineral green anchors the base — the color of mass, of the not-yet-resolved — and warms, stroke by stroke, into a single radiant gold at the summit, the temperature of arrival. Between them, nothing arbitrary: every intermediate tone is a deliberate step on a tuned gradient, the product of meticulous chromatic labor. The paper itself is warm, aged, faintly grained, so the marks sit *in* the surface rather than upon it. Two colors carry the meaning; the third — the gold — is rationed like sunlight.
+
+Rhythm lives in the repeated mark. Hundreds of fine vertical strokes, each nearly identical, each slightly displaced, build the ascending field the way a discipline builds a proof: through quiet, cumulative attention. The repetition must look *handmade and exact at once* — the signature of a master who has done this ten thousand times. Set against this density, the clinical apparatus of the plate — hairline rules, tick columns, registration crosshairs, indexed strata — provides the cool geometric counterpoint. Structure and accumulation hold each other in tension; neither is allowed to win.
+
+Typography is instrumentation, not voice. Words appear only as a scientist would annotate: a plate number, an axis label, a single tuned coefficient, one large condensed title standing like a monument at the base of the field. Monospaced markers whisper in the margins; a lone serif phrase, set small and exact, names the phenomenon without explaining it. Text never narrates — it *locates*. Every glyph is placed with the precision of a surveyor, contained, breathing, never touching the marks it describes.
+
+The finished plate must read as an artifact from an imaginary, rigorous discipline — something that took countless unhurried hours, labored over by someone at the absolute top of their field, where the spacing, the calibration, the weight of every hairline has been refined until the whole thing feels not merely correct but *inevitable*. This is the standard: master-level execution, museum stillness, the paradox of using cold analytical language to render something quietly luminous. Make it look studied. Make it look earned.
