@@ -146,8 +146,10 @@
    회색 띠 위의 라벨은 명도차가 2.6:1까지 떨어져 읽기도 힘들었다. */
 .vs { margin-top: 46px; padding-top: 26px; border-top: 1px solid var(--g3);
   display: flex; gap: 46px; }
-.vs .lb { font-size: 12.5px; font-weight: 500; letter-spacing: 1.4px; color: var(--g1);
-  width: 128px; flex: none; padding-top: 3px; }
+.vs .lb { width: 128px; flex: none; padding-top: 2px;
+  font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+.vs .lb em { display: block; font-style: normal; font-size: 11px; font-weight: 500;
+  letter-spacing: 1.8px; color: var(--g2); margin-bottom: 7px; }
 .vs .it { flex: 1; }
 .vs .it b { font-size: 16px; font-weight: 700; }
 .vs .it span { display: block; font-size: 15.5px; color: var(--g1); margin-top: 9px;

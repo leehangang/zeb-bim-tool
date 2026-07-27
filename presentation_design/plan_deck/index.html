@@ -341,7 +341,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   </div>
 
   <div class="note" style="margin-top:20px">※&nbsp; 입력 검증. 못 믿을 파일은 진단을 시작하지 않습니다. 좌표가 없는 모델은 에너지 해석을 건너뛰고 진단 · 공사비 · 경제성까지만 수행합니다.</div>
-  <div class="say" style="margin-top:16px">해석 · 단가 · 법령을 하나만 두었기에, <u>두 제도의 답이 같은 건물에서 어긋나지 않습니다.</u></div>
+  <div class="say" style="margin-top:16px">두 제도의 답은 다릅니다. 다만 그 차이는 <u>제도가 다르기 때문</u>이지, 우리가 단가나 해석값을 두 번 계산해서가 아닙니다.</div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; GR 지원사업 운영고시 §9 &nbsp;|&nbsp; 2026 공공 GR 2.0 가이드라인 p.18</div>
 </section>
 
@@ -382,7 +382,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   <div class="gapline">
     <div class="n1"><k>ZEB 절감률</k><v>50.5%</v></div>
     <div class="n1"><k>GR 성능개선비율</k><v>41.2%</v></div>
-    <div class="sayr">실제 사례 하나에서도 <u>9.3%p</u>가 갈립니다.<br>그래서 판정을 하나로 합칠 수 없습니다.</div>
+    <div class="sayr">한 건물에서 <u>9.3%p</u>가 벌어집니다.<br>한쪽 값을 다른 쪽 서류에 옮기면 그만큼 틀립니다.</div>
   </div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; GR 지원사업 운영고시 §9 &nbsp;|&nbsp; 2026 공공 GR 2.0 가이드라인 [표1] p.18</div>
 </section>
@@ -415,7 +415,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   </div>
 
   <div class="vs">
-    <div class="lb">지금은 이렇게</div>
+    <div class="lb"><em>EXISTING</em>기존 방식</div>
     <div class="it">
       <b>ZEB 인증 대행 · 컨설팅</b>
       <span>ECO2에 방·외피·설비를 사람이 처음부터 입력합니다. 수일~수주 걸리고 입력자에 따라 결과가 달라집니다.</span>
@@ -488,12 +488,12 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   <div class="shots">
     <div class="shot">
       <div class="chrome"><i></i><i></i><i></i><span>zeb-bim-tool.streamlit.app</span></div>
-      <div class="view"><img src="img/bim_tabs.png" style="margin-top:-5px"><span class="mk" style="left:114.9px; top:27.0px; width:339.4px; height:82.8px"><b>1</b></span><span class="mk" style="left:114.9px; top:130.8px; width:194.2px; height:47.4px"><b>2</b></span></div>
+      <div class="view"><img src="img/bim_tabs.png" style="margin-top:-5px"><span class="mk" style="left:114.9px; top:27.0px; width:339.4px; height:82.8px"><b>1</b></span></div>
       <span class="tag">데모 케이스 진단 결과 (도담 아님)</span>
     </div>
     <div class="zooms">
       <div class="zoom"><img src="img/bim_tabs.png" style="width:906px; left:-224px; top:-62px"><span class="lb"><b>1</b>두 제도의 판정이 나란히, 아래는 여섯 개 탭</span></div>
-      <div class="zoom"><img src="img/bim_tabs.png" style="width:1584px; left:-391px; top:-461px"><span class="lb"><b>2</b>등급의 한계를 화면이 먼저 밝힘</span></div>
+      <div class="zoom"><img src="img/zeb_verdict.png" style="width:896px; left:-221px; top:-395px"><span class="lb"><b>2</b>제1호 · 제2호 · 제3호 중 무엇이 모자란지까지</span></div>
     </div>
   </div>
   <div class="say">여기 나오는 등급은 <u>설계 검토용 추정</u>입니다. 공식 등급은 ECO2 해석으로만 확정됩니다.</div>
@@ -538,7 +538,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="zoom"><img src="img/roi2_strt.png" style="width:1731px; left:-427px; top:-675px"><span class="lb"><b>2</b>예시 클릭 → 조건 자동 입력</span></div>
     </div>
   </div>
-  <div class="say">도담 기준으로 외피를 보강하면 <u>1.81억</u>, 보조 50%면 자부담 <u>0.91억</u>, 회수는 <u>12.2년</u>입니다. (에너지 가격 연 2.5% 상승 가정)</div>
+  <div class="say">문장에서 읽는 것은 조건이고, <u>숫자는 표에서 옵니다.</u> 공사비는 조달청 단가에서, 전기요금은 한전 약관에서 가져옵니다.</div>
   <div class="ft">근거 · 조달청 시설공통자재 단가 442종 · 간접공사비 기준(2026) &nbsp;|&nbsp; 한국전력 기본공급약관 140.9원/kWh &nbsp;|&nbsp; 할인율 4.5% · 20년</div>
 </section>
 
@@ -551,12 +551,12 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   <div class="shots">
     <div class="shot">
       <div class="chrome"><i></i><i></i><i></i><span>zeb-bim-tool.streamlit.app</span></div>
-      <div class="view"><img src="img/intake_top.png"><span class="mk" style="left:115.7px; top:224.9px; width:286.5px; height:69.9px"><b>1</b></span></div>
+      <div class="view"><img src="img/intake_top.png"><span class="mk" style="left:111.1px; top:224.9px; width:249.6px; height:60.9px"><b>1</b></span></div>
       <span class="tag">공공 · 민간을 나눠 접수하는 첫 화면</span>
     </div>
     <div class="zooms">
-      <div class="zoom"><img src="img/intake_top.png" style="width:1073px; left:-267px; top:-518px"><span class="lb"><b>1</b>필수 · 선택 · 완성도 실시간 집계</span></div>
-      <div class="zoom"><img src="img/intake_ask.png" style="width:1459px; left:-360px; top:-286px"><span class="lb"><b>2</b>모자란 항목을 되묻는 대화</span></div>
+      <div class="zoom"><img src="img/intake_top.png" style="width:1232px; left:-294px; top:-595px"><span class="lb"><b>1</b>필수 · 선택 · 완성도 실시간 집계</span></div>
+      <div class="zoom"><img src="img/intake_ask.png" style="width:1021px; left:-252px; top:-200px"><span class="lb"><b>2</b>모자란 항목을 되묻는 대화</span></div>
     </div>
   </div>
   <div class="say">필수 항목이 다 차기 전에는 초안을 만들지 않고, <u>공식 양식은 창조센터에서 받아 대조하라</u>고 안내합니다.</div>
