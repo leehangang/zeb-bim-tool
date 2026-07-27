@@ -36,8 +36,8 @@
   --bg:   #EFF5F1;
   --card: #FFFFFF;
   --g1:   #5C665F;   /* 본문 회색 */
-  --g2:   #8A968F;   /* 보조 */
-  --g3:   #CFDCD5;   /* 선 */
+  --g2:   #6F7C75;   /* 보조 — 배경 위 4.4:1 */
+  --g3:   #C4D3CB;   /* 선 */
   --chev: #96B2A5;   /* 갈매기 — g3로 두면 배경에 묻힌다 */
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -77,17 +77,17 @@ body { background: #6b7772; }
 
 /* ── 머리말 바 ─────────────────────────────── */
 .hd { display: flex; justify-content: space-between; align-items: baseline;
-      font-size: 12px; font-weight: 500; letter-spacing: 1.6px; color: var(--g2); }
+      font-size: 12.5px; font-weight: 500; letter-spacing: 1.6px; color: var(--g2); }
 .rule { height: 1px; background: var(--g3); margin-top: 16px; }
 /* 굵기 폭은 위쪽만 벌린다. 얇은 굵기는 '큰 글씨'에만 쓰는 게 원래 규칙이고,
    15px 회색 본문을 350까지 내리면 색 대비와 획 굵기가 같이 떨어져 인쇄본에서 흐려진다. */
 h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20px;
      line-height: 1.25; }
-.sub { font-size: 14px; color: var(--g1); margin-top: 12px; line-height: 1.55; }
-.note { font-size: 12px; color: var(--g2); }
+.sub { font-size: 15.5px; color: var(--g1); margin-top: 12px; line-height: 1.55; }
+.note { font-size: 13px; color: var(--g2); }
 .ft { position: absolute; left: 64px; right: 64px; bottom: 20px;
       border-top: 1px solid var(--g3); padding-top: 12px;
-      font-size: 11px; color: var(--g2); }
+      font-size: 12px; color: var(--g2); }
 </style>
 <link rel="stylesheet" href="slides-a.css">
 <link rel="stylesheet" href="slides-b.css">
@@ -444,7 +444,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="qa">
         <em>무엇을 넣으면</em><p>gbXML 파일 또는 데모 케이스</p>
         <em>무엇이 나오는가</em><p>11개 기술요소 진단 · ZEB 등급 · GR 100점 · 보강 우선순위</p>
-        <div class="lim"><em>무엇을 못 하는가</em><p>공식 ZEB 등급 산정 (확정은 ECO2 해석)</p></div>
+        <div class="lim"><em>무엇에 근거해</em><p>ZEB 인증기준 공동고시 [별표2] · 2026 공공 GR 2.0 [표1]</p></div>
       </div>
     </div>
     <div>
@@ -453,7 +453,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="qa">
         <em>무엇을 넣으면</em><p>법령 질문을 문장 그대로</p>
         <em>무엇이 나오는가</em><p>원문 19건에서 찾은 조문 인용 · 파일명과 쪽수까지</p>
-        <div class="lim"><em>무엇을 못 하는가</em><p>색인한 19건 밖의 답변 (없으면 없다고 답변)</p></div>
+        <div class="lim"><em>무엇에 근거해</em><p>법·고시·공고 원문 19건을 조항 단위 1,300개로 색인</p></div>
       </div>
     </div>
     <div>
@@ -462,7 +462,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="qa">
         <em>무엇을 넣으면</em><p>도면 없이 조건을 문장으로</p>
         <em>무엇이 나오는가</em><p>공사비 상한 · 보조금 · 자부담 · NPV · IRR · 회수기간</p>
-        <div class="lim"><em>무엇을 못 하는가</em><p>실측 (도면 없이 용도별 원단위 추정)</p></div>
+        <div class="lim"><em>무엇에 근거해</em><p>조달청 자재 442종 · 한국전력 기본공급약관 140.9원/kWh</p></div>
       </div>
     </div>
     <div>
@@ -471,12 +471,12 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="qa">
         <em>무엇을 넣으면</em><p>공공 · 민간 중 해당 사업을 고르고 대화</p>
         <em>무엇이 나오는가</em><p>필수 항목 완성도 집계 · 신청서 초안</p>
-        <div class="lim"><em>무엇을 못 하는가</em><p>공식 양식 대필 (초안 작성까지)</p></div>
+        <div class="lim"><em>무엇에 근거해</em><p>GR 지원사업 운영고시 · 2026 민간 GR 이자지원 공고</p></div>
       </div>
     </div>
   </div>
   <div class="say">화면마다 그 숫자가 어느 조항에서 왔는지 <u>근거·출처</u>에 모아 두었습니다.</div>
-  <div class="ft">근거 · 2026 공공 GR 2.0 가이드라인 [표1] &nbsp;|&nbsp; GR 지원사업 운영고시 §7① 대상공사 7종 &nbsp;|&nbsp; 색인 원문 19건 · 1,300청크</div>
+  <div class="ft">모드마다 쓰는 근거가 다릅니다. 값이 어느 조항에서 왔는지는 근거·출처 화면에서 조항 · 시행일과 함께 확인할 수 있습니다</div>
 </section>
 
 <!-- ══════════════ 09 · BIM 진단 ══════════════ -->

@@ -14,7 +14,7 @@
 .cover .tag { font-size: 22px; font-weight: 500; color: var(--ink); margin-top: 34px;
   line-height: 1.6; letter-spacing: -0.025em; }
 .cover .meta { flex: none; padding-top: 24px; border-top: 1px solid var(--g3);
-  font-size: 14.5px; color: var(--g1); line-height: 1.95; }
+  font-size: 15px; color: var(--g1); line-height: 1.95; }
 .cover .meta b { font-weight: 700; color: var(--ink); }
 /* 그림은 세로로 늘지 않는다. 가운데 띠의 높이가 바뀌어도 크기를 그대로 두려고 못 박는다. */
 .cover .art { width: 470px; flex: none; align-self: stretch; position: relative; }
