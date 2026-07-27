@@ -49,10 +49,10 @@
 /* 어느 모드가 어느 구간을 맡는지 — 08장과 이어지는 정보인데 빠져 있었다.
    빈칸을 장식으로 메우지 않고 이걸로 채운다. 괄호 폭이 곧 담당 구간이다. */
 .tspan { display: flex; margin-top: 44px; }
-.tspan > div { position: relative; padding-top: 22px; text-align: center; }
+.tspan > div { position: relative; padding-top: 30px; text-align: center; }
 .tspan > div + div { margin-left: 14px; }
-.tspan .bk { position: absolute; left: 0; right: 0; top: 0; height: 9px;
-  border: 1px solid var(--g3); border-bottom: 0; }
+.tspan .bk { position: absolute; left: 0; right: 0; top: 0; height: 10px;
+  border: 1px solid var(--g3); border-top: 0; }
 .tspan em { font-style: normal; font-size: 11.5px; font-weight: 500; letter-spacing: 1.4px;
   color: var(--g2); }
 .tspan b { display: block; font-size: 15.5px; font-weight: 700; color: var(--green);
