@@ -94,7 +94,9 @@ const waitAnswer = async (p) => {
     await sleep(5000); await openAll(p); await sleep(2000);
 
     if (want("bim_start")) {          // 데모 카드가 화면 아래쪽에 오는 컷
-      await scrollTo(p, "🏢 분석할 건물 선택", 120);
+      // pad를 120으로 두면 위에 있는 'BIM 진단 + ROI 분석' 제목이 화면 밖으로 날아간다.
+      // 영상이 그 제목까지 담는 컷을 쓰므로 229 CSS px만큼 더 내려서 잡는다.
+      await scrollTo(p, "🏢 분석할 건물 선택", 349);
       await shoot(p, "bim_start");
     }
     if (want("bim_pick")) {           // 데모를 고른 뒤 — 카드가 위로, 안내 박스가 보인다
@@ -126,12 +128,20 @@ const waitAnswer = async (p) => {
         await shoot(p, "roi_input");
       }
       // 실행 → 답변
+      // 🔴 여기서 한 번 실패했다. 예시를 누르자마자 실행을 눌러 입력이 비어 있었고,
+      //    결과가 없으니 '📊'로 스크롤도 못 해 페이지 맨 위가 찍혔다.
+      //    입력이 실제로 채워졌는지 보고 누른다.
+      await p.waitForFunction(
+        () => [...document.querySelectorAll("textarea")].some((x) => x.value.trim().length > 30),
+        { timeout: 30000 });
       await clickButton(p, "시뮬레이션 실행");
       console.log("  … 모델 응답 대기");
       await waitAnswer(p);
+      // 결과가 실제로 붙었는지 확인하고 나서 찍는다.
+      await p.waitForFunction(() => document.body.innerText.includes("ROI 분석"), { timeout: 120000 });
       if (want("roi_cost")) {
         await openAll(p); await sleep(1200);
-        try { await scrollTo(p, "📊", 60); } catch { await scrollTop(p); }
+        await scrollTo(p, "📊", 60);
         await shoot(p, "roi_cost");
       }
     }

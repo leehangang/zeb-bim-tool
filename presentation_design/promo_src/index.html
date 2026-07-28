@@ -1,0 +1,1030 @@
+<meta charset="utf-8">
+<title>ZEB-ROI 홍보영상 90초 v4</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     센클라우드 서비스 영상의 문법을 ZEB-ROI 팔레트로 옮긴다.
+       · 배경은 브랜드색을 아주 옅게 깐 한 가지 톤으로 통일 (다크 없음)
+       · 제품 데모는 실제 화면을 거의 풀블리드로 두고
+         우상단 기능 배지 + 하단 자막 바가 의미를 나른다
+       · 화면 안에서 '무엇을 눌렀고 무엇이 떴는지'를 커서·리플·줌으로 보여준다
+     ───────────────────────────────────────────────────────────── */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #EFF5F1; }
+
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: #EFF5F1; color: #12201A;
+    font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 톤: 배경 위에 아주 옅은 파인 그라디언트 한 겹 */
+  .wash { position: absolute; inset: 0;
+    background: radial-gradient(1200px 700px at 78% 12%, rgba(46,155,110,0.09), transparent 62%),
+                radial-gradient(900px 600px at 12% 88%, rgba(15,74,59,0.06), transparent 60%); }
+
+  section { position: absolute; inset: 0; opacity: 0; visibility: hidden; }
+
+  .eyebrow { font-family: Arial, sans-serif; font-weight: 700; font-size: 22px;
+    letter-spacing: 0.34em; color: #2E9B6E; }
+  .kicker  { font-family: Arial, sans-serif; font-weight: 700; font-size: 20px;
+    letter-spacing: 0.26em; color: #7C8A84; }
+
+
+
+  /* ══ 앞머리 네 박자(n1~n4) ═════════════════════
+     슬라이드가 아니라 박자다. 화면마다 큰 글씨 한 줄이 중심이고 작은 글씨는 거든다.
+     키커·부제·출처 줄·베이지 상자는 쓰지 않는다 — 그걸 넣었다가 PPT처럼 보였다.
+     세로 중심은 네 화면 모두 540(무대 중심)에 맞춘다. */
+  #n1 .big, #n2 .big, #n3 .big, #n4 .big {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-weight: 700; font-size: 62px; letter-spacing: -0.04em; white-space: nowrap; }
+  /* 세 칸을 박스로 세우고, 아래에서 한 점으로 모아 결론을 가리킨다.
+     글자만 띄우면 화면이 허전하고 세 낱말과 결론의 관계도 안 보인다.
+     박스 가운데가 480 / 960 / 1440. 폭 480이므로 left는 그 −240. */
+  #n3 .bx, #n4 .bx { position: absolute; width: 440px; text-align: center;
+    border: 2px solid #CFDCD5; border-radius: 18px; background: rgba(255,255,255,0.55); }
+  #n3 .b1, #n4 .b1 { left: 260px; }
+  #n3 .b2, #n4 .b2 { left: 740px; }
+  #n3 .b3, #n4 .b3 { left: 1220px; }
+  /* 수렴선: 박스마다 내려온 선이 가로대에서 만나 가운데로 한 줄 더 내려가 결론을 찍는다. */
+  #n3 .cv, #n4 .cv { position: absolute; background: #B4C6BC; }
+  #n3 .v1, #n4 .v1 { left: 479px; width: 2px; transform-origin: center top; }
+  #n3 .v2, #n4 .v2 { left: 959px; width: 2px; transform-origin: center top; }
+  #n3 .v3, #n4 .v3 { left: 1439px; width: 2px; transform-origin: center top; }
+  #n3 .hbar, #n4 .hbar { left: 479px; width: 962px; height: 2px; transform-origin: center; }
+  #n3 .stem, #n4 .stem { left: 959px; width: 2px; transform-origin: center top; }
+  #n3 .cvh, #n4 .cvh { position: absolute; left: 949px; width: 0; height: 0;
+    border-left: 11px solid transparent; border-right: 11px solid transparent;
+    border-top: 16px solid #B4C6BC; }
+  /* 결론 줄은 세 박자(0b·0c·0d) 모두 같은 높이여야 한다 — 어긋나면 장면이 바뀔 때 글자가 튄다.
+     ★ 위 세 박스와 같은 모양(테두리)이면 전제와 결론이 같은 무게로 보여 위계가 무너진다.
+       결론만 꽉 찬 진녹색으로 뒤집는다 — 뒤 제품 데모의 자막 바와 같은 어법이다.
+       글자만 두면 도해에서 멀리 떨어져 붕 떠 보였다(사용자 지적). */
+  /* 716 → 760. 결론을 더 내리면 세 화면이 어긋나므로 셋을 같이 내리고,
+     위 블록도 186으로 올려 무대 중심 540을 지킨다(여백 위아래 186 대칭). */
+  #n2 .big, #n3 .big, #n4 .big { top: 760px; }
+  #n2 .big span, #n3 .big span, #n4 .big span {
+    display: inline-block; padding: 26px 56px; border-radius: 16px;
+    background: #0F4A3B; color: #F4FAF6; }
+
+  /* 0c 애로: 박스 248~459 / 내림선 66 / 가로대 525 / 줄기 600 / 화살촉 600 */
+  #n3 .bx { top: 186px; padding: 40px 24px; }
+  #n3 .bx b { display: block; font-size: 66px; font-weight: 700;
+    letter-spacing: -0.04em; line-height: 1.2; }
+  #n3 .bx span { display: block; margin-top: 18px; font-size: 28px; font-weight: 500;
+    letter-spacing: -0.02em; color: #5C665F; white-space: nowrap; }
+  #n3 .v1, #n3 .v2, #n3 .v3 { top: 401px; height: 66px; }
+  #n3 .hbar { top: 467px; }
+  #n3 .stem { top: 469px; height: 275px; }
+  #n3 .cvh { top: 744px; }
+
+  /* 0d 해결: 아이콘이 들어가 박스가 270px로 더 크다. 그만큼 아래 선을 짧게 잡는다. */
+  #n4 .bx { top: 186px; padding: 34px 24px; }
+  #n4 .bx .ic { display: block; margin: 0 auto; width: 84px; height: 84px; color: #0F4A3B; }
+  #n4 .bx b { display: block; margin-top: 16px; font-size: 54px; font-weight: 700;
+    letter-spacing: -0.04em; line-height: 1.2; }
+  #n4 .bx span { display: block; margin-top: 14px; font-size: 26px; font-weight: 500;
+    letter-spacing: -0.02em; color: #5C665F; white-space: nowrap; }
+  #n4 .v1, #n4 .v2, #n4 .v3 { top: 468px; height: 34px; }
+  #n4 .hbar { top: 502px; }
+  #n4 .stem { top: 504px; height: 240px; }
+  #n4 .cvh { top: 744px; }
+
+  /* ── 0a. 데이터 ─────────────────────────────────
+     매스(#plan, 668~1253)가 위, 항목 키워드가 그 아래, 큰 줄, 반전 한 줄. */
+  /* 각주가 한 줄 늘면서 블록이 길어졌다. 세로 중심 540을 지키려고 전체를 31px 올렸다
+     (매스 149 ~ 반전 아래끝 931). 이 다섯 값은 같이 움직여야 한다. */
+  #n1 .kw3 { position: absolute; left: 0; right: 0; top: 619px;
+    display: flex; justify-content: center; gap: 56px;
+    font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #5C665F; }
+  #n1 .kw3 span { padding: 12px 28px; border: 2px solid #CFDCD5; border-radius: 999px;
+    background: rgba(255,255,255,0.55); white-space: nowrap; }
+  #n1 .big { top: 720px; }
+  /* 밑줄은 border-bottom이 아니라 text-decoration으로 — inline 요소에 테두리를 주면
+     padding으로 위치를 맞춰야 하고 그 padding이 줄 높이를 밀어 올린다. */
+  #n1 .big u { text-decoration: underline; text-decoration-thickness: 3px;
+    text-underline-offset: 13px; text-decoration-color: #9BB3A9; }
+  #n1 .note { position: absolute; left: 0; right: 0; top: 824px; text-align: center;
+    font-size: 24px; font-weight: 500; letter-spacing: -0.01em; color: #7C8A84; }
+  /* 주황(#C9542E)을 쓰지 않는다. 이 색은 CTA 강조용이라 여기 쓰면 사납게 읽히고,
+     문장이 '까지만'으로 이미 뒤집으므로 색까지 소리 지를 필요가 없다. */
+  /* 물결 밑줄은 '단정이 아니라 단서'라는 표시다. 직선 밑줄은 위 큰 줄이 이미 쓰고 있어
+     같은 선을 두 번 쓰면 어느 쪽이 강조인지 흐려진다. */
+  #n1 .tw { position: absolute; left: 0; right: 0; top: 888px; text-align: center;
+    font-size: 46px; font-weight: 700; letter-spacing: -0.03em; color: #43544C;
+    text-decoration: underline wavy; text-decoration-thickness: 2px;
+    text-underline-offset: 12px; text-decoration-color: #9BB3A9; }
+
+  /* ── 0b. 빈자리 ─────────────────────────────────
+     가로: 기둥 120~684 / 화살표 704~830 / 빈 원 875~1045 / 화살표 1090~1216 /
+           기둥 1236~1800. 바깥 여백 양쪽 120으로 대칭.
+     가운데를 채우면 화면이 거짓말을 한다 — 점선 빈 원은 그대로 둘 것. */
+  /* 기둥에도 0c·0d와 같은 테두리 박스를 두른다 — 테두리만. 채움은 결론 전용이라
+     여기까지 채우면 전제와 결론이 같은 무게가 된다. */
+  #n2 .pk { position: absolute; top: 186px; width: 560px; text-align: center;
+    padding: 30px 28px; border: 2px solid #CFDCD5; border-radius: 18px;
+    background: rgba(255,255,255,0.55); }
+  #n2 .pkL { left: 110px; }
+  #n2 .pkR { left: 1250px; }
+  /* 로고 자리는 높이를 고정해 좌우 기둥의 아래 줄들이 같은 높이에서 시작하게 한다.
+     Revit은 꽉 찬 덩어리라 같은 높이면 더 무겁다 — 광학적으로 62px까지 줄인다. */
+  #n2 .pk .lg { height: 170px; display: flex; align-items: center; justify-content: center; }
+  #n2 .pkL .lg img { height: 170px; }
+  #n2 .pkR .lg img { height: 95px; }
+  #n2 .pk b { display: block; margin-top: 22px; font-size: 50px; font-weight: 700;
+    letter-spacing: -0.035em; }
+  #n2 .pkL b { color: #C18A2D; }
+  #n2 .pkR b { color: #1B5E20; }
+  #n2 .pk span { display: block; font-weight: 500; letter-spacing: -0.02em;
+    white-space: nowrap; }
+  /* 근거는 위에서 아래로 갈수록 옅어진다 — 주장 → 시점 → 일정 순의 무게. */
+  #n2 .pk .s1 { margin-top: 20px; font-size: 29px; font-weight: 700; color: #43544C; }
+  #n2 .pk .s2 { margin-top: 18px; font-size: 26px; color: #5C665F; }
+  #n2 .pk .s3 { margin-top: 16px; font-size: 23px; color: #8A9A93; }
+  #n2 .arw { position: absolute; top: 424px; height: 3px; width: 110px; background: #9BB3A9; }
+  #n2 .aL { left: 694px; transform-origin: left center; }
+  #n2 .aR { left: 1116px; transform-origin: right center; }
+  #n2 .ah { position: absolute; top: 414px; width: 0; height: 0;
+    border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+  #n2 .ahL { left: 804px; border-left: 16px solid #9BB3A9; }
+  #n2 .ahR { left: 1100px; border-right: 16px solid #9BB3A9; }
+  #n2 .hole { position: absolute; left: 845px; top: 311px; width: 230px; height: 230px;
+    border: 3px dashed #C0A96B; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 88px; font-weight: 700; color: #D8C29A; }
+  /* 빈 원에서 결론 상자까지 내려가는 연결선. 0c·0d의 수렴선과 같은 굵기·색이라야
+     세 화면이 한 문법으로 읽힌다. 원 아래끝 553에서 8px 띄우고 상자 윗변 716에 닿는다. */
+  #n2 .cv { position: absolute; background: #B4C6BC; }
+  #n2 .stem { left: 959px; width: 2px; top: 549px; height: 195px;
+    transform-origin: center top; }
+  #n2 .cvh { position: absolute; left: 949px; top: 744px; width: 0; height: 0;
+    border-left: 11px solid transparent; border-right: 11px solid transparent;
+    border-top: 16px solid #B4C6BC; }
+
+  em { font-style: normal; color: #0F4A3B; }
+
+  /* ── 1. 오프닝 ─────────────────────────────── */
+  /* 도면은 글줄이 끝나는 x≈1250 오른쪽으로 비켜 세운다.
+     삼각지붕 집 아이콘을 버리고, 대상 건물 매스를 등각투상으로 계산해 그렸다
+     (생성기: scratchpad/cap/axo.py — 3D 상자 → 투영식. d를 손으로 찍지 않는다). */
+  /* 585×443. 배경 화면(#n1) 왼쪽 그림 자리. 덱 p4가 이 자리에 Revit 스크린샷을 쓴다.
+     오른쪽 설명 패널이 960부터 시작하므로 왼쪽 150~900 안에 들어와야 한다. */
+  #plan { position: absolute; left: 668px; top: 131px; }
+  /* 면은 배경색으로 채운다. 먼 볼륨부터 그려 가까운 볼륨이 덮는 것으로
+     은선을 처리하므로, fill:none 으로 두면 안쪽 선이 다 비쳐 보인다. */
+  #plan .fc { fill: #EFF5F1; stroke: #0F4A3B; stroke-width: 3.0;
+    stroke-linejoin: round; }
+  #plan .thin { fill: none; stroke: #9BB3A9; stroke-width: 2.1;
+    stroke-linecap: round; }
+  #plan .win { fill: #DCE8E1; stroke: #5E7D70; stroke-width: 2.1;
+    stroke-linejoin: round; }
+  #s1 .eyebrow { position: absolute; left: 150px; top: 186px; }
+  /* 두 제도를 문장이 아니라 칼럼으로 세운다. 구문(“묻고/묻는다”)이 아니라 배치가
+     대비를 만들어서, 왼쪽을 읽고 오른쪽은 다른 데만 훑게 된다 — 세 줄로 쌓았을 때보다
+     빨리 읽힌다(그래서 끝에 남는 3.6초를 오프닝에 안 써도 된다).
+     좌측 보더 색은 사이트에서 그대로 가져왔다(streamlit_app.py 358·374):
+     ZEB=#C18A2D, 그린리모델링=#1B5E20. 23.1초의 실제 TRACK A/B 화면과 되받는다.
+     좌우는 사이트 순서(TRACK A=ZEB)와 아이브로우 순서를 따른다. */
+  /* box-sizing: border-box라 width에 padding·border가 포함된다.
+     좌우 칼럼을 거울로 뒤집는다 — 둘 다 왼쪽 정렬로 두면 박스는 대칭이어도
+     왼쪽은 글 끝이 매스에서 160px 떨어지고 오른쪽은 65px로 붙어 구도가 기운다.
+     colA를 우측 정렬 + 우측 보더로 바꾸면 두 색 막대가 매스를 양쪽에서 감싼다.
+     막대 안쪽 끝이 매스(668~1253)에서 각각 60px 떨어지도록 폭을 역산했다:
+     colA 150+458=608, colB 1313(=1253+60), 바깥 여백은 양쪽 150. */
+  /* pain이 두 줄이 되면서 칼럼이 55→160px로 커졌다. 매스(260~703, 중심 481.5)와
+     세로 중심을 맞추려면 top = 481.5 − 160/2 ≈ 402. */
+  #s1 .col { position: absolute; top: 402px; }
+  #s1 .colA { left: 150px; width: 458px; padding-right: 26px; text-align: right;
+    border-right: 5px solid #C18A2D; }
+  #s1 .colB { left: 1313px; width: 457px; padding-left: 26px;
+    border-left: 5px solid #1B5E20; }
+  #s1 .col .nm { font-weight: 700; font-size: 46px; letter-spacing: -0.03em;
+    line-height: 1.2; white-space: nowrap; }
+  /* 줄바꿈은 <br>로 직접 끊는다. 자동 줄바꿈에 맡기면 "네 분야가 / 달라붙는다"처럼
+     의미가 어긋난 데서 잘린다. nowrap이면 <br>이 무시되므로 normal로 둔다. */
+  #s1 .col .qq { margin-top: 16px; font-weight: 700; font-size: 34px;
+    letter-spacing: -0.03em; line-height: 1.3; color: #43544C; }
+  /* 결론은 매스 아래 가운데. 두 칼럼을 묶는 자리라 좌측 정렬하면 한쪽에 붙는다. */
+  #s1 .cc { position: absolute; left: 0; right: 0; top: 764px; text-align: center;
+    font-weight: 700; font-size: 58px; letter-spacing: -0.035em; white-space: nowrap; }
+  /* 자리를 먼저 긋고 글자가 나중에 채운다 (스윙챗의 밑줄-선행 문법).
+     레일은 이제 칼럼 좌우 끝(150~1770)을 잇는다 — 예전 980은 한쪽 칼럼 폭이었다. */
+  #s1 .bar { position: absolute; left: 150px; top: 890px; width: 132px; height: 9px;
+    background: #C9542E; transform-origin: left center; }
+  #s1 .rail { position: absolute; left: 150px; top: 894px; width: 1620px; height: 1px;
+    background: #C8D6CE; transform-origin: left center; }
+
+  /* ── 2. 키네틱 한 줄 ───────────────────────── */
+  /* 문구가 길어져 112 → 92px. 가장 긴 줄이 1400px 안쪽이라야 무대(여백 120)를 안 넘는다. */
+  .kin { position: absolute; left: 0; right: 0; top: 480px; text-align: center;
+    font-weight: 700; font-size: 92px; letter-spacing: -0.04em; white-space: nowrap; }
+
+  /* ── 3. 히어로 ─────────────────────────────── */
+  #s3 .mark { position: absolute; left: 0; right: 0; top: 408px; text-align: center;
+    font-family: "Arial Black", Arial, sans-serif; font-size: 156px; letter-spacing: -0.045em;
+    color: #0F4A3B; }
+  #s3 .mark span { display: inline-block; }
+  #s3 .eyebrow { position: absolute; left: 0; right: 0; top: 352px; text-align: center; }
+  #s3 .sub { position: absolute; left: 0; right: 0; top: 640px; text-align: center;
+    font-size: 34px; color: #3A4A44; letter-spacing: -0.02em; }
+  #s3 .url { position: absolute; left: 0; right: 0; top: 744px; text-align: center;
+    font-family: Consolas, monospace; font-size: 25px; color: #7C8A84; letter-spacing: 0.06em; }
+  #s3 .rule { position: absolute; left: 810px; top: 716px; width: 300px; height: 2px;
+    background: #C8D6CE; transform-origin: center; }
+
+  /* ── 제품 데모 공용 ────────────────────────── */
+  /* 실제 화면 카드. 3000×1900 원본을 카드 안에서 스케일·이동시켜 '줌인'을 만든다. */
+  .card {
+    /* height는 JS의 CH와 같은 값이어야 한다. 자막 바(946~1022)와 겹치지 않도록
+       아래끝을 930에서 끊는다. */
+    position: absolute; left: 170px; top: 58px; width: 1580px; height: 872px;
+    overflow: hidden; border-radius: 14px; background: #fff;
+    box-shadow: 0 34px 78px rgba(15,45,33,0.20), 0 3px 10px rgba(15,45,33,0.10);
+    opacity: 0; visibility: hidden;
+  }
+  .card img { position: absolute; left: 0; top: 0; width: 3000px; height: 1900px;
+    transform-origin: 0 0; image-rendering: -webkit-optimize-contrast; }
+
+  /* 우상단 기능 배지. 카드(top 58)에 걸치게 두면 카드 안 글자를 덮는다 —
+     ROI 예시 문장 끝과 파란 안내상자 끝이 배지 뒤로 사라졌다. 위 여백 안으로 올린다. */
+  .badge {
+    position: absolute; right: 84px; top: 4px; height: 52px; padding: 0 26px;
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(15,45,33,0.18);
+    font-weight: 700; font-size: 26px; letter-spacing: -0.02em; color: #12201A;
+    opacity: 0; visibility: hidden; white-space: nowrap;
+  }
+  .badge i { font-style: normal; font-size: 26px; }
+  .badge b { font-family: Arial, sans-serif; font-weight: 700; font-size: 17px;
+    letter-spacing: 0.16em; color: #2E9B6E; }
+
+  /* 하단 자막 바 — 설명은 화면에서 오리지 않고 여기에 직접 쓴다.
+     display:flex를 쓰면 <u> 앞뒤 공백이 flex item 사이로 흡수돼
+     "판정이나란히나옵니다"가 된다. 반드시 block + line-height. */
+  .cap {
+    position: absolute; left: 50%; transform: translateX(-50%); top: 946px;
+    height: 76px; padding: 0 38px; display: block; line-height: 76px;
+    background: rgba(16,28,23,0.93); border-radius: 11px;
+    color: #fff; font-weight: 700; font-size: 35px; letter-spacing: -0.025em;
+    white-space: nowrap; opacity: 0; visibility: hidden;
+  }
+  .cap u { text-decoration: none; color: #7BE0B0; }
+
+  /* ── 스포트라이트 박스 ───────────────────────
+     스윙챗이 채널 아이콘을 하나씩 밝히던 문법.
+     실제 사이드바 위를 훑으며 "모드가 넷"임을 화면으로 보여준다. */
+  #spot { position: absolute; left: 0; top: 0; width: 10px; height: 10px;
+    border: 5px solid #2E9B6E; border-radius: 12px; z-index: 38;
+    background: rgba(46,155,110,0.12); opacity: 0; visibility: hidden; }
+
+
+  /* 커서 + 클릭 리플 */
+  #cur { position: absolute; left: 0; top: 0; width: 34px; height: 46px;
+    opacity: 0; visibility: hidden; z-index: 40; transform-origin: 4px 4px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35)); }
+  #rip { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px;
+    border-radius: 50%; border: 5px solid #C9542E; background: rgba(201,84,46,0.15);
+    opacity: 0; visibility: hidden; z-index: 39; }
+
+  /* ── 9. 정직 ──────────────────────────────── */
+  #s9 .h { position: absolute; left: 0; right: 0; top: 128px; text-align: center;
+    font-weight: 700; font-size: 62px; letter-spacing: -0.035em; }
+  #s9 .eyebrow { position: absolute; left: 0; right: 0; top: 74px; text-align: center; }
+
+  /* ── 10. CTA ──────────────────────────────── */
+  /* 음절을 점으로 끊어 하나씩 세우는 마감 (스윙챗 "해.결.하.세.요") */
+  #s10 .say { position: absolute; left: 0; right: 0; top: 286px; text-align: center;
+    font-weight: 700; font-size: 44px; letter-spacing: -0.02em; color: #2E9B6E; }
+  #s10 .say span { display: inline-block; }
+  #s10 .say i { display: inline-block; font-style: normal; color: #A8BEB4;
+    margin: 0 15px; font-size: 30px; vertical-align: 6px; }
+  #s10 .mark { position: absolute; left: 0; right: 0; top: 372px; text-align: center;
+    font-family: "Arial Black", Arial, sans-serif; font-size: 132px; letter-spacing: -0.045em;
+    color: #0F4A3B; }
+  /* URL은 그냥 적지 않고 검색창 모양으로 — 두 레퍼런스가 공통으로 쓰던 마감 */
+  #s10 .find { position: absolute; left: 50%; transform: translateX(-50%); top: 566px;
+    display: flex; align-items: center; height: 82px; padding: 0 10px 0 32px;
+    background: #fff; border: 2px solid #D6E2DB; border-radius: 999px;
+    box-shadow: 0 16px 40px rgba(15,45,33,0.14); }
+  #s10 .find .url { font-family: Consolas, monospace; font-size: 34px;
+    color: #12201A; letter-spacing: 0.04em; margin-right: 26px; }
+  #s10 .find .go { width: 62px; height: 62px; border-radius: 999px; background: #0F4A3B;
+    display: flex; align-items: center; justify-content: center; }
+  #s10 .find .go svg { width: 28px; height: 28px; }
+  #s10 .foot { position: absolute; left: 0; right: 0; top: 704px; text-align: center;
+    font-size: 24px; color: #7C8A84; letter-spacing: -0.01em; }
+
+  /* 장면 전환 와이프 */
+  .wipe { position: absolute; inset: 0; background: #0F4A3B; transform: scaleX(0);
+    transform-origin: left center; z-index: 60; }
+</style>
+
+<div id="stage" data-composition-id="master" data-width="1920" data-height="1080"
+     data-duration="142" data-fps="30">
+  <div class="wash"></div>
+
+  <!-- ══ 앞머리 네 박자 ══════════════════════════
+       ★ 발표 슬라이드를 옮겨 붙이지 말 것. 키커·부제·베이지 상자·출처 줄을 다 넣었다가
+         "PPT 같다"고 반려당했다. 화면엔 키워드와 한 줄만 남기고, 근거는 덱에 둔다.
+         문법은 뒤 키네틱(입력은 하나로 / 판정은 두 트랙으로 / 판단은 한 화면에서)과 같게 —
+         큰 글씨 한 줄이 박자를 만들고 작은 글씨는 거들기만 한다. -->
+
+  <!-- 0a. 데이터 — 덱 p4. 항목 이름만 띄우고 설명은 안 쓴다. -->
+  <section id="n1">
+    <div class="kw3"><span>벽 · 지붕 · 바닥</span><span>창 · 문</span><span>설비 · 신재생</span></div>
+    <div class="big"><u>건물 데이터</u>는 이미 쌓여 있다</div>
+    <!-- 영상 전체가 BIM을 입력의 전제로 쓰는데 정의하는 자리가 여기밖에 없다.
+         각주는 반드시 'BIM'으로 시작한다 — 화면에 그 단어가 아직 안 나와서
+         정의만 놓으면 무엇을 정의하는지 모른다. -->
+    <div class="note">BIM(Building Information Modeling) : 속성 정보를 담은 3차원 디지털 건물 모델</div>
+    <!-- '쓰이지 않을 뿐'은 쓰지 말 것 — 어디에 안 쓰이는지를 말하지 않아 뭉툭하고,
+         '~뿐'이 깎아내리는 어미라 주황까지 얹으면 나무라는 화면이 된다.
+         덱 p4의 사실만 남긴다: 설계·시공 관리에만 쓰이고 의사결정에는 못 쓰인다.
+         '까지만'이 저절로 "그다음은?"을 만들어 다음 화면(빈자리)으로 이어진다. -->
+    <div class="tw">주로 설계와 시공까지만 쓰인다</div>
+  </section>
+
+  <!-- 0b. 빈자리 — 덱 p5. 이 프로젝트의 핵심 논지.
+       양쪽에서 화살표가 들어오는데 가운데가 점선 빈 원이라는 게 전부다. -->
+  <section id="n2">
+    <!-- 로고는 원본 벡터에서 뽑았다. ZEB는 .ai(=PDF) 시트에서 심벌만 —
+         로고타입까지 넣으면 이 크기에선 글자가 뭉개지고, 바로 아래 'ZEB 의무화'와도 겹친다.
+         ★ BIM 의무화는 2020년이 아니라 2022년이다(덱 p4·p5). 2020년은 ZEB 쪽 시작 연도다. -->
+    <div class="pk pkL">
+      <div class="lg"><img src="assets/zeb_mark.png" alt=""></div>
+      <b>ZEB 의무화</b>
+      <span class="s1">정해진 ZEB 등급 달성 필요</span>
+      <span class="s2">2020년 공공 1,000㎡ 이상부터</span>
+      <span class="s3">5 → 4 → 3등급 강화</span>
+    </div>
+    <div class="arw aL"></div><div class="ah ahL"></div>
+    <div class="hole">?</div>
+    <div class="arw aR"></div><div class="ah ahR"></div>
+    <div class="cv stem"></div><div class="cvh"></div>
+    <div class="pk pkR">
+      <div class="lg"><img src="assets/revit_logo.png" alt=""></div>
+      <b>BIM 의무화</b>
+      <span class="s1">건물 데이터가 디지털로 쌓인다</span>
+      <span class="s2">2022년 공공 발주부터 단계 의무화</span>
+      <span class="s3">도로 ’22 → 철도 · 건축 ’23 → 하천 · 항만 ’24</span>
+    </div>
+    <div class="big"><span>둘을 연결하는 도구가 없다</span></div>
+  </section>
+
+  <!-- 0c. 애로 — 덱 p7의 세 항목을 키워드로 압축. -->
+  <section id="n3">
+    <div class="bx b1"><b>수기</b><span>신청 서류</span></div>
+    <div class="bx b2"><b>흩어짐</b><span>법 · 고시 분산</span></div>
+    <div class="bx b3"><b>기준 없음</b><span>통합 산정 부재</span></div>
+    <div class="cv v1"></div><div class="cv v2"></div><div class="cv v3"></div>
+    <div class="cv hbar"></div><div class="cv stem"></div><div class="cvh"></div>
+    <div class="big"><span>판단할 근거나 자료가 분산되어 있다</span></div>
+  </section>
+
+  <!-- 0d. 해결 — 덱 p8의 세 기둥. 설명은 사용자 표현대로:
+       ZEB·그린리모델링 동시 평가 / AI 챗봇 자동화 / 정책 근거 기반.
+       마지막 줄은 '무엇을 어떻게'까지 말하지 않는다 — 바로 뒤 키네틱이 받는다. -->
+  <section id="n4">
+    <div class="bx b1"><svg class="ic" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="27" cy="36" r="19"/><circle cx="45" cy="36" r="19"/></svg><b>통합</b><span>ZEB · 그린리모델링 동시 평가</span></div>
+    <div class="bx b2"><svg class="ic" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16 h40 v26 h-23 l-12 10 v-10 h-5 z"/><path d="M56 10 l3.5 9 l9 3.5 l-9 3.5 l-3.5 9 l-3.5 -9 l-9 -3.5 l9 -3.5 z"/></svg><b>자동화</b><span>AI 챗봇이 즉시 산정</span></div>
+    <div class="bx b3"><svg class="ic" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 h26 l14 14 v38 h-40 z"/><path d="M42 10 v14 h14"/><path d="M25 42 l8 8 l16 -16"/></svg><b>근거</b><span>법령 원문 인용</span></div>
+    <div class="cv v1"></div><div class="cv v2"></div><div class="cv v3"></div>
+    <div class="cv hbar"></div><div class="cv stem"></div><div class="cvh"></div>
+    <div class="big"><span>그래서 하나로 모았다</span></div>
+  </section>
+
+  <!-- ── 대상 건물 매스 ──────────────────────────────
+       예전 오프닝(#s1)의 일부였는데, 그 화면을 통째로 걷어내면서 배경 화면(#n1)의
+       왼쪽 그림으로 옮겼다. 이제 어느 섹션에도 안 들어가고 #stage 직속이라
+       n1 타임라인이 직접 켜고 끈다. -->
+    <svg id="plan" width="585" height="443" viewBox="0 0 585 443">
+      <path class="fc" d="M180.6,16.0 L455.0,174.4 L306.4,260.2 L32.0,101.8Z"/>
+      <path class="fc" d="M32.0,202.1 L306.4,360.5 L306.4,260.2 L32.0,101.8Z"/>
+      <path class="fc" d="M455.0,274.7 L306.4,360.5 L306.4,260.2 L455.0,174.4Z"/>
+      <path class="win" d="M45.7,192.9 L292.6,335.4 L292.6,314.3 L45.7,171.8Z"/>
+      <path class="win" d="M45.7,145.4 L292.6,287.9 L292.6,266.8 L45.7,124.2Z"/>
+      <path class="thin" d="M32.0,150.6 L306.4,309.0"/>
+      <path class="fc" d="M54.9,167.8 L180.6,240.4 L141.7,262.8 L16.0,190.2Z"/>
+      <path class="fc" d="M16.0,237.8 L141.7,310.4 L141.7,262.8 L16.0,190.2Z"/>
+      <path class="fc" d="M180.6,287.9 L141.7,310.4 L141.7,262.8 L180.6,240.4Z"/>
+      <path class="win" d="M29.7,227.2 L128.0,284.0 L128.0,265.5 L29.7,208.7Z"/>
+      <path class="fc" d="M226.3,63.5 L283.5,96.5 L226.3,129.5 L169.2,96.5Z"/>
+      <path class="fc" d="M169.2,128.2 L226.3,161.2 L226.3,129.5 L169.2,96.5Z"/>
+      <path class="fc" d="M283.5,128.2 L226.3,161.2 L226.3,129.5 L283.5,96.5Z"/>
+      <path class="fc" d="M455.0,148.0 L569.3,214.0 L420.7,299.8 L306.4,233.8Z"/>
+      <path class="fc" d="M306.4,360.5 L420.7,426.5 L420.7,299.8 L306.4,233.8Z"/>
+      <path class="fc" d="M569.3,340.7 L420.7,426.5 L420.7,299.8 L569.3,214.0Z"/>
+      <path class="win" d="M320.1,351.3 L407.0,401.4 L407.0,380.3 L320.1,330.2Z"/>
+      <path class="win" d="M320.1,303.8 L407.0,353.9 L407.0,332.8 L320.1,282.6Z"/>
+      <path class="win" d="M555.6,331.5 L434.4,401.4 L434.4,380.3 L555.6,310.4Z"/>
+      <path class="win" d="M555.6,284.0 L434.4,353.9 L434.4,332.8 L555.6,262.8Z"/>
+      <path class="thin" d="M306.4,309.0 L420.7,375.0"/>
+    </svg>
+
+  <!-- ── 2. 키네틱 ───────────────────────────── -->
+  <section id="s2">
+    <div class="kin" id="k1"><em>입력 한 번</em>으로</div>
+    <div class="kin" id="k2">ZEB · 그린리모델링 <em>판정을 동시에</em></div>
+    <div class="kin" id="k3">법령 확인과 <em>신청서 초안</em>까지</div>
+  </section>
+
+  <!-- ── 3. 히어로 ───────────────────────────── -->
+  <section id="s3">
+    <div class="eyebrow">GREEN REMODELING DECISION PLATFORM</div>
+    <div class="mark" id="mk"></div>
+    <div class="sub">BIM 한 번으로 ZEB 인증 등급과 그린리모델링 사업성을 함께 판정합니다</div>
+    <div class="rule"></div>
+    <div class="url">zeb-bim-tool.streamlit.app</div>
+  </section>
+
+  <!-- ── 제품 데모: 실제 화면 카드들 ─────────── -->
+  <div class="card" id="c_home"><img src="assets/home.png"></div>
+  <div class="card" id="c_pick"><img src="assets/bim_pick.png"></div>
+  <div class="card" id="c_res"><img src="assets/bim_result.png"></div>
+  <div class="card" id="c_grade"><img src="assets/zeb_grade.png"></div>
+  <div class="card" id="c_req"><img src="assets/zeb_req.png"></div>
+  <div class="card" id="c_qat"><img src="assets/qa_typed.png"></div>
+  <div class="card" id="c_qaa"><img src="assets/qa_answer.png"></div>
+  <div class="card" id="c_roii"><img src="assets/roi_input.png"></div>
+  <div class="card" id="c_roic"><img src="assets/roi_cost.png"></div>
+  <div class="card" id="c_roie"><img src="assets/roi_econ.png"></div>
+  <div class="card" id="c_strt"><img src="assets/bim_start.png"></div>
+  <div class="card" id="c_tabs"><img src="assets/bim_tabs.png"></div>
+  <div class="card" id="c_verd"><img src="assets/zeb_verdict.png"></div>
+  <div class="card" id="c_qask"><img src="assets/qa_ask.png"></div>
+  <div class="card" id="c_qsrc"><img src="assets/qa_src.png"></div>
+  <div class="card" id="c_rstt"><img src="assets/roi2_strt.png"></div>
+  <div class="card" id="c_qhm"><img src="assets/qa2_home.png"></div>
+  <div class="card" id="c_qld"><img src="assets/qa2_load.png"></div>
+  <div class="card" id="c_qan"><img src="assets/qa2_ans.png"></div>
+  <div class="card" id="c_qsl"><img src="assets/qa2_srcs.png"></div>
+  <div class="card" id="c_qop"><img src="assets/qa2_open.png"></div>
+  <div class="card" id="c_rfl"><img src="assets/roi2_fill.png"></div>
+  <div class="card" id="c_rld"><img src="assets/roi2_load.png"></div>
+  <div class="card" id="c_intk"><img src="assets/intake_top.png"></div>
+  <div class="card" id="c_inta"><img src="assets/intake_ask.png"></div>
+
+  <!-- 기능 배지 -->
+  <div class="badge" id="bg3"><i>🏢</i><span>BIM 진단 + ROI</span><b>MODE 03</b></div>
+  <div class="badge" id="bg1"><i>💬</i><span>정책 Q&amp;A</span><b>MODE 01</b></div>
+  <div class="badge" id="bg2"><i>💰</i><span>ROI 시뮬레이션</span><b>MODE 02</b></div>
+  <div class="badge" id="bg4"><i>📋</i><span>사업 신청 인테이크</span><b>MODE 04</b></div>
+
+  <!-- 자막 바 (설명 텍스트는 전부 여기에 직접 조판) -->
+  <div class="cap" id="p1">왼쪽 사이드바에서 <u>BIM 진단 + ROI</u>를 고릅니다</div>
+  <div class="cap" id="p2">무엇을 넣느냐에 따라 나오는 결과가 달라집니다</div>
+  <div class="cap" id="p2b">데모 케이스를 누르거나 Revit gbXML 파일을 올립니다</div>
+  <div class="cap" id="p3">진단 실행 버튼을 누릅니다</div>
+  <div class="cap" id="p4">ZEB 인증과 그린리모델링, 두 제도의 판정이 <u>나란히</u> 나옵니다</div>
+  <div class="cap" id="p5">TRACK A는 절대성능을 기준으로 <u>ZEB 등급</u>을 산정합니다</div>
+  <div class="cap" id="p5b">TRACK B는 상대 개선율을 <u>100점 만점</u>으로 채점합니다</div>
+  <div class="cap" id="p6">현재 상태를 기준으로 ZEB 등급과 인증 가능 여부를 판정합니다</div>
+  <div class="cap" id="p7">보강을 적용했을 때 <u>도달 가능한 등급</u>까지 함께 산출합니다</div>
+  <div class="cap" id="p8">인증 요건을 항목별로 나눠 충족 여부를 보여줍니다</div>
+  <div class="cap" id="p9">ZEB 등급 평가뿐 아니라 <u>다양한 내용</u>을 이 페이지에서 확인합니다</div>
+  <div class="cap" id="p10">법령 질문을 직접 쓰거나 예시 질문을 누릅니다</div>
+  <div class="cap" id="p11">19건의 법령·고시·공고 원문에서 <u>근거 조항</u>을 찾습니다</div>
+  <div class="cap" id="p12">찾은 조문을 <u>원문 그대로</u> 인용해 답합니다</div>
+  <div class="cap" id="p13">어느 문서 몇 페이지에서 왔는지 <u>유사도</u>와 함께 밝힙니다</div>
+  <div class="cap" id="p13b">출처를 누르면 인용한 <u>원문</u>이 그대로 펼쳐집니다</div>
+  <div class="cap" id="p14">Max Cost, 보조금, NPV, 회수기간을 계산합니다</div>
+  <div class="cap" id="p14b">예시를 누르면 그 조건이 그대로 입력됩니다</div>
+  <div class="cap" id="p14c">시뮬레이션 실행을 누릅니다</div>
+  <div class="cap" id="p14d">입력한 조건을 읽어 <u>ROI</u>를 산정합니다</div>
+  <div class="cap" id="p15">공사비 상한을 <u>직접비와 간접비</u>로 나눠 산출합니다</div>
+  <div class="cap" id="p16">항목별 단가와 물량까지 근거로 함께 보여줍니다</div>
+  <div class="cap" id="p17"><u>NPV, IRR, B-C, 회수기간</u>을 한 번에 계산합니다</div>
+  <div class="cap" id="p18">공공건축물과 민간건축물 지원사업을 나눠 접수합니다</div>
+  <div class="cap" id="p19">대화로 필수 항목을 채우고 <u>완성도</u>를 집계합니다</div>
+  <div class="cap" id="p20">모자란 항목을 되물어 <u>신청서 초안</u>을 만듭니다</div>
+
+
+  <!-- 커서 · 클릭 리플 · 스포트라이트 -->
+  <div id="spot"></div>
+  <div id="rip"></div>
+  <svg id="cur" viewBox="0 0 34 46">
+    <path d="M2 2 L2 34 L10.5 26.5 L16 40 L22 37 L16.5 24 L28 24 Z"
+          fill="#12201A" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/>
+  </svg>
+
+  <!-- ── 10. CTA ─────────────────────────────── -->
+  <section id="s10">
+    <div class="say" id="say"></div>
+    <div class="mark">ZEB-ROI</div>
+    <div class="find">
+      <span class="url">zeb-bim-tool.streamlit.app</span>
+      <span class="go"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"
+        fill="none" stroke="#fff" stroke-width="2.6"/><line x1="15.6" y1="15.6" x2="21" y2="21"
+        stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+    </div>
+    <div class="foot">성제건 (1398)</div>
+  </section>
+
+  <div class="wipe"></div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+
+/* 선이 그려지는 연출은 플러그인 없이 dashoffset으로 만든다.
+   (DrawSVGPlugin은 jsDelivr에서 ORB로 차단되는 경우가 있어 의존하지 않는다) */
+function armDraw(sel) {
+  document.querySelectorAll(sel).forEach((el) => {
+    const L = Math.ceil(el.getTotalLength()) + 2;
+    el.style.strokeDasharray = L;
+    el.style.strokeDashoffset = L;
+    el.dataset.len = L;
+  });
+}
+armDraw("#plan .fc, #plan .thin");
+function draw(sel, t, dur, stagger) {
+  const els = [...document.querySelectorAll(sel)];
+  els.forEach((el, i) => {
+    tl.fromTo(el, { strokeDashoffset: +el.dataset.len },
+      { strokeDashoffset: 0, duration: dur, ease: "power2.inOut" }, t + i * (stagger || 0));
+  });
+}
+
+/* 히어로 워드마크는 글자별로 세워야 해서 미리 쪼갠다 */
+$("#mk").innerHTML = "ZEB-ROI".split("").map((c) =>
+  `<span>${c === "-" ? "&#8209;" : c}</span>`).join("");
+
+/* 마감 한 줄은 음절 사이에 점을 끼워 하나씩 세운다 */
+$("#say").innerHTML = "감사합니다".split("")
+  .map((c, i) => (i ? "<i>·</i>" : "") + `<span>${c}</span>`).join("");
+
+/* 제도 배경 화면(#s0)을 앞에 넣으면서 기존 장면 전부를 T0만큼 뒤로 밀어야 했다.
+   타임스탬프 수십 개를 손으로 +T0 하는 대신, 기존 코드는 자식 타임라인 tl에
+   0부터 그대로 쌓아 두고 파일 맨 끝에서 master의 T0 위치에 붙인다.
+   그래서 아래 섹션 1~10의 주석에 적힌 시각은 전부 '앞 화면 뺀' 상대 시각이다.
+   자식은 paused로 만들지 않는다 — 멈춘 자식은 부모가 붙여도 안 돈다. */
+/* 앞머리 네 화면(배경 → 빈자리 → 애로 → 개선)의 시작 시각.
+   T0는 기존 장면(키네틱~CTA)이 들어가는 자리인데, 옛 오프닝(#s1)을 걷어내면서
+   tl의 앞 5.75초가 텅 비었다. 그래서 키네틱(tl 5.75)이 46.5초에 오도록
+   T0 = 46.5 − 5.75로 역산한다. tl 자체의 시각은 하나도 안 건드렸다. */
+const P_N2 = 8.0, P_N3 = 16.2, P_N4 = 23.4, T0 = 25.35;
+const master = gsap.timeline({ paused: true });
+window.__timelines = window.__timelines || {};
+window.__timelines["master"] = master;
+const n1 = gsap.timeline(), n2 = gsap.timeline(),
+      n3 = gsap.timeline(), n4 = gsap.timeline();
+const tl = gsap.timeline();
+/* 자식 타임라인용 등장 헬퍼. 전역 up()은 tl에만 쓰므로 여기서 따로 둔다. */
+function rise(t_, sel, at, dy, dur) {
+  t_.fromTo(sel, { autoAlpha: 0, y: dy == null ? 26 : dy },
+    { autoAlpha: 1, y: 0, duration: dur || 0.58, ease: "power3.out" }, at);
+}
+
+/* ── 카드 안의 '카메라' ────────────────────────────────
+   원본 3000×1900 중 보고 싶은 영역 r=[x,y,w,h]를 카드에 꽉 채우는
+   scale/translate를 계산한다. r을 안 주면 화면 전체(풀뷰).       */
+/* CH는 .card의 height와 반드시 같아야 한다(둘이 어긋나면 프레이밍이 통째로 밀린다).
+   1000 → 872: 자막 바가 카드 위에 얹혀 판정 결과를 가렸다(t34에서 '에너지절감률
+   8.0%'와 '보강 후 소요량 184.0' 두 타일이 통째로, t80에서 '등급 미달' 헤드라인
+   아래 절반이). 자막을 옮길 자리가 없어서 — 카드 아래끝 1058, 무대 1080 —
+   카드를 줄여 자막에게 자기 띠를 줬다. 무대 여백은 위아래 58px로 맞는다. */
+const CX = 170, CY = 58, CW = 1580, CH = 872, IW = 3000, IH = 1900;
+function V(r) {
+  if (!r) { const s = CW / IW; return { s: s, x: 0, y: (CH - IH * s) / 2 }; }
+  /* 영역을 카드에 맞추되, 이미지가 카드를 못 덮을 만큼 작아지면 안 된다.
+     못 덮으면 카드의 흰 배경(#fff)이 가장자리에 띠로 드러난다. 화면 아래쪽
+     영역일수록 심해서 gradeTwo는 카드 높이의 19%가 흰 여백이었다. */
+  const s = Math.max(Math.min(CW / r[2], CH / r[3]), CW / IW, CH / IH);
+  /* 배율을 키워도 이미지를 벗어난 위치면 여전히 여백이 생기므로 가장자리에 붙인다.
+     프레이밍이 의도보다 조금 밀리지만 흰 띠보다 낫고, pt()·spotSet()이 같은 v를
+     쓰기 때문에 커서와 스포트라이트도 함께 따라온다. */
+  const x = Math.min(0, Math.max(-r[0] * s + (CW - r[2] * s) / 2, CW - IW * s));
+  const y = Math.min(0, Math.max(-r[1] * s + (CH - r[3] * s) / 2, CH - IH * s));
+  return { s: s, x: x, y: y };
+}
+/* 원본 좌표 → 무대 좌표. 커서를 화면 속 버튼에 정확히 얹기 위해 필요하다. */
+function pt(v, px, py) { return [CX + v.x + v.s * px, CY + v.y + v.s * py]; }
+
+const FULL = V(null);
+
+/* 보고 싶은 영역들 — 전부 격자 오버레이로 원본에서 직접 읽은 값 */
+const R = {
+  homeSide:  [0, 630, 700, 386],         // 사이드바 모드 — 클릭 대상(BIM 진단)까지
+  cases:     [780, 125, 2030, 230],      // 데모 케이스 4장
+  runBtn:    [2127, 416, 703, 388],      // 진단 실행 버튼 + 위 공사기간 슬라이더
+  tracks:    [750, 750, 2110, 430],      // 진단 완료 + TRACK A/B
+  trackA:    [750, 855, 1080, 230],
+  gradeBig:  [755, 1005, 2090, 620],     // 등급 미달 배너 + 현재/보강후
+  gradeTwo:  [755, 1355, 2090, 270],     // 현재 → 보강 후 두 카드
+  /* 고지 박스만 잡으면 y가 0으로 클램프돼 창이 원본 1153까지밖에 안 열리고,
+     1137~1215에 있는 '등급 미달' 헤드라인이 21%만 남고 잘린다. 고지를 폭 전체로
+     보이려면 s≤0.761이라 창이 1146px 이상 열리므로 — 판정 배너를 빼는 rect는
+     존재하지 않는다. 그래서 배너까지 통째로 담고 아래는 1342~1373 빈 띠에서 끊는다. */
+  gradeWarn: [625, 60, 2350, 1296],      // 노란 '설계 검토용 추정' 고지 + 판정 배너
+  reqs:      [750, 860, 2100, 390],      // 인증요건 3개 판정
+  qaInput:   [740, 315, 1600, 150],      // 질문 입력창
+  qaHead:    [755, 660, 2090, 560],      // 답변 제목 + 본문
+  qaScope:   [780, 935, 1360, 260],      // 완화 범위 목록
+  roiIn:     [750, 1180, 2100, 340],     // 자연어 입력 + 실행 버튼
+  roiCost:   [762, 0, 1803, 995],        // 핵심 사업비 요약 표 + 출처 줄
+  /* 아래끝이 1594.6에 걸려 '구분|금액' 머리행(1581~1610)을 45%에서 잘랐다.
+     단가 목록이 끝나는 1317~1483 빈 띠에서 끊도록 위로 올렸다(s는 그대로). */
+  roiUnit:   [762, 756, 1230, 679],      // 보조금 & 자부담 표 + 설명
+  roiEcon:   [770, 620, 1250, 689],      // NPV·IRR·B-C·회수기간 ('(A) 현금흐름 관점' 제목까지)
+  intMetric: [750, 1495, 2110, 270],     // 필수 14/16 · 완성도 64.0%
+  /* 지표 라벨(필수/선택/완성도)은 이 스크린샷에 아예 없다 — 캡처가 그 위로 스크롤돼
+     있어서 어떤 rect로도 못 살린다. 숫자만 윗동이 깎여 목 잘린 것처럼 보였으므로
+     지표 행 자체를 화면 밖으로 뺐다. 대신 2️⃣ 기술요소 되묻기까지 담긴다. */
+  intAsk:    [293, 405, 2707, 1494],     // 되묻는 대화 ('완벽합니다!'~질문 목록)
+
+  /* ── 새로 찍은 화면들 (3000×1900). 아래 값은 원본에서 픽셀로 재서 넣었다. ── */
+  strtTop:   [740, 385, 1620, 894],      // BIM 시작: 제목 + '어떤 파일을 넣느냐' 표
+  strtCases: [764, 757, 2071, 1143],     // 데모 케이스 4장
+  trkBoth:   [756, 238, 2084, 177],      // TRACK A/B 두 칼럼
+  /* 탭 줄 왼끝이 원본 758이라 x=756으로 잡으면 테두리가 카드 모서리에 딱 붙는다.
+     왼쪽으로 56px 더 물려 숨 쉴 자리를 준다(배율 0.758 → 0.738). */
+  tabs:      [700, 480, 2140, 360],      // 탭 줄(548~632) + 위 TRACK 판정까지 함께
+  verdBan:   [760, 346, 2080, 872],      // 등급 배너 + 아래 수치 타일까지 한 컷
+  verdTile:  [760, 1028, 2080, 190],     // 소요량·절감률·PV 등 수치 타일
+  verdReq:   [760, 1536, 2080, 252],     // 제1·2·3호 요건 3타일
+  qaBox:     [760, 1064, 1544, 80],      // 질문 입력창
+  qaFirst:   [760, 1448, 2080, 162],     // 답변 제목 + 첫 문단
+  qaBody:    [760, 148, 2080, 1266],     // 답변 본문 전체
+  qaSrc:     [760, 1600, 2080, 270],     // 출처 5개 + 유사도
+  /* 새 시작화면(roi2_strt) 기준. '나오는 수치' 머리 584~802, 예시 목록 1005~2255. */
+  roiOut:    [730, 0, 2139, 1180],       // '나오는 수치' + 네 타일
+  roiEx:     [732, 242, 2135, 1178],     // 예시 입력 목록
+
+  /* ── 정책 Q&A · ROI 로딩 (찍는 순간 DOM에서 잰 값. 눈으로 재면 틀린다) ── */
+  qhEx:      [758, 990, 2084, 650],      // 질문창 + 예시 질문 6개
+  qlAll:     [758, 660, 2084, 700],      // 채워진 질문 + '근거 조항 검색 + 답변 생성 중'
+  qaAns:     [758, 560, 2084, 1010],     // 답변 제목 + 본문
+  qaList:    [756, 660, 2088, 700],      // 출처 5개 접힌 목록
+  /* y를 240에 두면 아래끝이 1326에 걸려 출처 3번 줄(1300~1345)을 반으로 잘랐다. */
+  qaOpen:    [756, 275, 2088, 1020],     // 눌러서 펼쳐진 원문 두 건 + 3번 줄까지
+  rfAll:     [756, 800, 2088, 500],      // 채워진 자연어 입력 + 시뮬레이션 실행
+  rlAll:     [756, 720, 2088, 560],      // 실행 직후 '입력 조건 추출 + ROI 산정 중'
+};
+
+/* 결과 화면의 탭 줄 (원본 좌표). 여기서 다 설명할 시간이 없어 테두리로만 짚는다. */
+const TABSTRIP = [758, 540, 962, 92];
+
+/* 새 결과 화면(bim_tabs)에서의 TRACK A/B 스포트라이트 자리 */
+const TRK2 = { a: [760, 250, 1040, 160], b: [1820, 250, 1010, 160] };
+
+/* 진단 결과의 두 트랙 열 (원본 좌표) — 스포트라이트가 옮겨 다닌다 */
+const TRK = { a: [778, 893, 1000, 180], b: [1790, 893, 1000, 180] };
+
+/* 사이드바 모드 행 (원본 좌표). 홈·근거출처를 뺀 '모드' 넷만 훑는다 */
+const SIDE = {
+  bim:  [70, 805, 340, 78],
+  qa:   [70, 900, 340, 78],
+  roi:  [70, 992, 340, 78],
+  intk: [70, 1082, 340, 78],
+};
+
+/* ── 헬퍼 ───────────────────────────────────────────── */
+function show(sel, t) { tl.set(sel, { autoAlpha: 1 }, t); }
+/* 자식만 끄면 섹션은 살아 있다 — 장면을 닫을 땐 섹션도 같이 닫는다 */
+function hide(sel, t, sect) {
+  tl.to(sel, { autoAlpha: 0, duration: 0.4 }, t);
+  if (sect) tl.set(sect, { autoAlpha: 0 }, t + 0.45);
+}
+function up(sel, t, dy, dur) {
+  tl.fromTo(sel, { autoAlpha: 0, y: dy == null ? 30 : dy },
+    { autoAlpha: 1, y: 0, duration: dur || 0.62, ease: "power3.out" }, t);
+}
+function wipe(t, outSel, inSel) {
+  tl.fromTo(".wipe", { scaleX: 0, transformOrigin: "left center" },
+    { scaleX: 1, duration: 0.36, ease: "power3.in" }, t);
+  if (outSel) tl.set(outSel, { autoAlpha: 0 }, t + 0.36);
+  if (inSel) tl.set(inSel, { autoAlpha: 1 }, t + 0.36);
+  tl.to(".wipe", { scaleX: 0, transformOrigin: "right center", duration: 0.38, ease: "power3.out" }, t + 0.37);
+}
+
+/* 화면 카드 등장 / 카메라 이동 / 퇴장 */
+function scrIn(id, t, v) {
+  tl.set(id + " img", { scale: v.s, x: v.x, y: v.y }, t);
+  tl.fromTo(id, { autoAlpha: 0, scale: 0.982 },
+    { autoAlpha: 1, scale: 1, duration: 0.5, ease: "power3.out" }, t);
+}
+function camTo(id, t, v, dur) {
+  tl.to(id + " img", { scale: v.s, x: v.x, y: v.y, duration: dur || 1.0, ease: "power2.inOut" }, t);
+}
+function scrOut(id, t) { tl.to(id, { autoAlpha: 0, duration: 0.38 }, t); }
+/* 화면 교체 — 앞 화면 위로 새 화면이 겹쳐 뜬다 (클릭의 결과처럼) */
+function scrSwap(idOut, idIn, t, v) {
+  tl.set(idIn + " img", { scale: v.s, x: v.x, y: v.y }, t);
+  /* 글자 많은 화면끼리 오래 겹치면 두 화면이 서로 비쳐 읽히지 않는다.
+     짧게 올리고 뒤 화면은 끝에서 한 번에 끈다. */
+  tl.fromTo(idIn, { autoAlpha: 0, y: 26 },
+    { autoAlpha: 1, y: 0, duration: 0.3, ease: "power3.out" }, t);
+  tl.set(idOut, { autoAlpha: 0 }, t + 0.3);
+}
+
+/* 커서 · 클릭 */
+function curIn(t, p) { tl.set("#cur", { x: p[0], y: p[1] }, t); tl.to("#cur", { autoAlpha: 1, duration: 0.26 }, t); }
+function curTo(t, p, dur) { tl.to("#cur", { x: p[0], y: p[1], duration: dur || 0.72, ease: "power2.inOut" }, t); }
+function curOut(t) { tl.to("#cur", { autoAlpha: 0, duration: 0.24 }, t); }
+function click(t, p) {
+  tl.set("#rip", { x: p[0], y: p[1] }, t);
+  tl.fromTo("#rip", { autoAlpha: 0.95, scale: 0.18 },
+    { autoAlpha: 0, scale: 2.5, duration: 0.62, ease: "power2.out" }, t);
+  tl.to("#cur", { scale: 0.8, duration: 0.08, ease: "power2.out" }, t);
+  tl.to("#cur", { scale: 1, duration: 0.15, ease: "power2.in" }, t + 0.08);
+}
+/* 자막 바 */
+function cap(id, t, dur) {
+  tl.fromTo(id, { autoAlpha: 0, y: 18 },
+    { autoAlpha: 1, y: 0, duration: 0.32, ease: "power3.out" }, t);
+  tl.to(id, { autoAlpha: 0, duration: 0.24 }, t + dur);
+}
+/* 스포트라이트 — 카드 안의 원본 좌표 사각형 위에 얹는다 */
+function spotSet(t, v, r) {
+  tl.set("#spot", { x: CX + v.x + v.s * r[0], y: CY + v.y + v.s * r[1],
+    width: v.s * r[2], height: v.s * r[3] }, t);
+}
+function spotTo(t, v, r, dur) {
+  tl.to("#spot", { x: CX + v.x + v.s * r[0], y: CY + v.y + v.s * r[1],
+    width: v.s * r[2], height: v.s * r[3],
+    duration: dur == null ? 0.26 : dur, ease: "power2.inOut" }, t);
+}
+/* 모드 표지 — 배지를 화면 한가운데 크게 띄웠다가 제자리(우상단)로 보낸다.
+   네 기능이 쉬지 않고 넘어가 지금 어느 모드를 보는지 놓치기 쉬웠다.
+   배지마다 폭이 달라 중앙까지 가는 거리도 다르다. 제자리 중심은 (1920-84-w/2, 4+26)이고
+   transformOrigin이 가운데라 배율과 무관하게 중심 이동량만 맞추면 된다. */
+function modeIn(id, t) {
+  const w = $(id).offsetWidth;
+  const dx = 960 - (1836 - w / 2), dy = 540 - 30;
+  tl.set(id, { transformOrigin: "50% 50%" }, t);
+  tl.fromTo(id, { autoAlpha: 0, x: dx, y: dy, scale: 2.35 },
+    { autoAlpha: 1, scale: 2.9, duration: 0.55, ease: "back.out(1.5)" }, t);
+  tl.to(id, { x: 0, y: 0, scale: 1, duration: 0.9, ease: "power3.inOut" }, t + 1.05);
+}
+function badgeOut(id, t) { tl.to(id, { autoAlpha: 0, x: 30, duration: 0.32 }, t); }
+function badge(id, tIn, tOut) {
+  tl.fromTo(id, { autoAlpha: 0, x: 30 },
+    { autoAlpha: 1, x: 0, duration: 0.46, ease: "power3.out" }, tIn);
+  tl.to(id, { autoAlpha: 0, x: 30, duration: 0.32 }, tOut);
+}
+
+/* ═══════════════ 2. 키네틱 5.8–11.0 ═══════════════ */
+show("#s2", 5.75);
+[["#k1", 5.9], ["#k2", 7.55], ["#k3", 9.2]].forEach(([id, t]) => {
+  tl.fromTo(id, { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out" }, t);
+  tl.to(id, { autoAlpha: 0, y: -34, duration: 0.34, ease: "power2.in" }, t + 1.28);
+});
+tl.set("#s2", { autoAlpha: 0 }, 10.85);
+
+/* ═══════════════ 3. 히어로 11.0–14.6 ═══════════════ */
+show("#s3", 11.0);
+up("#s3 .eyebrow", 11.05, 14, 0.5);
+tl.fromTo("#mk span", { autoAlpha: 0, y: 58, rotateX: -55 },
+  { autoAlpha: 1, y: 0, rotateX: 0, duration: 0.52, stagger: 0.055, ease: "back.out(1.6)" }, 11.25);
+up("#s3 .sub", 12.25, 22, 0.55);
+tl.fromTo("#s3 .rule", { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "power3.out" }, 12.55);
+up("#s3 .url", 12.75, 16, 0.5);
+hide(["#s3 .eyebrow", "#mk", "#s3 .sub", "#s3 .rule", "#s3 .url"], 13.95, "#s3");
+
+/* ═══════════════ 4. BIM 진단 14.6–33.4 ═══════════════
+   홈 → 사이드바 → 시작 화면(무엇을 넣는가) → 데모 클릭 → 진단 실행 → 두 트랙 판정 */
+modeIn("#bg3", 14.6);
+scrIn("#c_home", 16.6, FULL);
+
+const vSide = V(R.homeSide);
+camTo("#c_home", 17.15, vSide, 0.85);
+cap("#p1", 18.1, 1.9);
+spotSet(17.96, vSide, SIDE.bim);
+tl.to("#spot", { autoAlpha: 1, duration: 0.2 }, 18);
+spotTo(18.35, vSide, SIDE.qa);
+spotTo(18.65, vSide, SIDE.roi);
+spotTo(18.95, vSide, SIDE.intk);
+spotTo(19.3, vSide, SIDE.bim, 0.42);
+curIn(19.35, pt(vSide, 1000, 846));
+curTo(19.5, pt(vSide, 300, 846), 0.55);
+click(20.15, pt(vSide, 300, 846));
+tl.to("#spot", { autoAlpha: 0, duration: 0.26 }, 20.3);
+curOut(20.5);
+
+/* 시작 화면부터 보여준다 — 넣는 것에 따라 나오는 게 달라지는 자리라 여기가 출발점이다. */
+scrSwap("#c_home", "#c_strt", 20.6, V(R.strtTop));
+cap("#p2", 21.3, 2.3);
+const vCases = V(R.strtCases);
+camTo("#c_strt", 23.9, vCases, 0.95);
+cap("#p2b", 24.5, 2.2);
+curIn(24.7, pt(vCases, 2500, 1700));
+curTo(24.9, pt(vCases, 1050, 1410), 0.75);
+click(25.9, pt(vCases, 1050, 1410));
+curOut(26.4);
+
+const vRun = V(R.runBtn);
+scrSwap("#c_strt", "#c_pick", 26.7, vRun);
+cap("#p3", 27.4, 1.7);
+curIn(27.3, pt(vRun, 1100, 200));
+curTo(27.5, pt(vRun, 2479, 687), 0.7);
+click(28.4, pt(vRun, 2479, 687));
+curOut(28.8);
+const vTrk = V(R.trkBoth);
+scrSwap("#c_pick", "#c_tabs", 29.5, vTrk);
+cap("#p4", 30.1, 2.0);
+spotSet(33, vTrk, TRK2.a);
+tl.to("#spot", { autoAlpha: 1, duration: 0.22 }, 33.04);
+cap("#p5", 33.2, 1.8);
+spotTo(35.2, vTrk, TRK2.b, 0.5);
+
+/* ═══════════════ 5. ZEB 등급 33.4–48.0 ═══════════════ */
+cap("#p5b", 35.4, 1.8);
+tl.to("#spot", { autoAlpha: 0, duration: 0.26 }, 37.4);
+scrOut("#c_tabs", 37.6);
+
+badgeOut("#bg3", 49.6);
+scrIn("#c_verd", 37.9, V(R.verdBan));
+cap("#p6", 38.6, 2.6);
+/* 배너와 수치 타일이 한 컷에 들어오므로 카메라를 옮기지 않고 이어서 말한다. */
+cap("#p7", 41.5, 2.7);
+camTo("#c_verd", 44.4, V(R.verdReq), 1.1);
+cap("#p8", 44.7, 2.5);
+scrOut("#c_verd", 47.5);
+
+/* 같은 페이지에 다른 탭이 더 있다는 걸 마지막에 한 번 짚는다 — 전부 설명할 시간이 없다. */
+scrIn("#c_tabs", 47.7, V(R.tabs));
+cap("#p9", 48.1, 2.6);
+/* 탭이 여섯 개 더 있다는 걸 글자로만 말하면 안 보인다 — 줄 자체를 둘러 짚는다. */
+const vTab = V(R.tabs);
+spotSet(48.4, vTab, TABSTRIP);
+tl.to("#spot", { autoAlpha: 1, duration: 0.3 }, 48.45);
+tl.to("#spot", { autoAlpha: 0, duration: 0.3 }, 50.9);
+scrOut("#c_tabs", 51.0);
+
+/* ═══════════════ 6. 정책 Q&A 49.6–68.5 ═══════════════
+   시작화면 → 예시 질문 클릭 → 실제 인라인 로딩 → 답변 → 출처 목록 → 클릭 → 펼친 원문.
+   로딩은 무대에 링을 얹지 않고 화면에 실제로 뜨는 줄을 그대로 쓴다. */
+modeIn("#bg1", 51.7);
+badgeOut("#bg1", 72.0);
+scrIn("#c_qhm", 53.7, FULL);
+cap("#p10", 54.3, 2.6);
+const vQhEx = V(R.qhEx);
+camTo("#c_qhm", 55, vQhEx, 0.95);
+curIn(55.6, pt(vQhEx, 2500, 1750));
+curTo(55.8, pt(vQhEx, 1289, 1327), 0.7);
+click(56.6, pt(vQhEx, 1289, 1327));
+curOut(57);
+
+scrSwap("#c_qhm", "#c_qld", 57.3, V(R.qlAll));
+cap("#p11", 57.9, 2.4);
+
+scrSwap("#c_qld", "#c_qan", 60.6, V(R.qaAns));
+cap("#p12", 61.2, 2.6);
+
+scrSwap("#c_qan", "#c_qsl", 64, V(R.qaList));
+cap("#p13", 64.6, 2.7);
+const vQsl = V(R.qaList);
+curIn(67.4, pt(vQsl, 2400, 1500));
+curTo(67.6, pt(vQsl, 1050, 849), 0.7);
+click(68.4, pt(vQsl, 1050, 849));
+curOut(68.8);
+
+scrSwap("#c_qsl", "#c_qop", 69.1, V(R.qaOpen));
+cap("#p13b", 69.4, 2.7);
+scrOut("#c_qop", 72.1);
+
+/* ═══════════════ 7. ROI 68.7–90.3 ═══════════════
+   나오는 수치를 먼저 → 예시를 눌러 조건이 채워지고 → 실행 → 실제 '산정 중' → 결과 */
+modeIn("#bg2", 72.8);
+badgeOut("#bg2", 95.9);
+scrIn("#c_rstt", 74.8, V(R.roiOut));
+cap("#p14", 75.4, 2.4);
+const vEx = V(R.roiEx);
+camTo("#c_rstt", 78, vEx, 1.0);
+cap("#p14b", 78.4, 2.2);
+curIn(78.6, pt(vEx, 2600, 1930));
+curTo(78.8, pt(vEx, 1800, 1157), 0.75);
+click(79.8, pt(vEx, 1800, 1157));   /* 지자체 예시 — 다음 화면에 채워지는 그 문장 */
+curOut(80.3);
+
+const vRfl = V(R.rfAll);
+scrSwap("#c_rstt", "#c_rfl", 80.6, vRfl);
+cap("#p14c", 81.2, 2.1);
+curIn(81.4, pt(vRfl, 2400, 1500));
+curTo(81.6, pt(vRfl, 960, 1145), 0.7);
+click(82.5, pt(vRfl, 960, 1145));
+curOut(82.9);
+
+scrSwap("#c_rfl", "#c_rld", 83.2, V(R.rlAll));
+cap("#p14d", 83.8, 2.2);
+
+scrSwap("#c_rld", "#c_roic", 86.3, V(R.roiCost));
+cap("#p15", 86.9, 2.5);
+camTo("#c_roic", 89.7, V(R.roiUnit), 1.1);
+cap("#p16", 90, 2.9);
+scrOut("#c_roic", 93.2);
+
+scrIn("#c_roie", 93.4, V(R.roiEcon));
+cap("#p17", 93.7, 2.5);
+scrOut("#c_roie", 96.4);
+
+/* ═══════════════ 8. 인테이크 91.1–101.5 ═══════════════ */
+modeIn("#bg4", 97.1);
+badgeOut("#bg4", 109.2);
+scrIn("#c_intk", 99.1, FULL);
+cap("#p18", 99.7, 2.5);
+camTo("#c_intk", 102.4, V(R.intMetric), 1.05);
+cap("#p19", 102.8, 2.5);
+scrOut("#c_intk", 105.6);
+
+scrIn("#c_inta", 105.8, V(R.intAsk));
+cap("#p20", 106.4, 2.6);
+scrOut("#c_inta", 109.5);
+
+/* ═══════════════ 9. CTA 101.8–108.0 ═══════════════ */
+wipe(109.8, null, null);
+show("#s10", 109.95);
+tl.fromTo("#s10 .say span", { autoAlpha: 0, y: 26 },
+  { autoAlpha: 1, y: 0, duration: 0.3, stagger: 0.085, ease: "back.out(2)" }, 110.1);
+tl.fromTo("#s10 .say i", { autoAlpha: 0 },
+  { autoAlpha: 1, duration: 0.24, stagger: 0.085 }, 110.16);
+up("#s10 .mark", 110.7, 34, 0.7);
+up("#s10 .find", 111.3, 22, 0.55);
+up("#s10 .foot", 111.8, 16, 0.5);
+
+/* ═══════════════ 0a. 데이터 (7.0초) ═══════════════
+   여기부터 넷만 master 기준 절대 시각이다. 섹션 1~10은 자식 tl 기준이라 T0만큼 뒤에 놓인다.
+   매스가 지어지고 → 항목 이름이 붙고 → 문장이 오고 → 마지막에 뒤집는다. */
+n1.set("#n1", { autoAlpha: 1 }, 0);
+n1.set("#plan", { autoAlpha: 1 }, 0);
+[...document.querySelectorAll("#plan .fc")].forEach((el, i) => {
+  const t0 = 0.20 + i * 0.062;
+  n1.fromTo(el, { strokeDashoffset: +el.dataset.len },
+    { strokeDashoffset: 0, duration: 0.56, ease: "power2.inOut" }, t0);
+  /* 면은 그 면의 선이 다 그어진 뒤에 칠한다 — 먼저 칠하면 흰 얼룩으로 보인다. */
+  n1.fromTo(el, { fillOpacity: 0 },
+    { fillOpacity: 1, duration: 0.24, ease: "power1.out" }, t0 + 0.40);
+});
+[...document.querySelectorAll("#plan .thin")].forEach((el, i) => {
+  n1.fromTo(el, { strokeDashoffset: +el.dataset.len },
+    { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 1.30 + i * 0.07);
+});
+n1.fromTo("#plan .win", { autoAlpha: 0 },
+  { autoAlpha: 1, duration: 0.26, stagger: 0.04, ease: "power2.out" }, 1.45);
+n1.fromTo("#n1 .kw3 span", { autoAlpha: 0, y: 18 },
+  { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.14, ease: "power3.out" }, 1.95);
+rise(n1, "#n1 .big", 2.70, 30, 0.62);
+/* 각주는 큰 줄 바로 뒤에 조용히. 밑줄이 "아래에 주석 있음"을 이미 예고한다. */
+rise(n1, "#n1 .note", 3.45, 16, 0.5);
+/* 반전은 맨 마지막. 붙여 놓으면 한 문장으로 읽혀 뒤집는 맛이 없다. */
+rise(n1, "#n1 .tw", 4.20, 22, 0.55);
+n1.to("#n1 .kw3, #n1 .big, #n1 .note, #n1 .tw, #plan",
+  { autoAlpha: 0, duration: 0.42 }, 7.35);
+n1.set("#n1", { autoAlpha: 0 }, 7.80);
+
+/* ═══════════════ 0b. 빈자리 (6.2초) ═══════════════
+   기둥 → 화살표 → 빈 원 순서를 지킨다. 원이 먼저 뜨면 배경 장식으로 읽힌다. */
+n2.set("#n2", { autoAlpha: 1 }, 0);
+rise(n2, "#n2 .pkL", 0.15, 26);
+rise(n2, "#n2 .pkR", 0.45, 26);
+n2.fromTo("#n2 .aL", { scaleX: 0 }, { scaleX: 1, duration: 0.44, ease: "power2.out" }, 1.05);
+n2.fromTo("#n2 .aR", { scaleX: 0 }, { scaleX: 1, duration: 0.44, ease: "power2.out" }, 1.05);
+n2.fromTo("#n2 .ah", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.22 }, 1.45);
+n2.fromTo("#n2 .hole", { autoAlpha: 0, scale: 0.88 },
+  { autoAlpha: 1, scale: 1, duration: 0.58, ease: "back.out(1.6)" }, 1.72);
+n2.fromTo("#n2 .stem", { scaleY: 0 }, { scaleY: 1, duration: 0.36, ease: "power2.out" }, 2.30);
+n2.fromTo("#n2 .cvh", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, 2.62);
+rise(n2, "#n2 .big", 2.82, 30, 0.62);
+/* 근거 세 줄이 붙어 읽을 게 늘었다 — 6.2 → 8.0초. */
+n2.to("#n2 .pk, #n2 .arw, #n2 .ah, #n2 .hole, #n2 .cv, #n2 .cvh, #n2 .big",
+  { autoAlpha: 0, duration: 0.42 }, 7.55);
+n2.set("#n2", { autoAlpha: 0 }, 8.00);
+
+/* ═══════════════ 0c. 애로 (6.0초) ═══════════════ */
+n3.set("#n3", { autoAlpha: 1 }, 0);
+rise(n3, "#n3 .b1", 0.15, 26);
+rise(n3, "#n3 .b2", 0.42, 26);
+rise(n3, "#n3 .b3", 0.69, 26);
+/* 세 갈래가 내려와 → 가로대에서 만나 → 한 줄로 내려가 결론을 찍는다.
+   이 순서를 지켜야 '흩어진 것이 한 결론으로 모인다'로 읽힌다. */
+n3.fromTo("#n3 .v1, #n3 .v2, #n3 .v3", { scaleY: 0 },
+  { scaleY: 1, duration: 0.34, stagger: 0.06, ease: "power2.out" }, 1.35);
+n3.fromTo("#n3 .hbar", { scaleX: 0 }, { scaleX: 1, duration: 0.44, ease: "power2.out" }, 1.68);
+n3.fromTo("#n3 .stem", { scaleY: 0 }, { scaleY: 1, duration: 0.3, ease: "power2.out" }, 2.06);
+n3.fromTo("#n3 .cvh", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, 2.32);
+rise(n3, "#n3 .big", 2.55, 30, 0.62);
+n3.to("#n3 .bx, #n3 .cv, #n3 .cvh, #n3 .big", { autoAlpha: 0, duration: 0.42 }, 6.55);
+n3.set("#n3", { autoAlpha: 0 }, 7.00);
+
+/* ═══════════════ 0d. 해결 (6.5초) ═══════════════ */
+n4.set("#n4", { autoAlpha: 1 }, 0);
+rise(n4, "#n4 .b1", 0.15, 26);
+rise(n4, "#n4 .b2", 0.42, 26);
+rise(n4, "#n4 .b3", 0.69, 26);
+n4.fromTo("#n4 .v1, #n4 .v2, #n4 .v3", { scaleY: 0 },
+  { scaleY: 1, duration: 0.34, stagger: 0.06, ease: "power2.out" }, 1.40);
+n4.fromTo("#n4 .hbar", { scaleX: 0 }, { scaleX: 1, duration: 0.44, ease: "power2.out" }, 1.73);
+n4.fromTo("#n4 .stem", { scaleY: 0 }, { scaleY: 1, duration: 0.3, ease: "power2.out" }, 2.11);
+n4.fromTo("#n4 .cvh", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, 2.37);
+rise(n4, "#n4 .big", 2.60, 30, 0.62);
+n4.to("#n4 .bx, #n4 .cv, #n4 .cvh, #n4 .big", { autoAlpha: 0, duration: 0.42 }, 7.05);
+n4.set("#n4", { autoAlpha: 0 }, 7.50);
+
+/* 자식 다섯을 붙여 최종 타임라인을 만든다.
+   데이터 → 빈자리 → 애로 → 해결 → 기존 장면 전부(tl, 키네틱부터).
+   tl의 앞 5.75초는 옛 오프닝을 걷어내 비어 있으므로 n4와 겹쳐도 아무 일도 없다. */
+master.add(n1, 0).add(n2, P_N2).add(n3, P_N3).add(n4, P_N4).add(tl, T0);
+</script>
