@@ -268,7 +268,7 @@ def test_build_inputs_from_diagnosis():
 # Section 6: 졸업설계 시연 시나리오
 # ────────────────────────────────────────────────
 
-def test_doam_full_demo_flow():
+def test_case_full_demo_flow():
     """도담어린이집 케이스 — 발표용 핵심 수치 검증."""
     # 시나리오 비교
     scenarios = compare_all_scenarios(DOAM_BASE_INPUTS)
@@ -309,7 +309,7 @@ ALL_TESTS = [
     test_recommend_payback_picks_shortest,
     test_recommend_roi_picks_highest,
     test_build_inputs_from_diagnosis,
-    test_doam_full_demo_flow,
+    test_case_full_demo_flow,
 ]
 
 

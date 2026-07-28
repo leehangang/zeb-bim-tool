@@ -116,7 +116,7 @@ import json  # noqa: E402
 from core.bim_diagnoser import map_to_gr_elements  # noqa: E402
 from core.zeb_evaluator import evaluate_zeb  # noqa: E402
 
-_bim = json.load(open("data/sample_bim/doam_archi_sample.json", encoding="utf-8"))
+_bim = json.load(open("data/sample_bim/case_daycare_archi_sample.json", encoding="utf-8"))
 _gr = map_to_gr_elements(_bim)
 _full = evaluate_zeb(_bim, _gr, assume_full_reinforcement=True, assume_bems=True)
 
@@ -453,8 +453,8 @@ else:
     # (6) 별표4 수수료 — 도담(1,251㎡ 비주거) = 390만원
     from core import params as _PP
     _fee = _PP.get("zeb_incentive", "인증수수료.전용면적구간_원")
-    _doam = next(v for u, v in _fee if 1251 < float(u))
-    check("도담 인증수수료 = 별표4 원문 390만원", _doam == 3_900_000, f"{_doam:,}원")
+    _case = next(v for u, v in _fee if 1251 < float(u))
+    check("도담 인증수수료 = 별표4 원문 390만원", _case == 3_900_000, f"{_case:,}원")
 
     # (7) 원문을 읽고 새로 생긴 숙제가 params에 기록됐는가 (조용히 넘어가지 않았는가)
     _yaml = (Path(__file__).resolve().parent.parent
@@ -509,11 +509,11 @@ check("기한은 코드에 박지 않고 params에서 읽는다",
 # 도담 ROI에 실제로 반영되는가 — params만 고치고 엔진이 안 따르면 의미 없다
 from core.roi_calculator import calculate_zeb_cert_fee  # noqa: E402
 
-_doam = calculate_zeb_cert_fee(1251.0, 5, is_mandatory=False)
-check("도담 수수료 390만원 (별표4 1천~3천㎡ 구간)", _doam["수수료"] == 3_900_000)
+_case = calculate_zeb_cert_fee(1251.0, 5, is_mandatory=False)
+check("도담 수수료 390만원 (별표4 1천~3천㎡ 구간)", _case["수수료"] == 3_900_000)
 check("도담 환불액 0원 — 예전엔 78만원을 편익에 넣고 있었다",
-      _doam["환불액"] == 0, f'{_doam["환불액"]:,}원')
-check("도담 순비용 = 수수료 전액", _doam["순비용"] == 3_900_000)
+      _case["환불액"] == 0, f'{_case["환불액"]:,}원')
+check("도담 순비용 = 수수료 전액", _case["순비용"] == 3_900_000)
     # status: 값만 본다. 본문 산문에는 과거 경위로 '확인필요_원문미확보'가 언급된다.
 
 print("\n⑯ 알림 아이콘이 두 번 그려지지 않는가")
@@ -541,7 +541,7 @@ from core.bim_diagnoser import diagnose_from_json, gr_label  # noqa: E402
 from core.full_report import build_full_report  # noqa: E402
 from core.ui_lint import find_dict_leaks  # noqa: E402
 
-_r = diagnose_from_json("data/sample_bim/doam_archi_sample.json", with_roi=True)
+_r = diagnose_from_json("data/sample_bim/case_daycare_archi_sample.json", with_roi=True)
 _z = evaluate_zeb(_r["bim_data"], _r["gr_mapping"],
                   assume_full_reinforcement=True, assume_bems=True)
 _md = build_full_report(_r, "x.json", zeb=_z, build={"date": "d", "commit": "c"})

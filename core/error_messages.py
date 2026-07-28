@@ -104,7 +104,7 @@ def friendly_error(error) -> str:
             "**확인**:\n"
             "- 파일이 정말 JSON 형식인지 (.json 확장자)\n"
             "- 파일 내용에 오타나 누락된 괄호 없는지\n"
-            "- 샘플 형식은 `data/sample_bim/doam_archi_sample.json` 참고"
+            "- 샘플 형식은 `data/sample_bim/case_daycare_archi_sample.json` 참고"
         )
 
     if "filenotfounderror" in low or "no such file" in low or "파일을 찾을 수 없" in msg:
@@ -154,7 +154,7 @@ def friendly_error(error) -> str:
             f"필수 필드 `{key}` 가 입력 데이터에 없습니다.\n\n"
             f"**해결**:\n"
             f"- BIM JSON 파일에 해당 필드가 있는지 확인\n"
-            f"- 샘플 스키마: `data/sample_bim/doam_archi_sample.json`"
+            f"- 샘플 스키마: `data/sample_bim/case_daycare_archi_sample.json`"
         )
 
     # ────────────────────────────────────────────────────

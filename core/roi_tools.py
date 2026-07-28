@@ -41,7 +41,7 @@ CALCULATE_ZEB_ROI_TOOL = {
             "total_area_m2": {
                 "type": "number",
                 "description": (
-                    "건물 연면적 (㎡). 필수. 예: 도담어린이집 1,251㎡."
+                    "건물 연면적 (㎡). 필수. 예: 어린이집 1,251㎡."
                 ),
             },
             "wall_no_insulation_m2": {
@@ -112,7 +112,7 @@ CALCULATE_ZEB_ROI_TOOL = {
                 "type": "number",
                 "description": (
                     "토지 평당가 (원). 용적률 보너스 자산가치 산정용. "
-                    "기본 15,000,000원/평 (도담 인근 시세)."
+                    "기본 15,000,000원/평 (대상 지역 시세)."
                 ),
                 "default": 15_000_000,
             },

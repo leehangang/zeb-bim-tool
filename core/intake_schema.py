@@ -68,7 +68,7 @@ FIELDS = {
         "section": "기관",
         "type": "string",
         "required": True,
-        "example": "김천시청",
+        "example": "○○시청",
         "help": "사업 신청 주체 (지자체 또는 공공기관)",
     },
     "org_type": {
@@ -155,7 +155,7 @@ FIELDS = {
         "section": "건축물",
         "type": "string",
         "required": True,
-        "example": "김천 도담어린이집",
+        "example": "○○어린이집",
     },
     "building_address": {
         "label": "소재지",
@@ -163,7 +163,7 @@ FIELDS = {
         "section": "건축물",
         "type": "string",
         "required": True,
-        "example": "경상북도 김천시 ○○로 12",
+        "example": "○○시 ○○로 12",
     },
     "building_usage": {
         "label": "용도",

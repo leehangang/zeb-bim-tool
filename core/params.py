@@ -226,7 +226,7 @@ def annual_saving_per_m2(reduction_primary_kwh_m2: Optional[float] = None) -> fl
     if reduction_primary_kwh_m2 is None:
         try:
             reduction_primary_kwh_m2 = float(
-                get("energy_tariff", "절감액산정.도담_1차E_절감_kWh_per_m2")
+                get("energy_tariff", "절감액산정.대상건물_1차E_절감_kWh_per_m2")
             )
         except Exception:
             return 5_172.0          # YAML 없어도 import가 깨지지 않게 방어

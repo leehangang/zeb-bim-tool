@@ -156,7 +156,7 @@ def evaluate_gr(bim: dict, gr_mapping: dict,
 
     imp = judge_improvement(pre_primary, post_primary, metric=metric)
     works = check_target_works(gr_mapping)
-    owner = _P.get("gr_support", "사업유형판정.도담판정", "공공지원사업")
+    owner = _P.get("gr_support", "사업유형판정.대상건물판정", "공공지원사업")
 
     eligible = imp["충족"] and works["충족"]
     return {

@@ -63,7 +63,7 @@ NREL 이미지에는 .epw가 0개다(`/usr/local`·`/opt`·`/root` 전수 조사
 
 ### ✅ 우리 IDF의 첫 EnergyPlus 실행 — 완주 (2026-07-17)
 
-`data/sample_bim/doam_sample.gbxml` → 파서 → `write_idf` → Modal → E+ 8,760시간 연간 해석.
+`data/sample_bim/case_daycare_sample.gbxml` → 파서 → `write_idf` → Modal → E+ 8,760시간 연간 해석.
 
 **1차 시도는 실패했다.** 그 전까지 "파싱은 통과"만 확인한 상태였고, 실제로 넣자마자
 IDF 생성기의 진짜 버그 3개 + 에러 파서 버그 1개가 나왔다:

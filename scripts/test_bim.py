@@ -37,7 +37,7 @@ from core.bim_diagnoser import (
 
 def test_full_pipeline():
     """KEPCO 가상 JSON 전체 파이프라인."""
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
 
     print("=" * 70)
     print("BIM 진단 파이프라인 검증")
@@ -168,7 +168,7 @@ def test_roi_integration():
     print("진단 ↔ ROI 연계 보강 계획 검증")
     print("=" * 70)
 
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
 
     # with_roi=True로 호출
     result = diagnose_from_json(str(sample_path), with_roi=True, duration_months=8)
@@ -251,7 +251,7 @@ def test_backward_compatibility():
     print("하위 호환성 검증 (기존 호출 방식)")
     print("=" * 70)
 
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
 
     # 기존 방식: with_roi 매개변수 없이 호출
     result = diagnose_from_json(str(sample_path))
@@ -277,7 +277,7 @@ def test_report_generation():
     print("진단 리포트 생성")
     print("=" * 70)
 
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
     result = diagnose_from_json(str(sample_path))
 
     report = result["report"]
@@ -302,7 +302,7 @@ def test_optimization_budget():
     print("최적화 검증: 예산 상한 모드")
     print("=" * 70)
 
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
     result = diagnose_from_json(str(sample_path), with_roi=True)
     plan = result["roi_plan"]
     current = result["score"]["total_score"]
@@ -341,7 +341,7 @@ def test_optimization_target_grade():
     print("최적화 검증: 목표 점수 모드")
     print("=" * 70)
 
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
     result = diagnose_from_json(str(sample_path), with_roi=True)
     plan = result["roi_plan"]
     current = result["score"]["total_score"]   # 도담 = 25점
@@ -376,7 +376,7 @@ def test_optimization_report_format():
     print("최적화 리포트 포맷 검증")
     print("=" * 70)
 
-    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "doam_archi_sample.json"
+    sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
     result = diagnose_from_json(str(sample_path), with_roi=True)
     plan = result["roi_plan"]
     current = result["score"]["total_score"]

@@ -247,10 +247,10 @@ def render_bim_panel() -> None:
              "🔬 데모 gbXML (가상)",
              "1,252㎡ · 어린이집 · 외피 6면",
              "**에너지 해석까지** 도는 예시. 실제 건물 아님"),
-            ("doam_archi_sample.json",
-             "🏫 도담어린이집",
+            ("case_daycare_archi_sample.json",
+             "🏫 실증 케이스(어린이집)",
              "1,251㎡ · 2014년 · 어린이집",
-             "KEPCO 검증 케이스. JSON이라 해석은 안 됨"),
+             "JSON이라 해석은 안 됨"),
             ("library_archi_sample.json",
              "📚 공공도서관",
              "3,500㎡ · 1998년 · 도서관",
@@ -335,7 +335,7 @@ def render_bim_panel() -> None:
         if _gb_demo:
             st.info(
                 f"**데모 gbXML** ({_gb_src[1]}) — 실제 건물이 아니라 화면 예시용 "
-                "가상 모델입니다. 연면적만 도담과 비슷하게 맞췄고 형상·열관류율은 가정값입니다.",
+                "가상 모델입니다. 연면적만 실증 케이스와 비슷하게 맞췄고 형상·열관류율은 가정값입니다.",
                 icon="🔬",
             )
         if _gb_src:
@@ -347,7 +347,7 @@ def render_bim_panel() -> None:
                 _cnt = " · ".join(f"{k} {v}개" for k, v in _g["surfaces"].items() if v)
                 st.success(f"gbXML 파싱 — {_cnt}", icon="✅")
 
-                # 🔴 파싱이 됐다고 쓸 수 있는 건 아니다. 실제 도담 export는 1,251㎡ 건물에서
+                # 🔴 파싱이 됐다고 쓸 수 있는 건 아니다. 실제 실증 케이스 export는 1,251㎡ 건물에서
                 #    해석 공간이 15㎡뿐이었는데 화면엔 "walls 6개"만 떠서 멀쩡해 보였다.
                 #    이건 '값 몇 개 없음'이 아니라 '이 파일을 쓰면 안 됨'이다.
                 if _g.get("blockers"):
@@ -416,7 +416,7 @@ def render_bim_panel() -> None:
                         _epw = st.file_uploader(
                             "기상파일 (.epw) — 선택 (비우면 서버 기본값: 추풍령)",
                             type=["epw"], key="_epw_up",
-                            help="도담(김천) 최근접 관측소는 추풍령 471350입니다. "
+                            help="중부2 기후대 최근접 관측소는 추풍령 471350입니다. "
                                  "climate.onebuilding.org에서 받을 수 있습니다.",
                         )
                         _go = st.button(
@@ -1404,7 +1404,7 @@ def _render_sensitivity_tab(result: dict) -> None:
     # ⚠️ 70%는 '현재'가 아니라 **가정**이다. gbXML엔 소유 주체가 없다
     #    (gbxml_parser가 directly_owned를 '사용자 입력 필요'로 명시한다).
     #    보조율은 소유 주체가 정한다 — 서울·중앙·공공기관 50% / 그 외 지자체 70%.
-    #    예전엔 이 값을 "현재(70%)"라고 불러서, 홈이 도담을 50%라 하는 동안
+    #    예전엔 이 값을 "현재(70%)"라고 불러서, 홈이 실증 케이스를 50%라 하는 동안
     #    같은 앱의 이 탭이 70%라고 우겼다. 스윕의 기준점일 뿐임을 화면에 적는다.
     baseline = {
         "subsidy_rate": 0.7,
@@ -1629,7 +1629,7 @@ def _render_zeb_tab(result: dict) -> None:
     )
 
     # 자립률이 0%인데 태양열이 있으면, 왜 0%인지 밝힌다.
-    # 안 밝히면 "0%"가 "신재생 전무"로 읽힌다 — 도담은 태양열 27㎡가 실재한다.
+    # 안 밝히면 "0%"가 "신재생 전무"로 읽힌다 — 실증 케이스는 태양열 27㎡가 실재한다.
     # (엔진의 0%는 옳다: 자립률 분자는 태양광 전력생산이고 이 건물엔 태양광이 없다.
     #  태양열을 5.4kW PV로 잘못 넣었던 과거엔 ~5%가 나왔는데, 그건 전력 과대계상이었다.)
     _st_area = sum(p.get("area_m2", p.get("area", 0))

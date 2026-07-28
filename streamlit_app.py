@@ -172,7 +172,7 @@ with st.sidebar:
             - 법령은 **RAG로 원문 인용**, 없으면 없다고 답변 (환각 차단)
             - **ZEB ≠ 그린리모델링** — 판정은 분리, 데이터·해석 기반은 공유
 
-            - 케이스: KEPCO 도담어린이집 (김천)
+            - 케이스: 공공기관 소유 어린이집 (중부2)
 
             **산정 데이터**
               - 07/08 조달청 단가DB·간접공사비
@@ -215,9 +215,9 @@ with st.sidebar:
 # ====================================================================
 
 @st.cache_data(show_spinner=False)
-def _doam_zeb() -> dict:
+def _case_zeb() -> dict:
     """
-    홈에 띄울 도담 ZEB 수치를 **엔진에서 직접 산출**한다.
+    홈에 띄울 실증 케이스 ZEB 수치를 **엔진에서 직접 산출**한다.
 
     왜 이 함수가 있나 — 예전엔 홈이 "4등급 · 66.0"을 문자열로 하드코딩하고 있었다.
     그래서 엔진의 결론이 4등급 → 5등급으로 바뀌었는데도 화면은 그대로였고,
@@ -228,7 +228,7 @@ def _doam_zeb() -> dict:
     from pathlib import Path
 
     try:
-        path = Path("data/sample_bim/doam_archi_sample.json")
+        path = Path("data/sample_bim/case_daycare_archi_sample.json")
         bim = json.loads(path.read_text(encoding="utf-8"))
         from core.bim_diagnoser import map_to_gr_elements
         from core.zeb_evaluator import evaluate_zeb
@@ -250,9 +250,9 @@ def _doam_zeb() -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def _doam_score() -> dict:
+def _case_score() -> dict:
     """
-    도담 GR 정량평가 점수 — 엔진에서 직접 산출.
+    실증 케이스 GR 정량평가 점수 — 엔진에서 직접 산출.
 
     ⚠️ 홈이 "25/100점"을 하드코딩하고 있었는데 엔진은 23점이었다(이미 어긋나 있었음).
     ⚠️ 등급(A/D)은 붙이지 않는다 — 정량평가표는 "고득점 순으로 선정"하는 랭킹 점수이지
@@ -263,7 +263,7 @@ def _doam_score() -> dict:
     try:
         from core.bim_diagnoser import diagnose_from_json
         res = diagnose_from_json(
-            str(Path("data/sample_bim/doam_archi_sample.json")), with_roi=True,
+            str(Path("data/sample_bim/case_daycare_archi_sample.json")), with_roi=True,
         )
         cur = res["score"]["total_score"]
         uplift = sum(p["점수상승"] for p in (res.get("roi_plan") or []))
@@ -273,9 +273,9 @@ def _doam_score() -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def _doam_gr() -> dict:
+def _case_gr() -> dict:
     """
-    Track B · 도담 GR 사업 자격 — 엔진(core.gr_evaluator)에서 직접 산출.
+    Track B · 실증 케이스 GR 사업 자격 — 엔진(core.gr_evaluator)에서 직접 산출.
     ZEB와 분모가 다르므로(개선 전 대비 vs base 대비) 별도 모듈이 판정한다. P4 참고.
     """
     import json
@@ -283,7 +283,7 @@ def _doam_gr() -> dict:
 
     try:
         bim = json.loads(
-            Path("data/sample_bim/doam_archi_sample.json").read_text(encoding="utf-8")
+            Path("data/sample_bim/case_daycare_archi_sample.json").read_text(encoding="utf-8")
         )
         from core.bim_diagnoser import map_to_gr_elements
         from core.gr_evaluator import evaluate_gr
@@ -302,9 +302,9 @@ def _P_tariff() -> float:
 
 
 @st.cache_data(show_spinner=False)
-def _doam_roi() -> dict:
+def _case_roi() -> dict:
     """
-    도담 재무성·경제성 — 엔진(core.roi_calculator)에서 직접 산출.
+    실증 케이스 재무성·경제성 — 엔진(core.roi_calculator)에서 직접 산출.
 
     🔴 2026-07-16까지 홈은 "회수 7.3년 · NPV +1.08억 · IRR 14.7% · B-C 2.19배"를
        **손으로 적어** 두고 있었다. 그런데 같은 가정으로 엔진을 돌리면 회수는 6.8년,
@@ -431,7 +431,7 @@ def render_home():
 
     st.markdown("---")
 
-    # 핵심 수치 (KEPCO 도담 검증 기준) — ZEB 등급 평가가 우리 플랫폼의 출발점
+    # 핵심 수치 (실증 케이스 검증 기준) — ZEB 등급 평가가 우리 플랫폼의 출발점
     #
     # 편집 원칙 — 여기는 **결과만** 둔다.
     #   제도 해설·우리가 틀렸던 이력·연구 근거는 📐 근거·출처에 있다.
@@ -439,12 +439,12 @@ def render_home():
     #   남기는 건 '숫자가 못 믿을 값일 때의 경고'뿐 — 그건 숫자에 붙어 있어야 한다.
     # (2026-07-17: 용어사전 모드를 화면에서 뺐다. modes/mode6_glossary.py는 남아 있지만
     #  어디서도 안 부른다 — 되살릴 땐 streamlit_app.py의 mode_options에 다시 넣으면 된다.)
-    st.markdown("### 검증 결과 — KEPCO 도담어린이집")
+    st.markdown("### 검증 결과 — 실증 케이스(어린이집)")
     st.caption("1,251㎡ · 2014년 사용승인 · 노유자시설(비주거) · 공공기관 소유 · 태양광 없음")
 
     st.markdown("**① ZEB 인증 등급 평가** — 본 플랫폼의 핵심")
 
-    zeb = _doam_zeb()      # ⚠️ 하드코딩 금지 — 엔진에서 직접 읽는다 (아래 함수 주석 참고)
+    zeb = _case_zeb()      # ⚠️ 하드코딩 금지 — 엔진에서 직접 읽는다 (아래 함수 주석 참고)
     if zeb:
         z1, z2, z3 = st.columns(3)
         z1.metric("현재 ZEB", "인증 미달",
@@ -462,7 +462,7 @@ def render_home():
         st.warning("ZEB 엔진 계산에 실패했습니다 — [📐 근거·출처] 모드에서 상세를 확인하세요.")
 
     # ── Track B · GR 사업 자격 (ZEB와 별개 제도 — 분모가 다르다) ──────
-    gr = _doam_gr()
+    gr = _case_gr()
     if gr:
         imp = gr["성능개선"]
         st.markdown("**② 그린리모델링 사업 자격** — Track B (ZEB와 별개 제도)")
@@ -479,7 +479,7 @@ def render_home():
         )
 
     st.markdown("**③ BIM 정밀 진단** — GR 지원사업 정량평가표 채점")
-    sc = _doam_score()
+    sc = _case_score()
     d1, d2, d3 = st.columns(3)
     d1.metric("현재 정량평가", f"{sc.get('현재', '—')} / 100점", "선정 랭킹 점수")
     d2.metric("보강 후", f"{sc.get('보강후', '—')} / 100점",
@@ -490,8 +490,8 @@ def render_home():
         "— 등급이 아니고, 커트라인은 해마다 달라집니다"
     )
 
-    # ④⑤ 숫자는 전부 엔진에서 읽는다 — _doam_roi() 주석 참고 (하드코딩이 어긋나 있었다)
-    roi = _doam_roi()
+    # ④⑤ 숫자는 전부 엔진에서 읽는다 — _case_roi() 주석 참고 (하드코딩이 어긋나 있었다)
+    roi = _case_roi()
 
     st.markdown("**④ 재무성 — 에너지 절감 회수**")
     f1, f2, f3 = st.columns(3)

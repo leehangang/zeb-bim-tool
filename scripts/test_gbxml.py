@@ -33,7 +33,7 @@ def check(name: str, cond: bool, detail: str = "") -> None:
         fails.append(name)
 
 
-FIXTURE = PROJECT_ROOT / "data" / "sample_bim" / "doam_sample.gbxml"
+FIXTURE = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_sample.gbxml"
 
 print("=" * 70)
 print("gbXML 파서")

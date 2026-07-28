@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "KEPCO 김천 도담어린이집 가상 BIM 추출 JSON (Step 3 검증용)",
+    "description": "공공기관 소유 어린이집 가상 BIM 추출 JSON (Step 3 검증용)",
     "source": "Dynamo 스크립트 추출값 + 일부 가정",
     "note": "실제 Dynamo 출력 포맷과 일치시킬 경우 이 스키마를 표준으로 사용",
     "renewable_correction": "2026-07: 태양열집열판 27㎡를 태양광 5.4kW로 분류하던 오류 정정. 태양광=전력(1차E ×2.75) / 태양열=급탕 열 → 자립률 기여 방식이 다름."

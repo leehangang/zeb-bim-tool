@@ -6,8 +6,8 @@
      만든 가상 모델이다. 연면적(1,252㎡)만 도담과 비슷하게 맞췄고 형상·열관류율은
      가정값이다. 실물 gbXML을 확보하면 이 파일은 데모 자리에서 물러난다.
 
-  doam_sample.gbxml과 역할이 다르다:
-    · doam_sample.gbxml → 파서 검증용. 바닥 U-value가 **일부러 없다**
+  case_daycare_sample.gbxml과 역할이 다르다:
+    · case_daycare_sample.gbxml → 파서 검증용. 바닥 U-value가 **일부러 없다**
       (없는 값을 지어내지 않는지 시험). 그래서 E+에서 부하가 0으로 나온다.
     · 이 파일          → 화면 예시용. 빠진 값이 없어 해석이 제대로 돈다.
 
