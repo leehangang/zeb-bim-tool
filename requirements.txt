@@ -3,7 +3,10 @@
 # 설치: pip install -r requirements.txt
 
 # === Web UI ===
-streamlit>=1.30.0
+streamlit>=1.57.0        # 사이드바 원문 내려받기가 두 가지 최신 기능에 기댄다:
+                         #   · download_button(data=callable) — 누를 때만 파일을 읽는다
+                         #   · download_button(type='tertiary') — 목록에 어울리는 링크형
+                         # >=1.30.0으로 두면 옛 버전이 깔려도 설치는 되고 화면에서 터진다.
 
 # === LLM API ===
 anthropic>=0.39.0          # Claude Haiku 4.5

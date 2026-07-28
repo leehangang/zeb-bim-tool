@@ -61,13 +61,28 @@ def _check_rag_index() -> bool:
     )
 
 
+# groups 항목의 모양이 바뀔 때마다 올린다.
+#   1 = (표시명, 설명)
+#   2 = (파일명, 표시명, 설명)   ← 원문 내려받기 때문에 파일명이 필요해졌다
+#
+# 🔴 2026-07-28: 이 번호가 없어서 배포된 앱이 죽었다.
+#    @st.cache_data는 **프로세스가 살아 있는 한 값을 들고 있다.** 코드를 새로 올려도
+#    스크립트만 다시 돌 뿐 캐시는 그대로라, 새 코드가 옛 2-튜플을 3개로 풀다가
+#    ValueError로 전체 페이지가 넘어갔다. 캐시 키에 모양 번호를 넣어 두면
+#    모양이 바뀌는 순간 옛 값이 자동으로 버려진다.
+_INDEX_SCHEMA = 2
+
+
 @st.cache_data(show_spinner=False)
-def _index_summary() -> dict:
+def _index_summary(schema: int = _INDEX_SCHEMA) -> dict:
     """
     색인에서 원문 목록·청크 수를 직접 읽는다.
 
     화면에 목록을 손으로 적지 않기 위한 함수다. 예전엔 사이드바·Mode 01 헤더·
     Mode 01 본문에 각각 다른 목록이 하드코딩돼 있었고 전부 실제 색인과 어긋났다.
+
+    Args:
+        schema: 캐시 무효화용. 값 자체는 안 쓴다 — 캐시 키에 들어가는 게 목적이다.
     """
     try:
         from core.doc_registry import group_indexed_docs
@@ -204,7 +219,10 @@ with st.sidebar:
         if _idx["error"]:
             st.caption(f"색인을 읽지 못했습니다 — {_idx['error']}")
         else:
-            for _title, _items in _idx["groups"]:
+            # 🔴 사이드바 목록 하나 때문에 앱 전체가 넘어간 적이 있다(캐시에 남은
+            #    옛 튜플 모양). 이 목록은 부가 정보다 — 여기서 터지면 여기서만 끝낸다.
+            try:
+              for _title, _items in _idx["groups"]:
                 st.markdown(f"**{_title}**")
                 for _fname, _label, _answers in _items:
                     _p = _POLICY_DIR / _fname
@@ -232,6 +250,8 @@ with st.sidebar:
                         f"</div>",
                         unsafe_allow_html=True,
                     )
+            except Exception as _e:
+                st.caption(f"원문 목록을 그리지 못했습니다 — {type(_e).__name__}: {_e}")
         # 사이드바는 '무엇이 색인돼 있는가'만 답한다.
         # 2026-07-17: 예전엔 "④ 계산 경로·한계에 있습니다"라고 가리켰는데, 그 탭은
         # 5개→2개로 줄이면서 지워졌다. 없는 곳을 가리키는 안내가 없느니만 못하다.
