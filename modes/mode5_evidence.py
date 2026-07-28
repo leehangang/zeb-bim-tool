@@ -101,14 +101,14 @@ def grade_sensitivity(base_primary_kwh_m2: Optional[float] = None,
 
     ⚠️ 2026-07-17부터 화면(③ 등급 민감도 탭)에서는 안 쓴다 — 탭을 없앴다.
        그래도 지우지 않는 이유: scripts/test_evidence.py가 이 함수로 **엔진의 등급
-       임계(도담 기준 55%)가 안 바뀌었는지** 회귀 검사한다. 지우면 그 보호가 사라진다.
+       임계(대상 건물 기준 55%)가 안 바뀌었는지** 회귀 검사한다. 지우면 그 보호가 사라진다.
        (아래 base 함정 주석도 그 검사가 지키는 대상이다.)
 
     ⚠️ 절감률의 분모는 **용도별 기준 에너지요구량(base)** 이지 '현재 소요량'이 아니다.
        core.zeb_evaluator.evaluate_zeb()가 쓰는 식과 동일하게 맞춘다:
            post_energy = base_kwh × (1 − reduction_ratio)
            net_primary = post_energy − PV 1차에너지 생산
-       (도담: base 200 → 현재 166.7은 기존 16.65% 적용 상태, 보강 후 66.0은 67% 절감)
+       (대상 건물: base 200 → 현재 166.7은 기존 16.65% 적용 상태, 보강 후 66.0은 67% 절감)
        base에 166.7을 넣으면 임계가 46%로 잘못 나온다. 실제 임계는 55%다.
 
     임계값은 하드코딩하지 않고 이분 탐색으로 찾는다.
@@ -117,7 +117,7 @@ def grade_sensitivity(base_primary_kwh_m2: Optional[float] = None,
     Args:
         base_primary_kwh_m2: 기준 에너지요구량. None이면 엔진의 용도별 기본값.
         building_use: 용도 (주거/비주거 기준표 + base 선택)
-        pv_primary_per_m2: PV 1차에너지 생산 (kWh/㎡·년). 도담은 태양광이 없어 0.
+        pv_primary_per_m2: PV 1차에너지 생산 (kWh/㎡·년). 대상 건물은 태양광이 없어 0.
 
     Returns:
         {"base":.., "rows": [...], "cliffs": [{"등급":.., "임계_절감률_pct":..}]}

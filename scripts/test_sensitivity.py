@@ -8,7 +8,7 @@ PFV 사업수지 모델 분석으로 도입한 두 엔진 검증.
     python scripts/test_sensitivity.py
 
 기대 결과:
-    - 도담 케이스: NPV/IRR/B-C·할인회수 산출, 3개 시나리오 비교
+    - 대상 건물 케이스: NPV/IRR/B-C·할인회수 산출, 3개 시나리오 비교
     - 민감도(보조율/비용/절감) 단조성 확인
     - 손익분기 보조금율 자동 산출
     - 모든 테스트 PASS
@@ -38,7 +38,7 @@ from core.scenario_compare import (
 )
 
 
-# 도담어린이집 기준 입력 (메모리에서)
+# 대상 건물 기준 입력 (메모리에서)
 DOAM_BASELINE = {
     "subsidy_rate": 0.7,
     "total_cost_won": 531_000_000,
@@ -269,7 +269,7 @@ def test_build_inputs_from_diagnosis():
 # ────────────────────────────────────────────────
 
 def test_case_full_demo_flow():
-    """도담어린이집 케이스 — 발표용 핵심 수치 검증."""
+    """대상 건물 케이스 — 발표용 핵심 수치 검증."""
     # 시나리오 비교
     scenarios = compare_all_scenarios(DOAM_BASE_INPUTS)
 
@@ -284,7 +284,7 @@ def test_case_full_demo_flow():
     bk = sens["breakeven"]
     # 회수 8년 달성에 보조 80% 이상 필요해야
     assert bk["회수8년_필요_보조율"] > 0.7
-    print(f"  ✓ 도담 시연: 시그니처 ROI {c_signature['자산화_ROI_pct']:.0f}%, "
+    print(f"  ✓ 대상 건물 시연: 시그니처 ROI {c_signature['자산화_ROI_pct']:.0f}%, "
           f"회수8년 보조율 {bk['회수8년_필요_보조율']:.0%}")
 
 

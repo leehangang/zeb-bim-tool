@@ -103,6 +103,13 @@
 .case2 .shots2 figure { flex: 1; min-width: 0; }
 .case2 .shots2 img { width: 100%; height: 104px; object-fit: cover; display: block;
   border: 1px solid var(--g3); }
+/* 실제 외관 사진을 뺐다 — 표본은 익명 처리 대상이고 외관은 이름을 지워도 건물을 특정한다.
+   한 장만 남으니 칸이 두 배로 넓어져 1.5 비율 원본이 위아래로 잘린다. 높이를 같이 키운다. */
+.case2 .shots2.one img { height: 140px; }
+/* 사진 한 장이 커진 만큼 제원 표를 좁힌다 — 안 그러면 마지막 줄(ZEB)이 각주에 물린다.
+   .case2가 고정 높이라 넘쳐도 render.js 검사기가 못 잡는다. 눈으로 봐야 한다. */
+.case2 .shots2.one + .kv { margin-top: 16px; }
+.case2 .shots2.one ~ .kv div { padding: 5px 0; }
 .case2 .shots2 figcaption { font-size: 12.5px; color: var(--g2); margin-top: 7px; }
 .case2 .sp { width: 372px; flex: none; padding-right: 48px; }
 .case2 .sp k { font-size: 12.5px; font-weight: 500; letter-spacing: 1.6px; color: var(--g2); }

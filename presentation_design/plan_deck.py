@@ -291,7 +291,7 @@ def s06_tracks():
     s.poly([(lx + cwid + 8, 346), (lx + cwid + 18, 340), (lx + cwid + 18, 352)], CHEV)
     s.poly([(rx - 8, 346), (rx - 18, 340), (rx - 18, 352)], CHEV)
 
-    s.T(MX, 542, "두 값을 섞으면 조용히 틀립니다 — 같은 도담어린이집에서도 기준이 다르면 결과가 갈립니다.",
+    s.T(MX, 542, "두 값을 섞으면 조용히 틀립니다 — 같은 대상 건물에서도 기준이 다르면 결과가 갈립니다.",
         "Bold", TYPE["body"], INK)
     # 실제 저장소 값 (core/gr_evaluator.py · modes/mode6_glossary.py)
     facts = [("ZEB 절감률", "50.5%", ""),

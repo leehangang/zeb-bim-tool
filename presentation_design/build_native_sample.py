@@ -120,7 +120,7 @@ def s_title():
     tb(s,88,338,1000,30,[[("제로에너지건축물(ZEB) 의사결정 통합 플랫폼",14,False,SUBC)]])
     hline(s,88,604,360,RGBColor(0x46,0x60,0x4C),1.0)
     tb(s,88,616,500,24,[[("졸업설계 작품 · 2026",10.5,False,RGBColor(0xAF,0xC2,0xB2))]])
-    tb(s,692,616,500,24,[[("사례 · KEPCO 김천 도담어린이집",10,False,GOLD)]],align=PP_ALIGN.RIGHT)
+    tb(s,692,616,500,24,[[("사례 · 공공기관 소유 어린이집",10,False,GOLD)]],align=PP_ALIGN.RIGHT)
 
 # ===================================================================
 # SLIDE 2 — MODE 01 (screenshot left + editable explanation right)

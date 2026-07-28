@@ -1,7 +1,7 @@
 """
 scripts/test_roi.py — ROI 함수 단위 테스트
 ==========================================
-KEPCO 김천 도담어린이집 사례로 core.roi_calculator 검증.
+공공기관 소유 어린이집 사례로 core.roi_calculator 검증.
 
 실행:
     cd /path/to/zeb-chatbot
@@ -69,9 +69,9 @@ def test_phase_b_material_lookup():
 
 
 def test_kepco_case():
-    """KEPCO 김천 도담어린이집 사례 통합 ROI 재현."""
+    """공공기관 소유 어린이집 사례 통합 ROI 재현."""
     print("\n" + "=" * 70)
-    print("KEPCO 김천 도담어린이집 사례 — 통합 ROI")
+    print("공공기관 소유 어린이집 사례 — 통합 ROI")
     print("=" * 70)
 
     bim_input = {

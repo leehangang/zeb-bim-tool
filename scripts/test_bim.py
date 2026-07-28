@@ -1,7 +1,7 @@
 """
 scripts/test_bim.py — BIM 진단 단위 테스트
 ==========================================
-KEPCO 도담어린이집 가상 BIM JSON 샘플로 core.bim_diagnoser 검증.
+공공기관 소유 어린이집 가상 BIM JSON 샘플로 core.bim_diagnoser 검증.
 
 실행:
     python scripts/test_bim.py
@@ -36,7 +36,7 @@ from core.bim_diagnoser import (
 
 
 def test_full_pipeline():
-    """KEPCO 가상 JSON 전체 파이프라인."""
+    """실증 케이스 가상 JSON 전체 파이프라인."""
     sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
 
     print("=" * 70)
@@ -93,7 +93,7 @@ def test_full_pipeline():
     print(f"  [PASS] 바닥 단열·난방: 적용 (XL 배관)")
 
     # 신재생 — 태양광(가목)과 태양열(나목)은 별개 설비 (GR 고시 §7 제6호)
-    # 도담 실측: 태양열집열판 27㎡(급탕). 태양광 객체는 0개.
+    # 대상 건물 실측: 태양열집열판 27㎡(급탕). 태양광 객체는 0개.
     # (과거 이 27㎡를 PV 5.4kW로 오분류해 자립률이 과대 산정되던 버그를 정정)
     pv = mapping["10_신재생태양광"]
     assert pv["status"] == "미적용", f"태양광은 0이어야 함: {pv}"
@@ -208,9 +208,9 @@ def test_roi_integration():
         )
         print(f"  [PASS] 단열문 자재 조회: {door_plan['Max_Cost']:,}원")
 
-    # 도담어린이집 검증: 미적용 항목이 11개 중 8개 이상이어야 함
+    # 대상 건물 검증: 미적용 항목이 11개 중 8개 이상이어야 함
     assert len(plan) >= 8, (
-        f"미적용 항목이 너무 적음 (도담어린이집은 11개 중 대부분 미적용): {len(plan)}"
+        f"미적용 항목이 너무 적음 (대상 건물은 11개 중 대부분 미적용): {len(plan)}"
     )
     print(f"  [PASS] 미적용/부분적용 {len(plan)}개 항목")
 
@@ -224,7 +224,7 @@ def test_roi_integration():
           f"{result['score']['total_score']} → 보강 후 "
           f"{result['score']['total_score'] + total_uplift})")
 
-    # 누적 비용 합리적 범위 (도담 1251㎡, 종합공사 약 5~10억)
+    # 누적 비용 합리적 범위 (대상 건물 1251㎡, 종합공사 약 5~10억)
     assert 200_000_000 <= total_cost <= 1_500_000_000, (
         f"누적 비용이 예상 범위(2~15억) 벗어남: {total_cost:,}원"
     )
@@ -344,7 +344,7 @@ def test_optimization_target_grade():
     sample_path = PROJECT_ROOT / "data" / "sample_bim" / "case_daycare_archi_sample.json"
     result = diagnose_from_json(str(sample_path), with_roi=True)
     plan = result["roi_plan"]
-    current = result["score"]["total_score"]   # 도담 = 25점
+    current = result["score"]["total_score"]   # 대상 건물 = 25점
 
     # 65점 - 도달 가능해야
     opt_b = optimize_for_target_score(plan, 65, current)
@@ -353,10 +353,10 @@ def test_optimization_target_grade():
     assert "목표등급" not in opt_b, "등급 키가 되살아났다"
     print(f"  [PASS] 65점: {opt_b['필요비용']:,}원, {opt_b['달성점수']}점 달성")
 
-    # 85점 - 도달 불가능 (도담 데이터로는 75점이 한계)
+    # 85점 - 도달 불가능 (대상 건물 데이터로는 75점이 한계)
     opt_a = optimize_for_target_score(plan, 85, current)
     assert not opt_a["achievable"], (
-        f"85점 달성 불가여야 함 (도담은 75점 한계): {opt_a['달성점수']}"
+        f"85점 달성 불가여야 함 (대상 건물은 75점 한계): {opt_a['달성점수']}"
     )
     print(f"  [PASS] 85점 불가 감지 (최대 {opt_a['달성점수']}점)")
 

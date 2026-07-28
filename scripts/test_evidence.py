@@ -97,8 +97,8 @@ check("결합은 순서에 무관하다",
 
 _rs = list(GR_ENERGY_REDUCTION.values())
 _sum, _mul = combine_reductions(_rs, "sum"), combine_reductions(_rs, "multiplicative")
-check("도담 단순합산 = 67.0%", abs(_sum * 100 - 67.0) < 0.1, f"{_sum*100:.1f}%")
-check("도담 상호작용 = 50.5%", abs(_mul * 100 - 50.5) < 0.2, f"{_mul*100:.1f}%")
+check("대상 건물 단순합산 = 67.0%", abs(_sum * 100 - 67.0) < 0.1, f"{_sum*100:.1f}%")
+check("대상 건물 상호작용 = 50.5%", abs(_mul * 100 - 50.5) < 0.2, f"{_mul*100:.1f}%")
 check("상호작용 값이 4등급 임계(55%) 아래 — 즉 등급이 뒤집힌다",
       _mul * 100 < 55.0,
       f"{_mul*100:.1f}% < 55% → 4등급 아님")
@@ -109,7 +109,7 @@ check("엔진이 두 값을 모두 노출한다",
 check("알 수 없는 결합 방식은 조용히 넘어가지 않는다",
       _raises(lambda: combine_reductions([0.1], "평균내기")))
 
-print("\n⑥ 도담 케이스 회귀 고정 — 엔진의 실제 판정")
+print("\n⑥ 대상 건물 케이스 회귀 고정 — 엔진의 실제 판정")
 # 왜: 홈 화면의 등급·소요량은 하드코딩 문자열이라, 엔진 결론이 바뀌어도 아무것도 깨지지
 #     않았다(4등급 → 5등급이 조용히 통과). 엔진의 실제 판정을 여기서 고정한다.
 import json  # noqa: E402
@@ -166,7 +166,7 @@ from core import params as _PP  # noqa: E402
 _tariff = _PP.electricity_tariff_won_per_kwh()
 check("전기 실효단가가 약관 값에서 계산된다 (140~141원/kWh)",
       140.0 < _tariff < 141.0, f"{_tariff:.2f}원/kWh")
-_expected = (100.92 / 2.75) * _tariff          # 도담 1차E 절감 ÷ 환산계수 × 단가
+_expected = (100.92 / 2.75) * _tariff          # 대상 건물 1차E 절감 ÷ 환산계수 × 단가
 check("절감 단가 = (1차E절감 ÷ 2.75) × 실효단가 로 재현됨",
       abs(_PP.annual_saving_per_m2() - _expected) < 1.0,
       f"{_PP.annual_saving_per_m2():.0f}원/㎡ vs 재현 {_expected:.0f}원/㎡")
@@ -216,7 +216,7 @@ check("공고 별지6의 3개 지표를 허용",
 
 _grres = evaluate_gr(_bim, _gr)
 _imp = _grres["성능개선"]
-check("도담 성능개선비율 = 41.2%", abs(_imp["성능개선비율_pct"] - 41.2) < 0.2,
+check("대상 건물 성능개선비율 = 41.2%", abs(_imp["성능개선비율_pct"] - 41.2) < 0.2,
       f"{_imp['성능개선비율_pct']}%")
 check("기준 20% 충족", _imp["충족"] is True, f"{_imp['성능개선비율_pct']}% ≥ {_imp['기준_pct']}%")
 check("대상공사 7종 중 1건 이상 충족", _grres["대상공사"]["충족"] is True,
@@ -236,7 +236,7 @@ from core.bim_diagnoser import score_compliance  # noqa: E402
 _sc = score_compliance(_gr, _bim)
 check("등급을 반환하지 않는다 (제도에 없음)", "grade" not in _sc)
 check("평가 성격이 '선정 랭킹 점수'로 명시", "랭킹" in _sc["_평가성격"])
-check("도담 기본점수 = 24 (사업효율성 원문정합 반영)",
+check("대상 건물 기본점수 = 24 (사업효율성 원문정합 반영)",
       _sc["total_score"] == 24, f"{_sc['total_score']}")
 check("GR요소 80 + 사업여건 20 = 100 만점", _sc["max_score"] == 100)
 
@@ -337,7 +337,7 @@ check("별표1 원문과 완전 일치 (4지역 × 6부위)", not _bad, "; ".joi
 check("비주거 기준이 주거보다 완화적 (별표1 구조)",
       u_limits("중부2", False)["외벽_직접"] > u_limits("중부2", True)["외벽_직접"],
       f"비주거 {u_limits('중부2', False)['외벽_직접']} > 주거 {u_limits('중부2', True)['외벽_직접']}")
-check("U_VALUE_LIMITS 기본값 = 비주거 (도담 등 공공 비주거가 대부분)",
+check("U_VALUE_LIMITS 기본값 = 비주거 (대상 건물 등 공공 비주거가 대부분)",
       U_VALUE_LIMITS["중부2"]["외벽_직접"] == 0.240)
 
 # check_u_value가 용도를 실제로 분기하는가 — 경계값으로 확인
@@ -361,10 +361,10 @@ for _a, _exp in [(5, 0.7), (9.99, 0.7), (10, 0.8), (14.99, 0.8),
 else:
     check("보정계수 4구간 (0.7/0.8/0.9/1.0) 경계 정확", True, "8개 경계값 통과")
 
-# 도담(PV 없음) 회귀 — 보정계수 도입이 기존 결과를 바꾸면 안 된다
-check("도담 회귀: 등급용·완화용 자립률 모두 0%",
+# 대상 건물(PV 없음) 회귀 — 보정계수 도입이 기존 결과를 바꾸면 안 된다
+check("대상 건물 회귀: 등급용·완화용 자립률 모두 0%",
       _full["autonomy_pct"] == 0.0 and _full["autonomy_pct_onsite_only"] == 0.0)
-check("도담 회귀: 여전히 5등급 · 소요량 99.1",
+check("대상 건물 회귀: 여전히 5등급 · 소요량 99.1",
       _full["grade"]["grade"] == "5" and abs(_full["post_energy_kwh_m2"] - 99.08) < 0.1)
 
 # 🔴 대지 외는 보정계수만큼 덜 인정 + 완화용에는 아예 안 잡힌다
@@ -450,11 +450,11 @@ else:
     _miss = [b for b in _bems if b not in _flat]
     check("별표1의2 BEMS 13항목 전부 원문에 존재", not _miss, f"누락: {_miss}" if _miss else "")
 
-    # (6) 별표4 수수료 — 도담(1,251㎡ 비주거) = 390만원
+    # (6) 별표4 수수료 — 대상 건물(1,251㎡ 비주거) = 390만원
     from core import params as _PP
     _fee = _PP.get("zeb_incentive", "인증수수료.전용면적구간_원")
     _case = next(v for u, v in _fee if 1251 < float(u))
-    check("도담 인증수수료 = 별표4 원문 390만원", _case == 3_900_000, f"{_case:,}원")
+    check("대상 건물 인증수수료 = 별표4 원문 390만원", _case == 3_900_000, f"{_case:,}원")
 
     # (7) 원문을 읽고 새로 생긴 숙제가 params에 기록됐는가 (조용히 넘어가지 않았는가)
     _yaml = (Path(__file__).resolve().parent.parent
@@ -506,14 +506,14 @@ check("의무 대상이면 기한 안이어도 0 (제6조제3항제5호 나목 =
 check("기한은 코드에 박지 않고 params에서 읽는다",
       "적용기한" in (_ROOT / "core" / "params.py").read_text(encoding="utf-8"))
 
-# 도담 ROI에 실제로 반영되는가 — params만 고치고 엔진이 안 따르면 의미 없다
+# 대상 건물 ROI에 실제로 반영되는가 — params만 고치고 엔진이 안 따르면 의미 없다
 from core.roi_calculator import calculate_zeb_cert_fee  # noqa: E402
 
 _case = calculate_zeb_cert_fee(1251.0, 5, is_mandatory=False)
-check("도담 수수료 390만원 (별표4 1천~3천㎡ 구간)", _case["수수료"] == 3_900_000)
-check("도담 환불액 0원 — 예전엔 78만원을 편익에 넣고 있었다",
+check("대상 건물 수수료 390만원 (별표4 1천~3천㎡ 구간)", _case["수수료"] == 3_900_000)
+check("대상 건물 환불액 0원 — 예전엔 78만원을 편익에 넣고 있었다",
       _case["환불액"] == 0, f'{_case["환불액"]:,}원')
-check("도담 순비용 = 수수료 전액", _case["순비용"] == 3_900_000)
+check("대상 건물 순비용 = 수수료 전액", _case["순비용"] == 3_900_000)
     # status: 값만 본다. 본문 산문에는 과거 경위로 '확인필요_원문미확보'가 언급된다.
 
 print("\n⑯ 알림 아이콘이 두 번 그려지지 않는가")

@@ -55,7 +55,7 @@ def test_field_validation():
 
     # 정상 케이스
     cases_ok = [
-        ("organization_name", "김천시청"),
+        ("organization_name", "○○시청"),
         ("total_area_m2", 1251),
         ("target_zeb_grade", 5),
         ("completion_year", 2014),
@@ -178,7 +178,7 @@ def test_intake_session_flow():
 
     # 1차 업데이트 (일부 잘못된 값 포함)
     r1 = dispatch("update_application", {
-        "organization_name": "김천시청",
+        "organization_name": "○○시청",
         "contact_person": "홍길동",
         "target_zeb_grade": 7,      # 잘못된 값
     })

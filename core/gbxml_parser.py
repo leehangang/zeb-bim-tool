@@ -318,7 +318,7 @@ def parse_gbxml(source) -> dict:
             break
 
     # ── Revit 해석 모델이 만들어졌는가 ──────────────────────────────
-    # 2026-07-17 실제 도담 Revit export(1,251㎡)를 넣었더니 해석 공간이 **15㎡**뿐이었고
+    # 2026-07-17 실제 대상 건물 Revit export(1,251㎡)를 넣었더니 해석 공간이 **15㎡**뿐이었고
     # 나머지 99%가 Shade 377개로 빠졌다. 그런데 화면엔 "walls 6개"라고만 떠서 멀쩡해 보였다.
     # 세어만 놓고 판단을 안 하면 사용자는 쓰레기를 받아들고 모른다.
     _envelope = sum(len(bim[k]) for k in ("walls", "roofs", "floors"))

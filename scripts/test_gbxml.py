@@ -265,7 +265,7 @@ check("데모 칸 수를 하드코딩하지 않는다 (st.columns(3)에 4개 넣
       "st.columns(len(samples))" in _ui)
 
 # ── 쓸 수 없는 export를 '쓸 수 없다'고 말하는가 ──────────────────────────
-# 2026-07-17 실제 도담 Revit export: 1,251㎡ 건물인데 해석 공간이 15㎡, 나머지 99%가
+# 2026-07-17 실제 대상 건물 Revit export: 1,251㎡ 건물인데 해석 공간이 15㎡, 나머지 99%가
 # Shade 377면. 그런데 화면엔 "walls 6개"만 떠서 멀쩡해 보였다. 세어놓고 판단을 안 했다.
 _BAD = """<gbXML xmlns="http://www.gbxml.org/schema" version="7.03">
   <Campus id="c">

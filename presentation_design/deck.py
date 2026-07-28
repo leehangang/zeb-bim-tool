@@ -129,7 +129,7 @@ def s01():
     s.T(MX,340,"제로에너지건축물(ZEB) 의사결정 통합 플랫폼","Regular",19,(190,205,193))
     s.line(MX,604,MX+360,604,(70,95,76),1.0)
     s.T(MX,624,"졸업설계 작품 · 2026","Medium",14,(175,190,178))
-    s.T(W-MX,624,"사례 · KEPCO 김천 도담어린이집","Medium",13,GOLD,anchor="ra")
+    s.T(W-MX,624,"사례 · 공공기관 소유 어린이집","Medium",13,GOLD,anchor="ra")
     s.save("slide-01.png")
 
 def s02():
@@ -138,7 +138,7 @@ def s02():
     items=[("01","배경","ZEB 의무화와 공공건축 BIM 의무화"),
            ("02","문제","ZEB 의사결정과 현행 제도의 한계"),
            ("03","제안","BIM 기반 통합 의사결정 플랫폼"),
-           ("04","실증","KEPCO 김천 도담어린이집 검증"),
+           ("04","실증","공공기관 소유 어린이집 검증"),
            ("05","전망","기대효과와 앞으로의 AI 발전방향")]
     y=212; rh=88
     for num,t,d in items:
@@ -369,7 +369,7 @@ def s12():
 
 def s13():
     s=Slide(WHITE)
-    title_block(s,"04 · 실증 사례","검증 사례 — KEPCO 김천 도담어린이집")
+    title_block(s,"04 · 실증 사례","검증 사례 — 공공기관 소유 어린이집")
     facts=[("1,251㎡","연면적"),("2014년","사용승인"),("어린이집","건물 용도"),("중부2","기후대")]
     cw=(W-2*MX-3*22)/4
     for i,(v,l) in enumerate(facts):
@@ -381,15 +381,15 @@ def s13():
     s.para(MX,424,"태양광·바닥 단열 등 일부만 보강된 상태로, 외피·설비 보강 여지가 크다. 어린이집 용도라 일조·채광 등 추가 기준도 적용된다.","Regular",15.5,GRAY,520)
     rx=MX+600
     s.T(rx,386,"왜 이 사례인가","Bold",16,INK)
-    for i,t in enumerate(["보강 잠재력이 큰 노후 공공건축물","KEPCO 실측 기반 검증 케이스","ZEB·그린리모델링 의사결정의 전형"]):
+    for i,t in enumerate(["보강 잠재력이 큰 노후 공공건축물","실측 BIM 기반 검증 케이스","ZEB·그린리모델링 의사결정의 전형"]):
         s.circle(rx+8,422+i*42+9,4,fill=GOLD); s.T(rx+28,422+i*42,t,"Regular",15,INK)
     skyline(s,MX,655,(210,225,213))   # 공공건축물 스카이라인 (하단 모티프)
-    footer(s,13,"출처: KEPCO 김천 도담어린이집 BIM · 현장 데이터")
+    footer(s,13,"출처: 공공기관 소유 어린이집 BIM · 현장 데이터")
     s.save("slide-13.png")
 
 def s14():
     s=Slide(WHITE)
-    title_block(s,"04 · 실증 사례","전체 보강 시 도담어린이집은 인증 미달에서 ZEB 4등급으로 도약한다")
+    title_block(s,"04 · 실증 사례","전체 보강 시 대상 건물은 인증 미달에서 ZEB 4등급으로 도약한다")
     # before / after
     by=300
     s.rect(MX,by,MX+360,by+200,fill=TINT,r=12)
@@ -414,7 +414,7 @@ def s14():
         col=GRAY_L if t<0.5 else GREEN
         s.circle(x,yv,2.4,fill=col)
     s.T(mx0,by+168,"4등급 기준선 90 통과","Regular",11.5,GREEN)
-    s.T(MX,540,"등급은 제1호(자립률) 또는 제2호(소요량) 중 상위로 정한다. 도담은 태양광이 없어 자립률 0% →","Regular",13.5,GRAY)
+    s.T(MX,540,"등급은 제1호(자립률) 또는 제2호(소요량) 중 상위로 정한다. 대상 건물은 태양광이 없어 자립률 0% →","Regular",13.5,GRAY)
     s.T(MX,562,"4등급은 태양광이 아니라 외피·설비 효율개선으로 소요량을 90 아래로 낮춰서 나온다. (BEMS 설치 가정)","Regular",13.5,GRAY)
     footer(s,14,"산정: ZEB-ROI 엔진 · 제2호 근거 (절감률 67%는 가정치 · 임계 55%)")
     s.save("slide-14.png")

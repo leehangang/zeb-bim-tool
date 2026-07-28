@@ -44,9 +44,9 @@ def test_tool_schema():
 
 
 def test_dispatcher_kepco_case():
-    """KEPCO 도담어린이집 케이스 디스패치 — 검증 목표값과 일치 확인."""
+    """공공기관 소유 어린이집 케이스 디스패치 — 검증 목표값과 일치 확인."""
     print("\n" + "=" * 70)
-    print("디스패처: 도담어린이집 케이스")
+    print("디스패처: 대상 건물 케이스")
     print("=" * 70)
     from core.roi_tools import dispatch_tool
 

@@ -13,7 +13,7 @@
 
 ![ZEB-ROI 플랫폼 — 라이브 화면](assets/screenshot_home.png)
 
-> 2026년 졸업설계 작품 (성균관대 · 삼성E&A 환경에너지탐구대회). 케이스: KEPCO 김천 도담어린이집 (연면적 1,251㎡).
+> 2026년 졸업설계 작품 (성균관대 · 삼성E&A 환경에너지탐구대회). 케이스: 공공기관 소유 어린이집 (연면적 1,251㎡).
 > **검증 결과 (외피 보강)**: NPV **+1.08억** · IRR **14.7%** · B-C **2.19** · 할인회수 **8.2년**
 > (자부담 기준, 20년·할인율 4.5%) · 수익환원 자산가치 **2.48억** (환원율 5%, NPV와 별도)
 
@@ -203,7 +203,7 @@ set PYTHONIOENCODING=utf-8         # Windows (PowerShell: $env:PYTHONIOENCODING=
 python scripts/test_bim.py        # BIM 진단 + ZEB 등급 판정
 python scripts/test_rag.py        # RAG 인덱싱 + 검색 (페이지 번들 추출 · ZIP 가드)
 python scripts/test_roi.py        # ROI·NPV/IRR 계산기
-python scripts/test_evidence.py   # 근거·출처 — 등급 임계 재현 · 도담 5등급 회귀 고정
+python scripts/test_evidence.py   # 근거·출처 — 등급 임계 재현 · 대상 건물 5등급 회귀 고정
 python scripts/test_sensitivity.py
 python scripts/test_mode2.py      # ROI Function Calling
 python scripts/test_mode4.py      # 인테이크 챗봇
@@ -211,11 +211,11 @@ python scripts/test_mode4.py      # 인테이크 챗봇
 
 **7개 스위트** 전부 외부 API 호출 없이 mock 백엔드로 검증합니다.
 특히 `test_evidence.py`는 등급 임계(4등급 55% / 5등급 35%)를 **엔진 호출로 재현**해 고정하고,
-도담의 실제 판정(절감률 50.5% → 소요량 99.1 → 5등급)을 회귀 테스트로 못박습니다.
+대상 건물의 실제 판정(절감률 50.5% → 소요량 99.1 → 5등급)을 회귀 테스트로 못박습니다.
 단순합산이 100%를 넘길 수 있다는 파탄도 테스트로 재현합니다 — 등급 기준표나 결합 방식을
 건드리면 테스트가 깨집니다.
 
-## 📊 검증 결과 — 도담어린이집
+## 📊 검증 결과 — 대상 건물
 
 | 지표 | 값 | 비고 |
 |---|---|---|
@@ -304,7 +304,7 @@ ZEB 그린리모델링을 단순 "에너지 절감 / 투자 비용"으로 보면
 ## 📋 졸업설계 작품 정보
 
 - **작품명**: ZEB-BIM-Tool — 그린리모델링 의사결정 플랫폼
-- **케이스**: KEPCO 김천 도담어린이집 (연면적 1,251㎡)
+- **케이스**: 공공기관 소유 어린이집 (연면적 1,251㎡)
 - **공모전**: 삼성E&A 환경에너지탐구대회
 - **연도**: 2026
 
@@ -331,8 +331,7 @@ ZEB 그린리모델링을 단순 "에너지 절감 / 투자 비용"으로 보면
 ## 🙏 감사
 
 - **데이터**: 조달청, 국토교통부, LH 한국토지주택공사
-- **케이스 협력**: KEPCO (한국전력공사)
-- **개발 도구**: Anthropic Claude
+- - **개발 도구**: Anthropic Claude
 
 ---
 

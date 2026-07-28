@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   시험용 gbXML — Revit "File > Export > gbXML" 산출물 구조를 본뜬 것.
-  ⚠️ 실제 도담 Revit 모델에서 뽑은 파일이 아니다. 파서 검증용 픽스처다.
+  ⚠️ 실제 대상 건물 Revit 모델에서 뽑은 파일이 아니다. 파서 검증용 픽스처다.
      실물 gbXML을 확보하면 교체할 것.
   네임스페이스·요소 구성은 gbXML 6.01 스펙과 Revit export 관행을 따랐다.
 -->

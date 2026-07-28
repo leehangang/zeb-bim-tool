@@ -153,7 +153,7 @@ def calculate_reduction_ratio(gr_mapping: dict, combine: str = "multiplicative")
     비교용으로 두 방식 값을 모두 반환해 모드 5(근거·출처)에서 격차를 공개한다.
 
     이력 (2026-07): 기본값이 'sum'이었으나 단순합산은 100%를 넘길 수 있어 정의상 틀렸다.
-      도담 기준 sum 67.0%(→4등급) vs multiplicative 50.5%(→5등급)로 등급 결론이 바뀐다.
+      대상 건물 기준 sum 67.0%(→4등급) vs multiplicative 50.5%(→5등급)로 등급 결론이 바뀐다.
       "숫자를 지키려고 틀린 산식을 남겨두지 않는다"는 판단으로 multiplicative로 전환.
     """
     breakdown = {}
