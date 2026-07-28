@@ -72,3 +72,6 @@ presentation_design/plan_slides/
 presentation_design/slides/
 presentation_design/plan_deck/node_modules/
 presentation_design/plan_deck/out/qa/
+
+# 익명화 검사용 금지어 목록 — 목록 자체가 식별정보라 커밋하지 않는다
+.anonymity-guard.txt
