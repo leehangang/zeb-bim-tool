@@ -60,7 +60,8 @@
 
 /* ── 05 — 아키텍처: 칸을 없애고 항목마다 가로선만 ───────────── */
 /* 구역 이름 줄 — 아래 .arch 칼럼 폭과 숫자를 맞춰 둔다 */
-.zones { display: flex; margin-top: 34px; font-size: 12.5px; font-weight: 500;
+/* 부제를 뺐다(1차 검토) — 그만큼 도해를 내려야 위아래가 다시 맞는다 */
+.zones { display: flex; margin-top: 70px; font-size: 12.5px; font-weight: 500;
          letter-spacing: 1.4px; color: var(--g2); }
 .arch { display: flex; margin-top: 18px; height: 292px; }
 .arch .frk svg { position: absolute; inset: 0; }

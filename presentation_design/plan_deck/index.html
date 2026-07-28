@@ -103,37 +103,21 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     <div class="mid">
       <div class="left">
         <h1>ZEB-ROI</h1>
-        <div class="tag">BIM 한 번으로 ZEB 인증 등급과<br>그린리모델링 사업성을 함께 판정하는 의사결정 플랫폼</div>
+        <div class="tag">BIM 한 번으로 ZEB 인증 등급과<br>그린리모델링 사업성 컨설팅 플랫폼</div>
+        <a class="url">zeb-bim-tool.streamlit.app</a>
       </div>
-      <div class="art"><svg viewBox="0 0 470 520" fill="none" font-family="Pretendard">
-  <!-- 05장의 갈래 그림과 같은 문법 — 초록 알약 대신 선과 글자만.
-       괄호 안을 비워 두지 않으려고 갈래 폭을 152px로 좁히고
-       오른쪽에 실제 결과물 이름을 앉혔다. -->
-  <g stroke="var(--g3)" stroke-width="1.4">
-    <path d="M60 260 H150"/><path d="M150 184 V336"/>
-    <path d="M150 184 H228"/><path d="M150 336 H228"/>
-  </g>
-  <circle cx="60" cy="260" r="6" fill="var(--green)"/>
-  <path d="M228 177 L240 184 L228 191 Z" fill="var(--chev)"/>
-  <path d="M228 329 L240 336 L228 343 Z" fill="var(--chev)"/>
-
-  <text x="60" y="230" fill="var(--g2)" font-size="11.5" font-weight="500"
-        letter-spacing="1.4">INPUT</text>
-  <text x="60" y="294" fill="var(--g1)" font-size="14.5">gbXML</text>
-
-  <text x="252" y="180" fill="var(--ink)" font-size="18" font-weight="700"
-        letter-spacing="-0.3">ZEB 인증 등급</text>
-  <text x="252" y="202" fill="var(--g2)" font-size="13.5">플러스등급 ~ 5등급</text>
-
-  <text x="252" y="332" fill="var(--ink)" font-size="18" font-weight="700"
-        letter-spacing="-0.3">GR 정량평가</text>
-  <text x="252" y="354" fill="var(--g2)" font-size="13.5">100점 · 고득점 순 선정</text>
-</svg></div>
+      <!-- 도해를 걷고 실제 홈 화면을 넣는다 (1차 검토) — 만든 사이트가 있다는 것이
+           그림 한 장보다 확실한 증거다. 캡처는 capture.js가 익명화된 화면에서 뽑는다. -->
+      <div class="art">
+        <div class="win">
+          <div class="chrome"><i></i><i></i><i></i><span>zeb-bim-tool.streamlit.app</span></div>
+          <div class="view"><img src="img/home.png" alt=""></div>
+        </div>
+      </div>
     </div>
 
     <div class="meta">
-      <b>성제건 (1398)</b> &nbsp;·&nbsp; 성균관대학교 건설환경공학부<br>
-      zeb-bim-tool.streamlit.app
+      <b>성제건 (1398)</b> &nbsp;·&nbsp; 성균관대학교 건설환경공학부
     </div>
   </div>
 </section>
@@ -141,7 +125,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 <!-- ══════════════ 챕터 01 ══════════════ -->
 <section class="slide dark chap" id="c1">
   <div class="kk">CHAPTER 01</div>
-  <div class="q">제도는 정해졌습니다.<br>이 건물은 <u>기준을 넘을까요?</u></div>
+  <div class="q">두 제도는 이미 운영되고 있습니다.<br>그런데 둘은 <u>이어져 있을까요?</u></div>
   <div class="toc">
     <div class="on"><i>01</i>PROBLEM</div>
     <div><i>02</i>SOLUTION</div>
@@ -152,10 +136,10 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 
 <!-- ══════════════ 02 · 이어지지 않는 두 제도 ══════════════ -->
 <section class="slide" id="s02">
-  <div class="hd"><span>PROBLEM&nbsp; |&nbsp; 이어지지 않는 두 제도</span><span>02</span></div>
+  <div class="hd"><span>PROBLEM&nbsp; |&nbsp; 연결되지 않는 두 제도</span><span>02</span></div>
   <div class="rule"></div>
-  <h1>BIM에 이미 있는 값을 ZEB 평가에서 다시 손으로 넣습니다</h1>
-  <div class="sub">두 의무화가 나란히 굴러가지만, 둘을 잇는 자리는 비어 있습니다.</div>
+  <h1>입력된 건물 정보가 곧바로 에너지 평가로 이어지도록 설계했습니다</h1>
+  <div class="sub">두 가지 의무화가 함께 운영되고 있지만, 건물 데이터는 아직 연결되지 않습니다.</div>
 
   <div class="gap2">
     <div class="pil">
@@ -165,6 +149,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
         <li><b>2025.1.1</b>부터 연면적 1,000㎡ 이상 공공건축물 <b>ZEB 4등급 이상</b></li>
         <li>민간 1,000㎡ 이상 · 30세대 이상 공동주택은 <b>5등급 수준 설계</b></li>
         <li>미취득 시 과태료 50만원</li>
+        <li>공식 등급은 <b>ECO2</b> 해석 결과로만 산정</li>
       </ul>
     </div>
     <div class="mid2">
@@ -173,16 +158,17 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     </div>
     <div class="pil">
       <k>의무화 02</k>
-      <h3>BIM 적용</h3>
+      <h3>BIM 의무화</h3>
       <ul>
         <li><b>1,000억원 이상</b> 신규 공공공사는 전 과정 BIM</li>
         <li><b>2026년 500억</b> 이상 → <b>2028년 300억</b> 이상으로 확대</li>
         <li>공동주택은 2024년 100% 시행</li>
       </ul>
+      <div class="note" style="margin-top:16px">BIM은 건물의 형상 · 재료 · 설비를 한 파일에 담은 3차원 설계 데이터입니다.</div>
     </div>
   </div>
 
-  <div class="say">건물 정보는 이미 디지털로 쌓이는데, ZEB 평가는 <u>그 값을 사람이 다시 손으로 입력</u>합니다.</div>
+  <div class="say">건물 정보는 이미 BIM에 입력되어 있지만, ZEB 평가를 위해 <u>같은 정보를 ECO2 프로그램에 입력</u>해야 합니다.</div>
   <div class="ft">근거 · 녹색건축물 조성 지원법 시행령 &nbsp;|&nbsp; 국토교통부 「건설산업 BIM 기본지침」 · 「2030 건축 BIM 활성화 로드맵」</div>
 </section>
 
@@ -246,7 +232,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 
 <!-- ══════════════ 04 · End-to-End ══════════════ -->
 <section class="slide" id="s04">
-  <div class="hd"><span>SOLUTION&nbsp; |&nbsp; End-to-End</span><span>04</span></div>
+  <div class="hd"><span>SOLUTION&nbsp; |&nbsp; 입력에서 신청서 작성까지 한 흐름으로</span><span>04</span></div>
   <div class="rule"></div>
   <h1>gbXML로 시작해 신청서 초안으로 끝납니다</h1>
   <div class="sub">설치 없이 주소만으로 접속해, 파일 하나를 올리면 판정부터 신청서까지 한 흐름으로 이어집니다.</div>
@@ -259,9 +245,9 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     <div><div class="dot io"></div><k>INPUT</k><b>gbXML 업로드</b>
       <i>Revit 내보내기 · 드래그앤드롭</i></div>
     <div><div class="dot"></div><k>STEP 01</k><b>읽고 거르기</b>
-      <i>부재 · 좌표 · 열관류율 추출<br>못 믿을 파일은 중지</i></div>
+      <i>부재 · 위치 · 열관류율 추출<br>신뢰할 수 없는 파일은 진단을 중지</i></div>
     <div><div class="dot"></div><k>STEP 02</k><b>두 제도로 판정</b>
-      <i>ZEB 등급 · GR 정량평가<br>근거 조항과 함께</i></div>
+      <i>ZEB 등급 · GR 정량평가<br>근거 조항 함께 제시</i></div>
     <div><div class="dot"></div><k>STEP 03</k><b>보강과 경제성 확인</b>
       <i>공사비 · 보조금 · 자부담<br>NPV · IRR · 회수기간</i></div>
     <div><div class="dot io"></div><k>OUTPUT</k><b>신청서 초안 제작</b>
@@ -269,11 +255,11 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   </div>
 
   <div class="tspan">
-    <div style="flex:4"><span class="bk"></span><em>MODE 03</em><b>BIM 진단 + ROI</b></div>
+    <div style="flex:4"><span class="bk"></span><em>MODE 03</em><b>BIM 진단 + 수익성 ROI 평가</b></div>
     <div style="flex:1"><span class="bk"></span><em>MODE 04</em><b>사업 신청 인테이크</b></div>
   </div>
 
-  <div class="say">중간에 파일을 주고받거나 <u>프로그램을 설치할 일이 없습니다.</u></div>
+  <div class="say">BIM 진단과 수익성 평가를 위해 <u>새로운 프로그램을 설치할 필요가 없습니다.</u></div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 &nbsp;|&nbsp; GR 지원사업 운영고시 §9 &nbsp;|&nbsp; 조달청 시설공통자재 단가 · 간접공사비 기준(2026)</div>
 </section>
 
@@ -281,13 +267,12 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 <section class="slide" id="s05">
   <div class="hd"><span>CORE TECHNOLOGY&nbsp; |&nbsp; 구조</span><span>05</span></div>
   <div class="rule"></div>
-  <h1>해석 · 단가 · 법령은 하나만 둡니다</h1>
-  <div class="sub">판정만 두 갈래로 나누고, 해석 · 단가 · 법령은 하나만 둡니다.</div>
+  <h1>해석 · 단가 · 법령만으로 두 제도를 판정합니다</h1>
 
   <div class="zones">
     <span style="width:232px">INPUT</span>
     <span style="width:60px"></span>
-    <span style="width:320px">공유 코어 · 하나만 존재</span>
+    <span style="width:320px">해석 · 단가 · 법령 기반 평가</span>
     <span style="width:176px">판정 · 산정</span>
     <span>OUTPUT</span>
   </div>
@@ -340,8 +325,8 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     </div>
   </div>
 
-  <div class="note" style="margin-top:20px">※&nbsp; 입력 검증. 못 믿을 파일은 진단을 시작하지 않습니다. 좌표가 없는 모델은 에너지 해석을 건너뛰고 진단 · 공사비 · 경제성까지만 수행합니다.</div>
-  <div class="say" style="margin-top:16px">두 제도의 답은 다릅니다. 다만 그 차이는 <u>제도가 다르기 때문</u>이지, 우리가 단가나 해석값을 두 번 계산해서가 아닙니다.</div>
+  <div class="note" style="margin-top:20px">※&nbsp; 입력 검증. 신뢰할 수 없는 파일은 진단을 시작하지 않습니다.</div>
+  <div class="say" style="margin-top:16px">ZEB 제도와 GR 제도에 <u>맞는 결과를 각각 출력합니다.</u></div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; GR 지원사업 운영고시 §9 &nbsp;|&nbsp; 2026 공공 GR 2.0 가이드라인 p.18</div>
 </section>
 
@@ -363,7 +348,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
         <div><i>규칙</i><span>둘 중 상위 등급으로 확정 · 제3호 BEMS는 필수</span></div>
         <div><i>결과</i><span>플러스등급 ~ 5등급</span></div>
       </div>
-      <div class="tl">기준을 넘으면 등급이 나옵니다. 남과 비교하지 않습니다.</div>
+      <div class="tl">기준을 넘으면 등급이 나옵니다. 다른 건물과 비교하지 않습니다.</div>
     </div>
     <div>
       <k>TRACK B</k>
@@ -382,7 +367,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   <div class="gapline">
     <div class="n1"><k>ZEB 절감률</k><v>50.5%</v></div>
     <div class="n1"><k>GR 성능개선비율</k><v>41.2%</v></div>
-    <div class="sayr">한 건물에서 <u>9.3%p</u>가 벌어집니다.<br>한쪽 값을 다른 쪽 서류에 옮기면 그만큼 틀립니다.</div>
+    <div class="sayr">동일한 건물에서 <u>9.3%p</u> 차이가 납니다.</div>
   </div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; GR 지원사업 운영고시 §9 &nbsp;|&nbsp; 2026 공공 GR 2.0 가이드라인 [표1] p.18</div>
 </section>
@@ -391,7 +376,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 <section class="slide" id="s07">
   <div class="hd"><span>WHY US&nbsp; |&nbsp; 차별점</span><span>07</span></div>
   <div class="rule"></div>
-  <h1>등급만 나오지 않습니다. 근거가 같이 나옵니다</h1>
+  <h1>등급만 나오지 않습니다. 그 등급의 근거까지 함께 내놓습니다</h1>
 
   <div class="cols3">
     <div>
@@ -404,13 +389,13 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="no">02</div>
       <h3>계산은 코드,<br>설명만 AI</h3>
       <p>같은 입력에 항상 같은 결과가 나오고, 틀렸을 때 어느 단계인지 되짚을 수 있습니다.</p>
-      <em>지어낸 조항이 낄 자리 없음</em>
+      <em>법령 인용만 사용</em>
     </div>
     <div>
       <div class="no">03</div>
       <h3>값마다<br>근거를 공개</h3>
       <p>조항과 시행일을 화면에 적고, 폐지된 조항은 계산에서 뺐습니다.</p>
-      <em>덜 유리해도 그대로 공개</em>
+      <em>불리한 값도 그대로 공개</em>
     </div>
   </div>
 
@@ -418,7 +403,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     <div class="lb"><em>EXISTING</em>기존 방식</div>
     <div class="it">
       <b>ZEB 인증 대행 · 컨설팅</b>
-      <span>ECO2에 방·외피·설비를 사람이 처음부터 입력합니다. 수일~수주 걸리고 입력자에 따라 결과가 달라집니다.</span>
+      <span>공식 평가 프로그램 ECO2에 방·외피·설비를 사람이 처음부터 입력합니다. 며칠에서 몇 주가 걸리고 입력자에 따라 결과가 달라집니다.</span>
     </div>
     <div class="it">
       <b>범용 에너지 해석 도구</b>
@@ -426,7 +411,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     </div>
   </div>
 
-  <div class="say">그래서 남는 것이 등급 하나가 아닙니다. <u>그 등급이 나온 조항과 공사비와 신청서</u>까지 함께 남습니다.</div>
+  <div class="say">결과로 등급뿐만 아니라, <u>그 등급의 근거 조항과 공사비 산출, 신청서 초안</u>을 만들어냅니다.</div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; 지방세특례제한법 제47조의2 &nbsp;|&nbsp; 녹색건축물 조성 지원법 제15조 · 시행령 제11조</div>
 </section>
 
@@ -496,7 +481,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="zoom"><img src="img/zeb_verdict.png" style="width:896px; left:-221px; top:-395px"><span class="lb"><b>2</b>제1호 · 제2호 · 제3호 중 무엇이 모자란지까지</span></div>
     </div>
   </div>
-  <div class="say">업로드는 한 번입니다. 여섯 개 탭이 <u>같은 진단값을 물려받아</u> 보강·비용부터 최적화와 리포트까지 이어집니다.</div>
+  <div class="say"><u>한 번의 BIM 파일 업로드로</u> 보강·비용부터 최적화와 리포트까지 작성해냅니다.</div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; 2026 공공 GR 2.0 가이드라인 [표1] · 요소 80 + 사업여건 20 &nbsp;|&nbsp; 등급은 설계 검토용 추정 · 공식 등급은 ECO2 해석으로 확정</div>
 </section>
 
@@ -517,7 +502,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="zoom"><img src="img/qa2_open.png" style="width:1782px; left:-440px; top:-268px"><span class="lb"><b>2</b>클릭하면 펼쳐지는 인용 원문</span></div>
     </div>
   </div>
-  <div class="say">근거 조항을 찾지 못하면 <u>아는 척하지 않고 자료에 없다고 답합니다.</u></div>
+  <div class="say">근거 조항을 찾지 못하면 <u>추정해 답하지 않고 자료에 없다고 답합니다.</u></div>
   <div class="ft">색인 원문 19건 · 1,300청크 &nbsp;|&nbsp; 무료 티어 메모리 제약으로 임베딩 대신 키워드(TF-IDF) 검색 사용</div>
 </section>
 
@@ -538,7 +523,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
       <div class="zoom"><img src="img/roi2_strt.png" style="width:1731px; left:-438px; top:-493px"><span class="lb"><b>2</b>예시 클릭 → 조건 자동 입력</span></div>
     </div>
   </div>
-  <div class="say">문장에서 읽는 것은 조건이고, <u>숫자는 표에서 옵니다.</u> 공사비는 조달청 단가에서, 전기요금은 한전 약관에서 가져옵니다.</div>
+  <div class="say"><u>구체적인 공사비용은</u> 조달청 단가에서, 전기요금은 한전 약관에서 참고합니다.</div>
   <div class="ft">근거 · 조달청 시설공통자재 단가 442종 · 간접공사비 기준(2026) &nbsp;|&nbsp; 한국전력 기본공급약관 140.9원/kWh &nbsp;|&nbsp; 할인율 4.5% · 20년</div>
 </section>
 
@@ -547,7 +532,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   <div class="hd"><span>SOLUTION&nbsp; |&nbsp; 사업 신청 인테이크</span><span>12</span></div>
   <div class="rule"></div>
   <h1>대화가 신청서 초안이 됩니다</h1>
-  <div class="sub">공공과 민간은 근거 조항도 지원 방식도 서식도 제출처도 다릅니다. 고른 쪽에 맞는 항목만 묻습니다.</div>
+  <div class="sub">공공과 민간은 근거 조항도 지원 방식도 서식도 제출처도 다릅니다. 선택한 사업에 해당하는 항목만 묻습니다.</div>
   <div class="shots">
     <div class="shot">
       <div class="chrome"><i></i><i></i><i></i><span>zeb-bim-tool.streamlit.app</span></div>
@@ -556,7 +541,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     </div>
     <div class="zooms">
       <div class="zoom"><img src="img/intake_top.png" style="width:1232px; left:-294px; top:-595px"><span class="lb"><b>1</b>필수 · 선택 · 완성도 실시간 집계</span></div>
-      <div class="zoom"><img src="img/intake_ask.png" style="width:1610px; left:-408px; top:-236px"><span class="lb"><b>2</b>모자란 항목을 되묻는 대화</span></div>
+      <div class="zoom"><img src="img/intake_ask.png" style="width:1610px; left:-408px; top:-236px"><span class="lb"><b>2</b>부족한 항목을 되묻는 대화</span></div>
     </div>
   </div>
   <div class="say">필수 항목이 다 차기 전에는 초안을 만들지 않고, <u>공식 양식은 창조센터에서 받아 대조하라</u>고 안내합니다.</div>
@@ -580,7 +565,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   <div class="hd"><span>RELIABILITY&nbsp; |&nbsp; 역할 분리</span><span>13</span></div>
   <div class="rule"></div>
   <h1>계산은 코드가, 설명만 AI가 맡습니다</h1>
-  <div class="sub">돈이 걸린 답에서 지어낸 조항 하나는 그대로 손해가 됩니다. 그래서 계산에는 AI를 두지 않았습니다.</div>
+  <div class="sub">보조금이나 세금처럼 금액이 걸린 답에서는 AI 오류가 일어나면 안 됩니다. 따라서 계산은 미리 만들어 놓은 코드로 합니다.</div>
 
   <div class="duo">
     <div>
@@ -608,7 +593,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     <div><b>틀린 단계까지 추적</b><span>결과가 이상할 때 어느 단계가 틀렸는지 되짚을 수 있습니다.</span></div>
     <div><b>근거 없으면 없다고 답변</b><span>조항을 못 찾으면 지어내지 않고 자료에 없다고 답합니다.</span></div>
   </div>
-  <div class="say">그래서 단가표가 오르거나 공고가 바뀌어도 <u>값 하나만 갈아 끼우면</u> 됩니다. 모델을 다시 학습시킬 일이 없습니다.</div>
+  <div class="say">그래서 단가표나 공고가 바뀌어도 <u>참조 자료만 수정하면</u> 됩니다. 새로운 모델을 다시 만들 필요가 없습니다.</div>
   <div class="ft">설계 원칙 · 파인튜닝 대신 에이전트. 단가표 · 공고 · 법령 원문만 갈아 끼우면 되도록 계산 파라미터를 YAML로 분리</div>
 </section>
 
@@ -641,7 +626,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     </div>
   </div>
 
-  <div class="say">받지 못할 혜택을 편익으로 잡으면 회수기간이 짧아 보입니다. <u>덜 유리하게 나오더라도 지웠습니다.</u></div>
+  <div class="say">받을 수 없는 혜택을 편익으로 넣으면 회수기간이 실제보다 짧아 보입니다. <u>결과가 불리하게 나오더라도 계산에서 뺐습니다.</u></div>
   <div class="ft">근거·출처 화면에 파라미터마다 조항 · 시행일 · 원문 링크를 함께 표시 &nbsp;|&nbsp; 계산 파라미터는 코드가 아닌 YAML에 분리</div>
 </section>
 
@@ -661,7 +646,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 <section class="slide" id="s15">
   <div class="hd"><span>VALIDATION&nbsp; |&nbsp; 검증 케이스</span><span>15</span></div>
   <div class="rule"></div>
-  <h1>실제 공공건축물 한 채로 검증했습니다</h1>
+  <h1>실제로 공공기관이 소유한 건물로 검증했습니다</h1>
   <div class="sub">공공기관이 소유한 노후 건물이면서 연면적이 1,000㎡ 기준선을 넘어, 두 제도를 같은 건물에서 확인할 수 있습니다.</div>
 
   <div class="case2">
@@ -737,7 +722,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     </div>
   </div>
 
-  <div class="say">자립률 기준으로 4등급까지 가려면 태양광을 <u>약 25kW 더</u> 달아야 합니다. 태양열집열판은 전기를 만들지 않기 때문입니다.</div>
+  <div class="say">자립률 기준으로 4등급까지 가려면 태양광을 <u>약 25kW 더</u> 추가해야 합니다. 태양열집열판은 전기를 만들지 않기 때문입니다.</div>
   <div class="ft">근거 · ZEB 인증기준 공동고시 [별표2] &nbsp;|&nbsp; 2026 공공 GR 2.0 가이드라인 [표1] &nbsp;|&nbsp; 성능개선비율 = (개선전 − 개선후) ÷ 개선전 · 공고 산식</div>
 </section>
 
@@ -756,8 +741,8 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
     <div class="b"><k>보조율 89%</k><div class="track"><div class="fill hot" style="width:11.0%"></div></div><v>9.7년</v></div>
   </div>
 
-  <div class="note" style="margin-top:22px">※&nbsp; 막대 길이 = 회수기간. 마지막 줄의 89%는 회수기간을 10년 안으로 넣으려면 보조율이 얼마여야 하는지를 되풀어 계산한 값입니다.</div>
-  <div class="say" style="margin-top:20px">그린리모델링은 시장에만 맡겨 두면 퍼지지 않습니다.<br><u>공공의 보조가 있어야 성립한다</u>는 것을 우리 손으로 계산해 확인했습니다.</div>
+  <div class="note" style="margin-top:22px">※&nbsp; 막대 길이 = 회수기간. 보조율 89%는 회수기간을 10년 안으로 넣으려면 보조율이 얼마여야 하는지를 되풀어 계산한 값입니다.</div>
+  <div class="say" style="margin-top:20px">그린리모델링은 시장에만 맡겨 두면 사람들의 관심을 끌 수가 없습니다.<br><u>공공의 보조가 있어야 성립한다</u>는 것을 우리 손으로 계산해 확인했습니다.</div>
   <div class="ft">전체 보강 기준 · 자부담 = 공사비 × (1 − 보조율) ÷ 연간 절감액 &nbsp;|&nbsp; 2026 공공 GR 2.0은 공사비의 50%를 지원</div>
 </section>
 
@@ -765,7 +750,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
 <section class="slide" id="s18">
   <div class="hd"><span>SCALE UP&nbsp; |&nbsp; 로드맵</span><span>18</span></div>
   <div class="rule"></div>
-  <h1>지금은 한 채, 다음은 여러 채, 끝은 지자체 단위입니다</h1>
+  <h1>사업 범위를 지자체로 확장할 수 있습니다</h1>
 
   <div class="road">
     <div class="ph now">
@@ -808,7 +793,7 @@ h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20
   </div>
 
   <div class="close">
-    <div class="big">건물 한 채의 개선안이 아니라,<br>여러 건물에 같은 방식으로 쓰는 진단 도구입니다.</div>
+    <div class="big">건물 한 채의 개선안을 넘어,<br>여러 건물에 같은 방식으로 쓸 수 있는 진단 도구입니다.</div>
   </div>
 </section>
 

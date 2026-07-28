@@ -18,5 +18,14 @@
 .cover .meta b { font-weight: 700; color: var(--ink); }
 /* 그림은 세로로 늘지 않는다. 가운데 띠의 높이가 바뀌어도 크기를 그대로 두려고 못 박는다. */
 .cover .art { width: 470px; flex: none; align-self: stretch; position: relative; }
-.cover .art svg { position: absolute; left: 0; top: 50%; width: 470px; height: 520px;
-  transform: translateY(-50%); }
+/* 브라우저 창은 09~12장과 같은 부품을 쓴다 — 표지에서 이미 '웹서비스'라고 말해 둔다.
+   캡처는 3000×1900(1.579)이라 470px 폭이면 298px. 창 높이를 거기에 맞춘다. */
+.cover .art .win { position: absolute; left: 0; top: 50%; width: 470px;
+  transform: translateY(-50%); border: 1px solid var(--g3); border-radius: 10px;
+  overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.cover .art .view { height: 298px; }
+
+/* URL — 검토에서 "큰 글씨로 우리가 만든 사이트 강조"를 받았다. 각주에 작게 있던 걸 올린다. */
+.cover .url { display: inline-block; margin-top: 30px; padding: 11px 20px;
+  border: 1.5px solid var(--green); border-radius: 999px;
+  font-size: 20px; font-weight: 700; color: var(--green); letter-spacing: -0.02em; }

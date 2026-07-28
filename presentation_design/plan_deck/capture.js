@@ -68,6 +68,17 @@ const bodyText = (p) => p.evaluate(() => document.body.innerText);
   await p.goto(URL, { waitUntil: "networkidle0" });
   await sleep(4000);
 
+  // ── 홈 (표지에 넣는다) ──────────────────────────────────────
+  await clickLabel(p, "🏠 홈");
+  await sleep(5000);
+  await p.evaluate(() => {
+    const sc = document.querySelector('[data-testid="stMain"]');
+    if (sc) sc.scrollTop = 0;
+  });
+  await sleep(800);
+  await p.screenshot({ path: path.join(DIR, "img/home.png") });
+  console.log("home.png 저장");
+
   // ── ROI 시뮬레이션 시작 화면 ────────────────────────────────
   await clickLabel(p, "💰 ROI 시뮬레이션");
   await sleep(5000);
