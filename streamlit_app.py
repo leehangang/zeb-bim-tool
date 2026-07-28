@@ -38,6 +38,22 @@ def _check_anthropic_key() -> bool:
     return bool(key) and not key.startswith("sk-ant-api03-여기")
 
 
+# ── 색인 원문 내려받기 ──────────────────────────────────────────
+# "이 조항이 진짜 그렇게 적혀 있나"를 화면에서 끝내려면 원문까지 닿아야 한다.
+# 외부 링크(law.go.kr 등)로 걸면 그쪽 URL이 바뀌는 순간 죽고, 무엇보다
+# **우리가 색인한 그 파일**이라는 보장이 없다. 색인한 파일 자체를 내려준다.
+from pathlib import Path as _Path
+
+_POLICY_DIR = _Path(os.getenv("POLICY_DOCS_DIR", "data/policy_docs"))
+_MIME = {".pdf": "application/pdf", ".txt": "text/plain; charset=utf-8",
+         ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+
+
+def _file_reader(path: _Path):
+    """누를 때 읽는다. 루프에서 만드는 클로저라 path를 기본값으로 묶어 둔다."""
+    return lambda p=path: p.read_bytes()
+
+
 def _check_rag_index() -> bool:
     from pathlib import Path
     return Path("./data/chroma_db").exists() and any(
@@ -190,10 +206,28 @@ with st.sidebar:
         else:
             for _title, _items in _idx["groups"]:
                 st.markdown(f"**{_title}**")
-                for _label, _answers in _items:
+                for _fname, _label, _answers in _items:
+                    _p = _POLICY_DIR / _fname
+                    if _p.is_file():
+                        # data에 callable을 넘기면 **누를 때만** 파일을 읽는다.
+                        # 원문 19건이 25MB라, 미리 읽으면 사이드바가 다시 그려질 때마다
+                        # 그만큼을 메모리에 얹는다 (무료 티어에서 감당 안 됨).
+                        st.download_button(
+                            f"📄 {_label}",
+                            data=_file_reader(_p),
+                            file_name=_fname,
+                            mime=_MIME.get(_p.suffix.lower(), "application/octet-stream"),
+                            key=f"_doc_{_fname}",
+                            type="tertiary",
+                            help=f"원문 내려받기 · {_fname}",
+                        )
+                    else:
+                        st.markdown(
+                            f"<div style='margin:0 0 0 .5rem; font-size:.82rem;'>{_label}</div>",
+                            unsafe_allow_html=True,
+                        )
                     st.markdown(
-                        f"<div style='margin:0 0 .45rem .5rem; line-height:1.35;'>"
-                        f"<span style='font-size:.82rem;'>{_label}</span><br>"
+                        f"<div style='margin:-.35rem 0 .5rem .5rem; line-height:1.35;'>"
                         f"<span style='font-size:.72rem; color:#757575;'>↳ {_answers}</span>"
                         f"</div>",
                         unsafe_allow_html=True,

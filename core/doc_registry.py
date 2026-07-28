@@ -46,9 +46,10 @@ REGISTRY: Dict[str, Tuple[str, str, str]] = {
         "zeb", "ZEB 인증에 관한 규칙 (기후에너지환경부령 제1호)",
         "인증 신청 자격·절차 · 별표를 공동고시로 위임(§8③)",
     ),
-    # 표시명은 HTML로 렌더된다 — 마크다운 **볼드**는 리터럴로 새어나온다. <b>를 쓸 것.
+    # 표시명은 이제 내려받기 버튼의 라벨로 들어간다. 버튼 라벨은 마크다운만 받고
+    # HTML은 글자 그대로 새어나온다 — <b>ZEB…</b>가 화면에 그대로 찍혔다. **볼드**를 쓸 것.
     "19_ZEB_인증기준_공동고시.txt": (
-        "zeb", "<b>ZEB 인증 기준 공동고시</b> (국토부 2024-893 / 산업부 2024-208)",
+        "zeb", "**ZEB 인증 기준 공동고시** (국토부 2024-893 / 산업부 2024-208)",
         "별표1 자립률 산식·대지외 보정계수 · 별표1의2 BEMS 13항목 · 별표2 등급표 — 우리 ZEB 판정의 최종 근거",
     ),
     "06_에너지절약설계기준.pdf": (
@@ -116,7 +117,7 @@ REGISTRY: Dict[str, Tuple[str, str, str]] = {
 }
 
 
-def group_indexed_docs(files) -> List[Tuple[str, List[Tuple[str, str]]]]:
+def group_indexed_docs(files) -> List[Tuple[str, List[Tuple[str, str, str]]]]:
     """
     색인에 실제로 존재하는 파일 목록을 그룹별로 묶어 반환.
 
@@ -124,15 +125,18 @@ def group_indexed_docs(files) -> List[Tuple[str, List[Tuple[str, str]]]]:
         files: 색인 메타에서 읽은 파일명 iterable (중복 허용)
 
     Returns:
-        [(그룹 표시명, [(표시명, 답하는 질문), ...]), ...]
+        [(그룹 표시명, [(파일명, 표시명, 답하는 질문), ...]), ...]
         레지스트리에 없는 파일은 '미분류'로 마지막에 드러낸다.
+
+        파일명을 같이 돌려주는 이유: 화면에서 원문을 바로 내려받게 하려면
+        표시명만으로는 실제 파일을 못 찾는다. 이름을 다시 손으로 적으면 어긋난다.
     """
     present = set(files)
-    out: List[Tuple[str, List[Tuple[str, str]]]] = []
+    out: List[Tuple[str, List[Tuple[str, str, str]]]] = []
 
     for key, title in GROUPS:
         items = [
-            (label, answers)
+            (fname, label, answers)
             for fname, (g, label, answers) in REGISTRY.items()
             if g == key and fname in present
         ]
@@ -143,6 +147,6 @@ def group_indexed_docs(files) -> List[Tuple[str, List[Tuple[str, str]]]]:
     if unknown:
         out.append((
             f"⚠️ 미분류 ({len(unknown)}건)",
-            [(f, "레지스트리에 설명이 없습니다 — core/doc_registry.py에 추가 필요") for f in unknown],
+            [(f, f, "레지스트리에 설명이 없습니다 — core/doc_registry.py에 추가 필요") for f in unknown],
         ))
     return out
